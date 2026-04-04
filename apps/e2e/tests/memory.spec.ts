@@ -10,6 +10,13 @@ test.describe('browser memory profile', () => {
   // Soak runs for MEMORY_SOAK_SECONDS (default 120s) — need extra headroom for setup
   test.setTimeout(SOAK_DURATION_MS + 30_000);
 
+  // --enable-precise-memory-info is required for performance.memory to return real values
+  test.use({
+    launchOptions: {
+      args: ['--enable-precise-memory-info'],
+    },
+  });
+
   test('measure JS heap during sustained use', async ({ page }) => {
     // Navigate to the app
     await page.goto('/');
@@ -20,16 +27,13 @@ test.describe('browser memory profile', () => {
     const deadline = start + SOAK_DURATION_MS;
 
     while (Date.now() < deadline) {
-      // performance.memory is Chrome-only (non-standard) but Playwright uses Chromium
-      const heapUsed = await page.evaluate(() => {
-        const perf = performance as Performance & {
-          memory?: { usedJSHeapSize: number };
-        };
-        return perf.memory?.usedJSHeapSize ?? 0;
-      });
+      // Use CDP to get precise heap usage — more reliable than performance.memory
+      const client = await page.context().newCDPSession(page);
+      const { usedSize } = await client.send('Runtime.getHeapUsage');
+      await client.detach();
 
       const elapsedS = Math.round((Date.now() - start) / 1000);
-      const heapMb = Math.round(heapUsed / 1024 / 1024);
+      const heapMb = Math.round(usedSize / 1024 / 1024);
       samples.push({ elapsed_s: elapsedS, heap_used_mb: heapMb });
 
       await page.waitForTimeout(SAMPLE_INTERVAL_MS);
