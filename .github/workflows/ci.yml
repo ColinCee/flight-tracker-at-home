@@ -41,7 +41,7 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - name: Install Python deps
-        run: cd apps/backend && uv sync
+        run: cd apps/backend && uv sync --extra dev
 
       - name: TypeScript
         run: bunx tsc --build
@@ -58,7 +58,7 @@ jobs:
       - uses: jdx/mise-action@v2
 
       - name: Install Python deps
-        run: cd apps/backend && uv sync
+        run: cd apps/backend && uv sync --extra dev
 
       - name: pytest
         run: cd apps/backend && uv run pytest -v
