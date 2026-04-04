@@ -1,9 +1,13 @@
-# AUTO-GENERATED from RULES.md — do not edit directly. Run: mise run rules:sync
+---
+root: true
+targets:
+  - '*'
+globs:
+  - '**/*'
+description: 'Project overview, conventions, and development guidelines'
+---
 
-# Project Rules — Flight Tracker at Home
-
-
-## What is this?
+# Flight Tracker at Home
 
 Real-time aviation dashboard showing aircraft over London with Heathrow arrival tracking.
 Built by Colin & Calvin Cheung as a portfolio/learning project.
@@ -35,11 +39,9 @@ mise run setup:frontend     # Install frontend dependencies only
 mise run setup:backend      # Install backend dependencies only
 
 mise run format             # Format all code (ruff + biome)
-mise run check              # Lint, format, and type check (for CI)
-mise run test               # Run all tests (pytest)
-mise run typecheck          # Type check only (ty + tsc)
-mise run rules:sync         # Regenerate AI config files from RULES.md
+mise run check              # Lint/format check without modifying (for CI)
 
+npx rulesync generate       # Regenerate AI config files from .rulesync/
 bun run generate:api        # Regenerate frontend types from backend schema
 ```
 
@@ -59,6 +61,7 @@ bunx nx serve frontend      # Starts on http://localhost:4200
 - **camelCase in JSON** — Pydantic `alias_generator=to_camel` handles this automatically; Python stays `snake_case`, TypeScript gets `camelCase`
 - **Generated code is committed** — `apps/frontend/src/api/generated.ts` and `apps/frontend/openapi.json` are checked in so the frontend builds without the backend running
 - **Single `/aircraft` endpoint** — KPIs are derived from the aircraft list and bundled atomically
+- **AI config is managed by rulesync** — edit `.rulesync/` and run `npx rulesync generate`, never edit generated files directly
 
 ## Stack
 
@@ -94,4 +97,4 @@ Formatting and linting:
 - Don't add Python type stubs manually — use ty for type checking
 - Don't install Python deps with pip — use `uv add` in `apps/backend/`
 - Don't install JS deps with npm/yarn — use `bun add` from repo root
-- Don't edit CLAUDE.md / .cursorrules / copilot-instructions.md directly — edit `RULES.md` and run `mise run rules:sync`
+- Don't edit CLAUDE.md / .cursorrules / copilot-instructions.md directly — edit `.rulesync/` and run `npx rulesync generate`

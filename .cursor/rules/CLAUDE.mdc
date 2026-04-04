@@ -1,3 +1,8 @@
+---
+description: Project overview, conventions, and development guidelines
+globs: **/*
+---
+
 # Flight Tracker at Home
 
 Real-time aviation dashboard showing aircraft over London with Heathrow arrival tracking.
