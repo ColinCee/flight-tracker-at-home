@@ -179,12 +179,26 @@
             "title": "Lastcontact"
           },
           "positionSource": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Positionsource"
           },
           "category": {
-            "type": "string",
-            "title": "category"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
           },
           "isApproachingLhr": {
             "type": "boolean",
