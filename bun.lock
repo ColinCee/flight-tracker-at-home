@@ -7,6 +7,7 @@
       "dependencies": {
         "@deck.gl/core": "^9.2.11",
         "@deck.gl/layers": "^9.2.11",
+        "@deck.gl/mapbox": "^9.2.11",
         "@deck.gl/react": "^9.2.11",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -284,6 +285,8 @@
     "@deck.gl/core": ["@deck.gl/core@9.2.11", "", { "dependencies": { "@loaders.gl/core": "~4.3.4", "@loaders.gl/images": "~4.3.4", "@luma.gl/constants": "~9.2.6", "@luma.gl/core": "~9.2.6", "@luma.gl/engine": "~9.2.6", "@luma.gl/shadertools": "~9.2.6", "@luma.gl/webgl": "~9.2.6", "@math.gl/core": "^4.1.0", "@math.gl/sun": "^4.1.0", "@math.gl/types": "^4.1.0", "@math.gl/web-mercator": "^4.1.0", "@probe.gl/env": "^4.1.1", "@probe.gl/log": "^4.1.1", "@probe.gl/stats": "^4.1.1", "@types/offscreencanvas": "^2019.6.4", "gl-matrix": "^3.0.0", "mjolnir.js": "^3.0.0" } }, "sha512-lpdxXQuFSkd6ET7M6QxPI8QMhsLRY6vzLyk83sPGFb7JSb4OhrNHYt9sfIhcA/hxJW7bdBSMWWphf2GvQetVuA=="],
 
     "@deck.gl/layers": ["@deck.gl/layers@9.2.11", "", { "dependencies": { "@loaders.gl/images": "~4.3.4", "@loaders.gl/schema": "~4.3.4", "@luma.gl/shadertools": "~9.2.6", "@mapbox/tiny-sdf": "^2.0.5", "@math.gl/core": "^4.1.0", "@math.gl/polygon": "^4.1.0", "@math.gl/web-mercator": "^4.1.0", "earcut": "^2.2.4" }, "peerDependencies": { "@deck.gl/core": "~9.2.0", "@loaders.gl/core": "~4.3.4", "@luma.gl/core": "~9.2.6", "@luma.gl/engine": "~9.2.6" } }, "sha512-2FSb0Qa6YR+Rg6GWhYOGTUug3vtZ4uKcFdnrdiJoVXGyibKJMScKZIsivY0r/yQQZsaBjYqty5QuVJvdtEHxSA=="],
+
+    "@deck.gl/mapbox": ["@deck.gl/mapbox@9.2.11", "", { "dependencies": { "@luma.gl/constants": "~9.2.6", "@math.gl/web-mercator": "^4.1.0" }, "peerDependencies": { "@deck.gl/core": "~9.2.0", "@luma.gl/core": "~9.2.6" } }, "sha512-5OaFZgjyA4Vq6WjHUdcEdl0Phi8dwj8hSCErej0NetW90mctdbxwMt0gSbqcvWBowwhyj2QAhH0P2FcITjKG/A=="],
 
     "@deck.gl/react": ["@deck.gl/react@9.2.11", "", { "peerDependencies": { "@deck.gl/core": "~9.2.0", "@deck.gl/widgets": "~9.2.0", "react": ">=16.3.0", "react-dom": ">=16.3.0" } }, "sha512-7xrXlM++3A7cKZdDKSW2/EPT6sc0ob7J24sTPaHe3YlIIFvCZTkQ1U1rAT9cN2gjhkI6XsE+TugUsqhx4TGwHQ=="],
 

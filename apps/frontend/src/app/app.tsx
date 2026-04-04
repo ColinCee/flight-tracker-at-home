@@ -1,11 +1,13 @@
+import { MapView } from '@/components/MapView';
+import { useAircraftData } from '@/hooks/useAircraftData';
+
 export function App() {
+  const { aircraft } = useAircraftData();
+
   return (
     <div className="h-screen w-screen bg-background text-foreground">
       <main className="relative h-full w-full">
-        {/* Map will be rendered here */}
-        <div className="flex h-full items-center justify-center text-muted-foreground">
-          Flight Tracker — Map loading…
-        </div>
+        <MapView aircraft={aircraft} />
       </main>
     </div>
   );
