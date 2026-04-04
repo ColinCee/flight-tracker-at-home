@@ -41,6 +41,17 @@ That runs:
 - `bun install` for the JS workspace
 - `cd apps/backend && uv sync` for the Python backend
 
+## API contract generation
+
+The frontend API client is generated from the FastAPI OpenAPI schema with Orval:
+
+```sh
+bun run generate:api
+```
+
+That exports `apps/backend`'s OpenAPI schema and regenerates the frontend client in
+`apps/frontend/src/api/`.
+
 ## Typical commands
 
 ```sh

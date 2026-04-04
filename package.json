@@ -2,7 +2,10 @@
   "name": "@flight-tracker-at-home/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "export:openapi": "cd apps/backend && uv run python scripts/export_openapi.py",
+    "generate:api": "bun run export:openapi && bunx orval --config orval.config.ts"
+  },
   "private": true,
   "workspaces": [
     "apps/*",
@@ -32,6 +35,7 @@
     "jsdom": "~22.1.0",
     "nx": "22.6.4",
     "postcss": "8.4.38",
+    "orval": "^7.10.0",
     "tailwindcss": "3.4.3",
     "tslib": "^2.3.0",
     "typescript": "~5.9.2",

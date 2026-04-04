@@ -1,0 +1,244 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Flight Tracker at Home API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/aircraft": {
+      "get": {
+        "summary": "Get aircraft",
+        "operationId": "getAircraft",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AircraftResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AircraftResponse": {
+        "properties": {
+          "timestamp": {
+            "type": "integer",
+            "title": "Timestamp"
+          },
+          "cacheAgeSeconds": {
+            "type": "number",
+            "title": "Cacheageseconds"
+          },
+          "aircraft": {
+            "items": {
+              "$ref": "#/components/schemas/AircraftState"
+            },
+            "type": "array",
+            "title": "Aircraft"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/KPIs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp",
+          "cacheAgeSeconds",
+          "aircraft",
+          "kpis"
+        ],
+        "title": "AircraftResponse",
+        "description": "Single response for the main polling endpoint."
+      },
+      "AircraftState": {
+        "properties": {
+          "icao24": {
+            "type": "string",
+            "title": "Icao24"
+          },
+          "callsign": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Callsign"
+          },
+          "originCountry": {
+            "type": "string",
+            "title": "Origincountry"
+          },
+          "latitude": {
+            "type": "number",
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude"
+          },
+          "baroAltitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baroaltitude"
+          },
+          "geoAltitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geoaltitude"
+          },
+          "velocity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Velocity"
+          },
+          "trueTrack": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Truetrack"
+          },
+          "verticalRate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verticalrate"
+          },
+          "onGround": {
+            "type": "boolean",
+            "title": "Onground"
+          },
+          "squawk": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Squawk"
+          },
+          "lastContact": {
+            "type": "integer",
+            "title": "Lastcontact"
+          },
+          "isApproachingLhr": {
+            "type": "boolean",
+            "title": "Isapproachinglhr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "icao24",
+          "callsign",
+          "originCountry",
+          "latitude",
+          "longitude",
+          "baroAltitude",
+          "geoAltitude",
+          "velocity",
+          "trueTrack",
+          "verticalRate",
+          "onGround",
+          "squawk",
+          "lastContact",
+          "isApproachingLhr"
+        ],
+        "title": "AircraftState",
+        "description": "One aircraft's state, transformed from OpenSky's positional array."
+      },
+      "KPIs": {
+        "properties": {
+          "inboundLhr": {
+            "type": "integer",
+            "title": "Inboundlhr"
+          },
+          "throughputLast60Min": {
+            "type": "integer",
+            "title": "Throughputlast60Min"
+          },
+          "trackedAircraft": {
+            "type": "integer",
+            "title": "Trackedaircraft"
+          },
+          "dataFreshnessSeconds": {
+            "type": "number",
+            "title": "Datafreshnessseconds"
+          },
+          "apiHealth": {
+            "type": "string",
+            "enum": [
+              "green",
+              "amber",
+              "red"
+            ],
+            "title": "Apihealth"
+          }
+        },
+        "type": "object",
+        "required": [
+          "inboundLhr",
+          "throughputLast60Min",
+          "trackedAircraft",
+          "dataFreshnessSeconds",
+          "apiHealth"
+        ],
+        "title": "KPIs"
+      }
+    }
+  }
+}

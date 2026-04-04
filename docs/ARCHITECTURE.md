@@ -230,15 +230,19 @@ app.add_middleware(
 
 `localhost:4200` as default ensures local dev works without env vars.
 
-## API Contract Pipeline (Future)
+## API Contract Pipeline
 
 **Pipeline:** Pydantic models → FastAPI auto-generates OpenAPI spec → Orval
-generates typed React Query hooks + Zod validation schemas + TypeScript types.
+generates typed React Query hooks + TypeScript types for the frontend.
 
-**For MVP:** Start with the manually written TypeScript interfaces above and a
-single React Query hook. Introduce Orval code generation when the API stabilises
-(>3 endpoints). The OpenAPI spec is always available at `/docs` (Swagger UI) and
-`/openapi.json`.
+The repo should treat the backend schema as the source of truth. Regenerate the
+frontend client with:
+
+```sh
+bun run generate:api
+```
+
+The OpenAPI spec is always available at `/docs` (Swagger UI) and `/openapi.json`.
 
 ---
 

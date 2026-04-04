@@ -1,5 +1,9 @@
 {
   "name": "@flight-tracker-at-home/frontend",
   "version": "0.0.1",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "@tanstack/react-query": "^5.79.0",
+    "axios": "^1.9.0"
+  }
 }
