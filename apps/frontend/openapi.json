@@ -178,6 +178,28 @@
             "type": "integer",
             "title": "Lastcontact"
           },
+          "positionSource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Positionsource"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
           "isApproachingLhr": {
             "type": "boolean",
             "title": "Isapproachinglhr"
@@ -198,6 +220,8 @@
           "onGround",
           "squawk",
           "lastContact",
+          "positionSource",
+          "category",
           "isApproachingLhr"
         ],
         "title": "AircraftState",

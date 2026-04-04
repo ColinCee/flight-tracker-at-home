@@ -49,6 +49,7 @@ jobs:
       - uses: jdx/mise-action@v2
       - run: mise run setup
       - run: mise run check
+      - run: mise run codegen:check
 
   test:
     name: Test

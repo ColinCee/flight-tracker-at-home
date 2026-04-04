@@ -51,7 +51,7 @@ without changing the frontend contract.
 ### London bounding box
 
 ```
-lamin=51.28  lomin=-0.53  lamax=51.70  lomax=0.23
+lamin=51.20  lomin=-0.90  lamax=51.70  lomax=0.25
 ```
 
 Covers Greater London — Heathrow to City Airport east-west, Croydon to Enfield
@@ -61,8 +61,8 @@ north-south. Area is ~0.32 sq° → 1 credit per request.
 
 An aircraft is classified as "approaching Heathrow" when ALL conditions are met:
 
-- Within **20 km** of LHR (51.4700°N, 0.4543°W)
-- Below **1,200 m** barometric altitude (~4,000 ft)
+- Within **25 km** of LHR (51.4700°N, 0.4543°W)
+- Below **2,000 m** barometric altitude (~6,500 ft)
 - Negative vertical rate (descending)
 - Not on ground
 

@@ -58,6 +58,8 @@ def test_full_aircraft_pipeline(mock_get):
                 800.0,
                 "1234",
                 False,
+                None,
+                "Heavy",
                 0,
             ],
             # Invalid: Missing latitude/longitude (should be dropped by parser)
@@ -78,6 +80,8 @@ def test_full_aircraft_pipeline(mock_get):
                 1000.0,
                 "1234",
                 False,
+                0,
+                6,
                 0,
             ],
         ],
