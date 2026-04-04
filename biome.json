@@ -9,7 +9,9 @@
       "!bun.lock",
       "!apps/frontend/src/api/generated.ts",
       "!apps/frontend/openapi.json",
-      "!apps/frontend/src/app/nx-welcome.tsx"
+      "!apps/frontend/src/app/nx-welcome.tsx",
+      "!.playwright",
+      "!.playwright-cli"
     ]
   },
   "css": {

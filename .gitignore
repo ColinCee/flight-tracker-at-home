@@ -62,3 +62,9 @@ rulesync.local.jsonc
 **/CLAUDE.local.md
 **/AGENTS.local.md
 .claude/memories/
+.playwright-cli/
+.playwright/
+
+# Playwright
+test-results/
+playwright-report/

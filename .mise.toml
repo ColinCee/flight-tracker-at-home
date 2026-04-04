@@ -20,7 +20,7 @@ git config core.hooksPath .githooks
 
 [tasks.dev]
 description = "Run frontend and backend together"
-run = "bun run dev"
+run = "bunx nx run-many -t serve -p backend,frontend --parallel=2"
 
 [tasks."setup:frontend"]
 description = "Install frontend dependencies only"
@@ -71,6 +71,14 @@ run = "cd apps/e2e && bunx playwright test"
 [tasks."test:e2e:ui"]
 description = "Run Playwright tests with interactive UI"
 run = "cd apps/e2e && bunx playwright test --ui"
+
+[tasks.codegen]
+description = "Regenerate frontend API types from backend schema"
+run = """
+cd apps/backend && uv run python scripts/export_openapi.py
+cd {{config_root}}
+bunx orval --config orval.config.ts
+"""
 
 [tasks."rules:sync"]
 description = "Regenerate AI config files from .rulesync/"

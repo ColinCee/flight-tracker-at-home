@@ -57,12 +57,12 @@ mise run test               # Run all tests
 # Codegen & config
 mise run rules:sync         # Regenerate AI config files from .rulesync/
 mise run rules:check        # Verify AI config files are in sync (CI)
-bun run generate:api        # Regenerate frontend types from backend schema
+mise run codegen        # Regenerate frontend types from backend schema
 ```
 
 ## Key Conventions
 
-- **Pydantic is the schema source of truth** — change `apps/backend/src/models.py`, run `bun run generate:api` to update frontend types
+- **Pydantic is the schema source of truth** — change `apps/backend/src/models.py`, run `mise run codegen` to update frontend types
 - **camelCase in JSON** — Pydantic `alias_generator=to_camel` handles this automatically; Python stays `snake_case`, TypeScript gets `camelCase`
 - **Generated code is committed** — `apps/frontend/src/api/generated.ts` and `apps/frontend/openapi.json` are checked in so the frontend builds without the backend running
 - **Single `/aircraft` endpoint** — KPIs are derived from the aircraft list and bundled atomically

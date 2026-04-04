@@ -15,7 +15,10 @@ export async function fetchClient<T>(url: string, config: RequestInit = {}): Pro
     throw new Error(`API error: ${response.status} ${response.statusText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Orval expects { data, status, headers } shape from the fetch client
+  return { data, status: response.status, headers: response.headers } as T;
 }
 
 export default fetchClient;
