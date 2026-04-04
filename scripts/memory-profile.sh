@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Configuration
+SAMPLE_INTERVAL=1
+THRESHOLD_MB=${MEMORY_THRESHOLD_MB:-512}
+REPORT_FILE="${MEMORY_REPORT_FILE:-memory-report.txt}"
+
+# Temp files for peak tracking
+BACKEND_SAMPLES=$(mktemp)
+FRONTEND_SAMPLES=$(mktemp)
+cleanup() {
+  local pids=("${BACKEND_PID:-}" "${FRONTEND_PID:-}" "${BACKEND_SAMPLER_PID:-}" "${FRONTEND_SAMPLER_PID:-}")
+  for pid in "${pids[@]}"; do
+    [[ -n "$pid" ]] && kill "$pid" 2>/dev/null || true
+  done
+  rm -f "$BACKEND_SAMPLES" "$FRONTEND_SAMPLES"
+}
+trap cleanup EXIT
+
+# --- Start servers ---
+echo "Starting backend..."
+cd apps/backend
+uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 &
+BACKEND_PID=$!
+cd - > /dev/null
+
+echo "Starting frontend..."
+bunx nx serve frontend &
+FRONTEND_PID=$!
+
+# --- Wait for servers ---
+echo "Waiting for backend (port 8000)..."
+timeout 30 bash -c 'until curl -sf http://localhost:8000/health > /dev/null 2>&1; do sleep 0.5; done'
+echo "Backend ready (PID: $BACKEND_PID)"
+
+echo "Waiting for frontend (port 4200)..."
+timeout 60 bash -c 'until curl -sf http://localhost:4200 > /dev/null 2>&1; do sleep 0.5; done'
+echo "Frontend ready (PID: $FRONTEND_PID)"
+
+# --- Start memory samplers ---
+sample_rss() {
+  local pid=$1 output=$2
+  while kill -0 "$pid" 2>/dev/null; do
+    # ps reports RSS in KB
+    rss_kb=$(ps -o rss= -p "$pid" 2>/dev/null || echo "0")
+    echo "${rss_kb// /}" >> "$output"
+    sleep "$SAMPLE_INTERVAL"
+  done
+}
+
+sample_rss "$BACKEND_PID" "$BACKEND_SAMPLES" &
+BACKEND_SAMPLER_PID=$!
+
+sample_rss "$FRONTEND_PID" "$FRONTEND_SAMPLES" &
+FRONTEND_SAMPLER_PID=$!
+
+# --- Run e2e tests ---
+echo ""
+echo "Running e2e tests..."
+cd apps/e2e
+# Use SERVERS_EXTERNAL since we started servers ourselves
+TEST_EXIT=0
+SERVERS_EXTERNAL=1 CI=true bunx playwright test --reporter=list 2>&1 || TEST_EXIT=$?
+cd - > /dev/null
+
+# --- Stop samplers and servers ---
+kill "$BACKEND_SAMPLER_PID" "$FRONTEND_SAMPLER_PID" 2>/dev/null || true
+wait "$BACKEND_SAMPLER_PID" "$FRONTEND_SAMPLER_PID" 2>/dev/null || true
+
+# --- Calculate peaks ---
+peak_kb() {
+  local file=$1
+  if [[ -s "$file" ]]; then
+    sort -rn "$file" | head -1
+  else
+    echo "0"
+  fi
+}
+
+BACKEND_PEAK_KB=$(peak_kb "$BACKEND_SAMPLES")
+FRONTEND_PEAK_KB=$(peak_kb "$FRONTEND_SAMPLES")
+BACKEND_PEAK_MB=$(( BACKEND_PEAK_KB / 1024 ))
+FRONTEND_PEAK_MB=$(( FRONTEND_PEAK_KB / 1024 ))
+BACKEND_SAMPLES_COUNT=$(wc -l < "$BACKEND_SAMPLES" | tr -d ' ')
+FRONTEND_SAMPLES_COUNT=$(wc -l < "$FRONTEND_SAMPLES" | tr -d ' ')
+
+# --- Generate report ---
+{
+  echo "=== Memory Profile Report ==="
+  echo "Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "Threshold: ${THRESHOLD_MB} MB"
+  echo ""
+  echo "Backend (uvicorn):"
+  echo "  PID:          $BACKEND_PID"
+  echo "  Peak RSS:     ${BACKEND_PEAK_MB} MB (${BACKEND_PEAK_KB} KB)"
+  echo "  Samples:      $BACKEND_SAMPLES_COUNT"
+  echo "  Status:       $([ "$BACKEND_PEAK_MB" -le "$THRESHOLD_MB" ] && echo "PASS" || echo "FAIL (exceeds ${THRESHOLD_MB} MB)")"
+  echo ""
+  echo "Frontend (vite dev):"
+  echo "  PID:          $FRONTEND_PID"
+  echo "  Peak RSS:     ${FRONTEND_PEAK_MB} MB (${FRONTEND_PEAK_KB} KB)"
+  echo "  Samples:      $FRONTEND_SAMPLES_COUNT"
+  echo "  Status:       $([ "$FRONTEND_PEAK_MB" -le "$THRESHOLD_MB" ] && echo "PASS" || echo "FAIL (exceeds ${THRESHOLD_MB} MB)")"
+  echo ""
+  echo "E2E tests exit code: $TEST_EXIT"
+  echo "=== End Report ==="
+} | tee "$REPORT_FILE"
+
+# --- Threshold check ---
+EXIT_CODE=$TEST_EXIT
+if [[ "$BACKEND_PEAK_MB" -gt "$THRESHOLD_MB" ]]; then
+  echo ""
+  echo "ERROR: Backend peak RSS (${BACKEND_PEAK_MB} MB) exceeds threshold (${THRESHOLD_MB} MB)"
+  EXIT_CODE=1
+fi
+if [[ "$FRONTEND_PEAK_MB" -gt "$THRESHOLD_MB" ]]; then
+  echo ""
+  echo "ERROR: Frontend peak RSS (${FRONTEND_PEAK_MB} MB) exceeds threshold (${THRESHOLD_MB} MB)"
+  EXIT_CODE=1
+fi
+
+exit "$EXIT_CODE"
