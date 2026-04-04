@@ -13,10 +13,10 @@ import httpx
 from src.models import AircraftState
 
 # London Bounding Box from ARCHITECTURE.md
-LAMIN = 51.28
-LOMIN = -0.53
+LAMIN = 51.20
+LOMIN = -0.90
 LAMAX = 51.70
-LOMAX = 0.23
+LOMAX = 0.25
 
 # Heathrow (EGLL) Reference Coordinates
 LHR_LAT = 51.4700

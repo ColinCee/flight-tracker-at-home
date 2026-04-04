@@ -51,7 +51,7 @@ without changing the frontend contract.
 ### London bounding box
 
 ```
-lamin=51.28  lomin=-0.53  lamax=51.70  lomax=0.23
+lamin=51.20  lomin=-0.90  lamax=51.70  lomax=0.25
 ```
 
 Covers Greater London — Heathrow to City Airport east-west, Croydon to Enfield
