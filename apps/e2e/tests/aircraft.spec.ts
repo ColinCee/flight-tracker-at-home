@@ -20,10 +20,12 @@ test.describe('aircraft endpoint', () => {
     const { kpis } = await response.json();
 
     expect(kpis).toMatchObject({
-      inboundLhr: expect.any(Number),
-      throughputLast60Min: expect.any(Number),
       trackedAircraft: expect.any(Number),
-      dataFreshnessSeconds: expect.any(Number),
+      airborneAircraft: expect.any(Number),
+      inboundLhrAircraft: expect.any(Number),
+      climbingAircraft: expect.any(Number),
+      descendingAircraft: expect.any(Number),
+      throughputLast60Min: expect.any(Number),
       apiHealth: expect.stringMatching(/^(green|amber|red)$/),
     });
   });
@@ -32,10 +34,13 @@ test.describe('aircraft endpoint', () => {
     const response = await request.get(`${API}/aircraft`);
     const { kpis } = await response.json();
     const expectedKeys = [
-      'inboundLhr',
-      'throughputLast60Min',
       'trackedAircraft',
-      'dataFreshnessSeconds',
+      'airborneAircraft',
+      'inboundLhrAircraft',
+      'climbingAircraft',
+      'descendingAircraft',
+      'throughputLast60Min',
+      'avgAltitudeFt',
       'apiHealth',
     ];
     expect(Object.keys(kpis).sort()).toEqual(expectedKeys.sort());

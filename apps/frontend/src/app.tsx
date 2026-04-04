@@ -21,7 +21,7 @@ export function App() {
   const handleCloseInspector = useCallback(() => setSelectedIcao24(null), []);
 
   return (
-    <div className="relative h-screen w-screen bg-background text-foreground">
+    <main className="relative h-screen w-screen bg-background text-foreground">
       <MapView
         aircraft={aircraft}
         selectedAircraft={selectedAircraft}
@@ -30,6 +30,6 @@ export function App() {
         onCloseInspector={handleCloseInspector}
       />
       <KpiStrip kpis={kpis} activeFilter={activeFilter} onFilterChange={setActiveFilter} />
-    </div>
+    </main>
   );
 }

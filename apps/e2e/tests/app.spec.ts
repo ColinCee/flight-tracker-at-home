@@ -29,13 +29,13 @@ test.describe('frontend app', () => {
     await page.goto('/');
 
     // Wait for data to load and KPI strip to render
-    const trackedLabel = page.locator('text=Tracked');
+    const trackedLabel = page.getByRole('button', { name: 'Tracked' });
     await expect(trackedLabel).toBeVisible({ timeout: 10_000 });
 
-    // All 5 KPI labels should be present
-    await expect(page.locator('text=Inbound LHR')).toBeVisible();
-    await expect(page.locator('text=Throughput/hr')).toBeVisible();
-    await expect(page.locator('text=Freshness')).toBeVisible();
+    // KPI labels should be present
+    await expect(page.getByRole('button', { name: 'Inbound LHR' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Airborne' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Avg Alt' })).toBeVisible();
   });
 
   test('shows API health indicator', async ({ page }) => {
