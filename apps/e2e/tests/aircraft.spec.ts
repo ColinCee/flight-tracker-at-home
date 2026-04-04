@@ -43,6 +43,7 @@ test.describe('aircraft endpoint', () => {
       'throughputLast60Min',
       'avgAltitudeFt',
       'apiHealth',
+      'apiCreditsRemaining',
     ];
     expect(Object.keys(kpis).sort()).toEqual(expectedKeys.sort());
   });

@@ -104,8 +104,15 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
         <Badge variant="outline" className="text-[11px] uppercase">
           {health.label}
         </Badge>
+        {kpis.apiCreditsRemaining != null && (
+          <span className="font-mono text-[11px] text-muted-foreground">
+            {kpis.apiCreditsRemaining.toLocaleString()}
+          </span>
+        )}
         <span className="pointer-events-none absolute -top-9 left-1/2 z-20 hidden -translate-x-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-[11px] text-zinc-300 shadow-lg group-hover:block">
-          Data source: Live = receiving, Stale = cached, Offline = unavailable
+          {kpis.apiCreditsRemaining != null
+            ? `${kpis.apiCreditsRemaining.toLocaleString()} API credits remaining today`
+            : 'Data source status'}
         </span>
       </div>
     </div>

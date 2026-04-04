@@ -7,7 +7,11 @@ import time
 from collections import deque
 
 from src.models import AircraftResponse, KPIs
-from src.opensky import _token_manager, get_current_airspace_state
+from src.opensky import (
+    _token_manager,
+    get_current_airspace_state,
+    get_remaining_credits,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +107,7 @@ class AirspaceCache:
             throughput_last_60min=len(self.arrival_times),
             avg_altitude_ft=avg_alt,
             api_health="live" if aircraft_list else "offline",
+            api_credits_remaining=get_remaining_credits(),
         )
 
         self.cached_response = AircraftResponse(
