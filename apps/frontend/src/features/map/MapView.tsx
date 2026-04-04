@@ -1,7 +1,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import type { MapStyleDataEvent } from 'maplibre-gl';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Map as MapGL, Popup } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
 import type { AircraftFilter } from '@/shared/filters';
@@ -20,7 +20,7 @@ interface MapViewProps {
   aircraft: AircraftState[];
   selectedAircraft?: AircraftState | null;
   activeFilter?: AircraftFilter;
-  onAircraftClick?: (icao24: string | null) => void;
+  onAircraftClick?: (icao24: string) => void;
   onCloseInspector: () => void;
 }
 
@@ -32,6 +32,15 @@ export function MapView({
   onCloseInspector,
 }: MapViewProps) {
   const [isHoveringAircraft, setIsHoveringAircraft] = useState(false);
+  const deckClickedRef = useRef(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCloseInspector();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onCloseInspector]);
 
   // OpenFreeMap dark style references a "wood-pattern" sprite that's missing
   // from their sprite sheet. Remove the broken layer once the style loads.
@@ -42,19 +51,38 @@ export function MapView({
     }
   }, []);
 
+  // Deck.gl click fires before MapGL click in the same event cycle.
+  // The ref prevents the map handler from dismissing a just-selected aircraft.
+  const handleAircraftClick = useCallback(
+    (icao24: string) => {
+      deckClickedRef.current = true;
+      onAircraftClick?.(icao24);
+    },
+    [onAircraftClick],
+  );
+
+  const handleMapClick = useCallback(() => {
+    if (deckClickedRef.current) {
+      deckClickedRef.current = false;
+      return;
+    }
+    onCloseInspector();
+  }, [onCloseInspector]);
+
   return (
     <MapGL
       initialViewState={INITIAL_VIEW_STATE}
       style={{ width: '100%', height: '100%' }}
       mapStyle={MAP_STYLE}
       cursor={isHoveringAircraft ? 'pointer' : 'grab'}
+      onClick={handleMapClick}
       onStyleData={handleStyleData}
     >
       <AircraftLayer
         aircraft={aircraft}
         selectedIcao24={selectedAircraft?.icao24}
         activeFilter={activeFilter}
-        onAircraftClick={onAircraftClick}
+        onAircraftClick={handleAircraftClick}
         onHoverChange={setIsHoveringAircraft}
       />
       {selectedAircraft && (

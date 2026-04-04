@@ -43,7 +43,7 @@ class KPIs(BaseModel):
     descending_aircraft: int
     throughput_last_60min: int
     avg_altitude_ft: int | None
-    api_health: Literal["green", "amber", "red"]
+    api_health: Literal["live", "stale", "offline"]
 
 
 class AircraftResponse(BaseModel):
@@ -53,5 +53,6 @@ class AircraftResponse(BaseModel):
 
     timestamp: int
     cache_age_seconds: float
+    refresh_interval_ms: int
     aircraft: list[AircraftState]
     kpis: KPIs

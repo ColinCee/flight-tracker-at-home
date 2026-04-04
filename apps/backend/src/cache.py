@@ -2,11 +2,18 @@
 The Python class acts as a Singleton - only one instance of this stace will ever exist.
 """
 
+import logging
 import time
 from collections import deque
 
 from src.models import AircraftResponse, KPIs
-from src.opensky import get_current_airspace_state
+from src.opensky import _token_manager, get_current_airspace_state
+
+logger = logging.getLogger(__name__)
+
+# OpenSky data resolution: 5s authenticated, 10s anonymous
+TTL_AUTHENTICATED = 5.0
+TTL_ANONYMOUS = 10.0
 
 
 class AirspaceCache:
@@ -14,7 +21,6 @@ class AirspaceCache:
         # The core state
         self.cached_response: AircraftResponse | None = None
         self.last_update: float = 0.0
-        self.ttl_seconds: float = 10.0
 
         # Throughput tracking (The "Rolling 60 Min" window)
         self.arrival_times = deque()
@@ -24,14 +30,24 @@ class AirspaceCache:
         """The main entry point for the API route."""
         now = time.time()
         cache_age = now - self.last_update
+        ttl = TTL_AUTHENTICATED if _token_manager.is_authenticated else TTL_ANONYMOUS
 
         # 1. The "Lazy" Check: If data is fresh, return it immediately
-        if self.cached_response and cache_age < self.ttl_seconds:
+        if self.cached_response and cache_age < ttl:
             self.cached_response.cache_age_seconds = round(cache_age, 1)
             return self.cached_response
 
         # 2. Cache is stale: Fetch fresh data (Phases 1-3)
-        aircraft_list = await get_current_airspace_state()
+        try:
+            aircraft_list = await get_current_airspace_state()
+        except Exception as e:
+            logger.warning("OpenSky fetch failed: %s", e)
+            # Serve stale cache instead of losing data
+            if self.cached_response:
+                self.cached_response.cache_age_seconds = round(cache_age, 1)
+                self.cached_response.kpis.api_health = "stale"
+                return self.cached_response
+            aircraft_list = []
 
         # 3. Process KPIs
         now = time.time()  # Update 'now' after the async await finishes
@@ -86,13 +102,15 @@ class AirspaceCache:
             descending_aircraft=descending_count,
             throughput_last_60min=len(self.arrival_times),
             avg_altitude_ft=avg_alt,
-            api_health="green"
-            if aircraft_list
-            else "amber",  # Amber if OpenSky returns empty
+            api_health="live" if aircraft_list else "offline",
         )
 
         self.cached_response = AircraftResponse(
-            timestamp=int(now), cache_age_seconds=0.0, aircraft=aircraft_list, kpis=kpis
+            timestamp=int(now),
+            cache_age_seconds=0.0,
+            refresh_interval_ms=int(ttl * 1000),
+            aircraft=aircraft_list,
+            kpis=kpis,
         )
         self.last_update = now
 

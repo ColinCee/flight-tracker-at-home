@@ -41,10 +41,10 @@ test.describe('frontend app', () => {
   test('shows API health indicator', async ({ page }) => {
     await page.goto('/');
 
-    // Health badge should show green/amber/red
+    // Health badge should show Live/Stale/Offline
     const healthBadge = page.locator('[data-slot="badge"]');
     await expect(healthBadge).toBeVisible({ timeout: 10_000 });
     const text = await healthBadge.textContent();
-    expect(['green', 'amber', 'red']).toContain(text?.trim());
+    expect(['Live', 'Stale', 'Offline']).toContain(text?.trim());
   });
 });

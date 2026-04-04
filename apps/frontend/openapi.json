@@ -54,6 +54,10 @@
             "type": "number",
             "title": "Cacheageseconds"
           },
+          "refreshIntervalMs": {
+            "type": "integer",
+            "title": "Refreshintervalms"
+          },
           "aircraft": {
             "items": {
               "$ref": "#/components/schemas/AircraftState"
@@ -69,6 +73,7 @@
         "required": [
           "timestamp",
           "cacheAgeSeconds",
+          "refreshIntervalMs",
           "aircraft",
           "kpis"
         ],
@@ -267,9 +272,9 @@
           "apiHealth": {
             "type": "string",
             "enum": [
-              "green",
-              "amber",
-              "red"
+              "live",
+              "stale",
+              "offline"
             ],
             "title": "Apihealth"
           }

@@ -2,10 +2,12 @@ import type { KPIs } from '@/api/generated';
 import type { AircraftFilter } from '@/shared/filters';
 import { Badge } from '@/shared/ui/badge';
 
-const HEALTH_COLORS: Record<string, string> = {
-  green: 'bg-emerald-500',
-  amber: 'bg-amber-500',
-  red: 'bg-red-500',
+const FALLBACK_HEALTH = { color: 'bg-red-500', label: 'Offline' } as const;
+
+const HEALTH_LABELS: Record<string, { color: string; label: string }> = {
+  live: { color: 'bg-emerald-500', label: 'Live' },
+  stale: { color: 'bg-amber-500', label: 'Stale' },
+  offline: FALLBACK_HEALTH,
 };
 
 interface KpiStripProps {
@@ -18,19 +20,17 @@ interface KpiItemProps {
   label: string;
   value: string | number;
   tooltip: string;
-  filterId?: AircraftFilter;
-  activeFilter?: AircraftFilter;
-  onFilterChange?: (filter: AircraftFilter) => void;
+  isActive?: boolean;
+  onClick?: () => void;
 }
 
-function KpiItem({ label, value, tooltip, filterId, activeFilter, onFilterChange }: KpiItemProps) {
-  const isClickable = filterId != null;
-  const isActive = isClickable && activeFilter === filterId;
+function KpiItem({ label, value, tooltip, isActive, onClick }: KpiItemProps) {
+  const isClickable = onClick != null;
 
   return (
     <button
       type="button"
-      onClick={isClickable ? () => onFilterChange?.(isActive ? null : filterId) : undefined}
+      onClick={onClick}
       className={`group relative flex flex-col items-center gap-0.5 rounded-md px-3 py-1 transition-colors ${
         isClickable ? 'cursor-pointer hover:bg-zinc-700/50' : 'cursor-default'
       } ${isActive ? 'bg-zinc-700/70 ring-1 ring-zinc-500' : ''}`}
@@ -47,41 +47,50 @@ function KpiItem({ label, value, tooltip, filterId, activeFilter, onFilterChange
 export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) {
   if (!kpis) return null;
 
-  const healthColor = HEALTH_COLORS[kpis.apiHealth] ?? HEALTH_COLORS.red;
+  const toggle = (id: AircraftFilter) => () => onFilterChange(activeFilter === id ? null : id);
+
+  const health = HEALTH_LABELS[kpis.apiHealth] ?? FALLBACK_HEALTH;
 
   return (
     <div className="pointer-events-auto absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-zinc-600 bg-background/95 px-3 py-1.5 shadow-lg">
       <KpiItem
         label="Tracked"
         value={kpis.trackedAircraft}
-        tooltip="Total aircraft tracked in the London area"
+        tooltip="Total aircraft tracked — click to show all"
+        isActive={activeFilter === null}
+        onClick={() => onFilterChange(null)}
       />
       <Separator />
       <KpiItem
         label="Airborne"
         value={kpis.airborneAircraft}
         tooltip="Aircraft currently in flight — click to highlight"
-        filterId="airborne"
-        activeFilter={activeFilter}
-        onFilterChange={onFilterChange}
+        isActive={activeFilter === 'airborne'}
+        onClick={toggle('airborne')}
       />
       <Separator />
       <KpiItem
         label="Inbound LHR"
         value={kpis.inboundLhrAircraft}
-        tooltip="Aircraft approaching London Heathrow — click to highlight"
-        filterId="inbound-lhr"
-        activeFilter={activeFilter}
-        onFilterChange={onFilterChange}
+        tooltip="Aircraft approaching Heathrow — click to highlight"
+        isActive={activeFilter === 'inbound-lhr'}
+        onClick={toggle('inbound-lhr')}
       />
       <Separator />
       <KpiItem
         label="Climbing"
-        value={`${kpis.climbingAircraft}↑ ${kpis.descendingAircraft}↓`}
-        tooltip="Aircraft gaining / losing altitude — click to highlight climbing"
-        filterId="climbing"
-        activeFilter={activeFilter}
-        onFilterChange={onFilterChange}
+        value={kpis.climbingAircraft}
+        tooltip="Aircraft gaining altitude — click to highlight"
+        isActive={activeFilter === 'climbing'}
+        onClick={toggle('climbing')}
+      />
+      <Separator />
+      <KpiItem
+        label="Descending"
+        value={kpis.descendingAircraft}
+        tooltip="Aircraft losing altitude — click to highlight"
+        isActive={activeFilter === 'descending'}
+        onClick={toggle('descending')}
       />
       <Separator />
       <KpiItem
@@ -91,12 +100,12 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
       />
       <Separator />
       <div className="group relative flex items-center gap-1.5 px-3">
-        <span className={`inline-block h-2.5 w-2.5 rounded-full ${healthColor}`} />
+        <span className={`inline-block h-2.5 w-2.5 rounded-full ${health.color}`} />
         <Badge variant="outline" className="text-[11px] uppercase">
-          {kpis.apiHealth}
+          {health.label}
         </Badge>
         <span className="pointer-events-none absolute -top-9 left-1/2 z-20 hidden -translate-x-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-[11px] text-zinc-300 shadow-lg group-hover:block">
-          API connection: green = ok, amber = degraded, red = down
+          Data source: Live = receiving, Stale = cached, Offline = unavailable
         </span>
       </div>
     </div>
