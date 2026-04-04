@@ -10,9 +10,12 @@ def test_health():
     assert response.json() == {"status": "ok"}
 
 
-def test_aircraft_returns_empty_stub():
+def test_aircraft_returns_mock_data():
     response = client.get("/aircraft")
     assert response.status_code == 200
     data = response.json()
-    assert data["aircraft"] == []
+    assert len(data["aircraft"]) > 0
     assert data["kpis"]["apiHealth"] == "green"
+    assert data["kpis"]["trackedAircraft"] == len(data["aircraft"])
+    # Verify at least one aircraft is approaching LHR
+    assert any(a["isApproachingLhr"] for a in data["aircraft"])

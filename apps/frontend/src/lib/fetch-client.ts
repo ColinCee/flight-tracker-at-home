@@ -1,0 +1,21 @@
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
+
+export async function fetchClient<T>(url: string, config: RequestInit = {}): Promise<T> {
+  const fullUrl = `${BASE_URL}${url}`;
+
+  const response = await fetch(fullUrl, {
+    ...config,
+    headers: {
+      'Content-Type': 'application/json',
+      ...config.headers,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export default fetchClient;

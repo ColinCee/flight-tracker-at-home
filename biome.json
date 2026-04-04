@@ -12,6 +12,12 @@
       "!apps/frontend/src/app/nx-welcome.tsx"
     ]
   },
+  "css": {
+    "parser": {
+      "cssModules": true,
+      "tailwindDirectives": true
+    }
+  },
   "formatter": {
     "indentStyle": "space",
     "indentWidth": 2,
