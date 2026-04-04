@@ -34,9 +34,9 @@ run = "cd apps/backend && uv sync"
 description = "Format all code (ruff + biome)"
 run = """
 uvx ruff format apps/backend/
-uvx ruff check --fix apps/backend/
+uvx ruff check --fix apps/backend/ || true
 bunx @biomejs/biome format --write .
-bunx @biomejs/biome lint --fix .
+bunx @biomejs/biome lint --fix . || true
 """
 
 [tasks.check]
