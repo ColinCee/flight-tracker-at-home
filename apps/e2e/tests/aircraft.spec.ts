@@ -1,21 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from '@playwright/test';
 
-const API = "http://localhost:8000";
+const API = 'http://localhost:8000';
 
-test.describe("aircraft endpoint", () => {
-  test("returns valid aircraft response shape", async ({ request }) => {
+test.describe('aircraft endpoint', () => {
+  test('returns valid aircraft response shape', async ({ request }) => {
     const response = await request.get(`${API}/aircraft`);
     expect(response.ok()).toBe(true);
 
     const data = await response.json();
-    expect(data).toHaveProperty("timestamp");
-    expect(data).toHaveProperty("cacheAgeSeconds");
-    expect(data).toHaveProperty("aircraft");
-    expect(data).toHaveProperty("kpis");
+    expect(data).toHaveProperty('timestamp');
+    expect(data).toHaveProperty('cacheAgeSeconds');
+    expect(data).toHaveProperty('aircraft');
+    expect(data).toHaveProperty('kpis');
     expect(Array.isArray(data.aircraft)).toBe(true);
   });
 
-  test("kpis have expected fields and types", async ({ request }) => {
+  test('kpis have expected fields and types', async ({ request }) => {
     const response = await request.get(`${API}/aircraft`);
     const { kpis } = await response.json();
 
@@ -28,31 +28,29 @@ test.describe("aircraft endpoint", () => {
     });
   });
 
-  test("kpis contain no extra unexpected fields", async ({ request }) => {
+  test('kpis contain no extra unexpected fields', async ({ request }) => {
     const response = await request.get(`${API}/aircraft`);
     const { kpis } = await response.json();
     const expectedKeys = [
-      "inboundLhr",
-      "throughputLast60Min",
-      "trackedAircraft",
-      "dataFreshnessSeconds",
-      "apiHealth",
+      'inboundLhr',
+      'throughputLast60Min',
+      'trackedAircraft',
+      'dataFreshnessSeconds',
+      'apiHealth',
     ];
     expect(Object.keys(kpis).sort()).toEqual(expectedKeys.sort());
   });
 
-  test("response uses camelCase field names", async ({ request }) => {
+  test('response uses camelCase field names', async ({ request }) => {
     const response = await request.get(`${API}/aircraft`);
     const data = await response.json();
 
     // Top-level fields should be camelCase
-    expect(data).toHaveProperty("cacheAgeSeconds");
-    expect(data).not.toHaveProperty("cache_age_seconds");
+    expect(data).toHaveProperty('cacheAgeSeconds');
+    expect(data).not.toHaveProperty('cache_age_seconds');
   });
 
-  test("aircraft array items have correct shape when present", async ({
-    request,
-  }) => {
+  test('aircraft array items have correct shape when present', async ({ request }) => {
     const response = await request.get(`${API}/aircraft`);
     const { aircraft } = await response.json();
 
@@ -70,19 +68,17 @@ test.describe("aircraft endpoint", () => {
       });
 
       // Nullable fields should be present (even if null)
-      expect(plane).toHaveProperty("callsign");
-      expect(plane).toHaveProperty("baroAltitude");
-      expect(plane).toHaveProperty("geoAltitude");
-      expect(plane).toHaveProperty("velocity");
-      expect(plane).toHaveProperty("trueTrack");
-      expect(plane).toHaveProperty("verticalRate");
-      expect(plane).toHaveProperty("squawk");
+      expect(plane).toHaveProperty('callsign');
+      expect(plane).toHaveProperty('baroAltitude');
+      expect(plane).toHaveProperty('geoAltitude');
+      expect(plane).toHaveProperty('velocity');
+      expect(plane).toHaveProperty('trueTrack');
+      expect(plane).toHaveProperty('verticalRate');
+      expect(plane).toHaveProperty('squawk');
     }
   });
 
-  test("timestamp and cacheAgeSeconds are non-negative numbers", async ({
-    request,
-  }) => {
+  test('timestamp and cacheAgeSeconds are non-negative numbers', async ({ request }) => {
     const response = await request.get(`${API}/aircraft`);
     const data = await response.json();
 
@@ -90,9 +86,7 @@ test.describe("aircraft endpoint", () => {
     expect(data.cacheAgeSeconds).toBeGreaterThanOrEqual(0);
   });
 
-  test("trackedAircraft matches aircraft array length", async ({
-    request,
-  }) => {
+  test('trackedAircraft matches aircraft array length', async ({ request }) => {
     const response = await request.get(`${API}/aircraft`);
     const data = await response.json();
 
