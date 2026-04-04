@@ -1,26 +1,14 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
-export async function fetchClient<T>(config: {
-  url: string;
-  method: string;
-  params?: Record<string, string>;
-  data?: unknown;
-  headers?: Record<string, string>;
-  signal?: AbortSignal;
-}): Promise<T> {
-  const { url, method, params, data, headers, signal } = config;
-
-  const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
-  const fullUrl = `${BASE_URL}${url}${queryString}`;
+export async function fetchClient<T>(url: string, config: RequestInit = {}): Promise<T> {
+  const fullUrl = `${BASE_URL}${url}`;
 
   const response = await fetch(fullUrl, {
-    method,
+    ...config,
     headers: {
       'Content-Type': 'application/json',
-      ...headers,
+      ...config.headers,
     },
-    body: data ? JSON.stringify(data) : undefined,
-    signal,
   });
 
   if (!response.ok) {

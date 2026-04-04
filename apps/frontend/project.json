@@ -18,7 +18,7 @@
       "options": { "cwd": "apps/frontend" }
     },
     "typecheck": {
-      "command": "tsc --build --emitDeclarationOnly",
+      "command": "tsc --build",
       "options": { "cwd": "apps/frontend" }
     }
   }
