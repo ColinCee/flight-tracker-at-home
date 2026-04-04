@@ -184,25 +184,11 @@
             "title": "Lastcontact"
           },
           "positionSource": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Positionsource"
           },
           "category": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Category"
           },
           "isApproachingLhr": {

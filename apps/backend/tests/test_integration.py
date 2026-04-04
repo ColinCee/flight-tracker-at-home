@@ -43,7 +43,7 @@ def test_full_aircraft_pipeline(mock_get):
             # Valid: Close to LHR, descending, runway 09 heading
             [
                 "111111",
-                "BAW1    ",
+                "BAW1",
                 "UK",
                 0,
                 0,
@@ -58,14 +58,13 @@ def test_full_aircraft_pipeline(mock_get):
                 800.0,
                 "1234",
                 False,
-                None,
-                "Heavy",
                 0,
+                6,
             ],
             # Invalid: Missing latitude/longitude (should be dropped by parser)
             [
                 "222222",
-                "GHOST   ",
+                "GHOST",
                 "UK",
                 0,
                 0,
@@ -80,8 +79,6 @@ def test_full_aircraft_pipeline(mock_get):
                 1000.0,
                 "1234",
                 False,
-                0,
-                6,
                 0,
             ],
         ],
@@ -111,3 +108,7 @@ def test_full_aircraft_pipeline(mock_get):
     assert baw1["icao24"] == "111111"
     assert baw1["callsign"] == "BAW1"  # Whitespace stripped
     assert baw1["isApproachingLhr"] is True  # ATC logic applied successfully
+
+    # Verify the integer-to-string mapping logic
+    assert baw1["positionSource"] == "ADS-B"
+    assert baw1["category"] == "Heavy"
