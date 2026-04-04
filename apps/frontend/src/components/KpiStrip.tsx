@@ -13,9 +13,9 @@ interface KpiStripProps {
 
 function KpiItem({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex flex-col items-center gap-0.5 px-3">
-      <span className="font-mono text-sm font-semibold text-foreground">{value}</span>
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+    <div className="flex flex-col items-center gap-0.5 px-4">
+      <span className="font-mono text-base font-semibold text-foreground">{value}</span>
+      <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -26,7 +26,7 @@ export function KpiStrip({ kpis }: KpiStripProps) {
   const healthColor = HEALTH_COLORS[kpis.apiHealth] ?? HEALTH_COLORS.red;
 
   return (
-    <div className="pointer-events-auto absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-border bg-background/80 px-3 py-1.5 shadow-lg backdrop-blur-sm">
+    <div className="pointer-events-auto absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-zinc-600 bg-background/95 px-4 py-2.5 shadow-lg">
       <KpiItem label="Tracked" value={kpis.trackedAircraft} />
       <Separator />
       <KpiItem label="Inbound LHR" value={kpis.inboundLhr} />
@@ -35,9 +35,9 @@ export function KpiStrip({ kpis }: KpiStripProps) {
       <Separator />
       <KpiItem label="Freshness" value={`${kpis.dataFreshnessSeconds}s`} />
       <Separator />
-      <div className="flex items-center gap-1.5 px-3">
-        <span className={`inline-block h-2 w-2 rounded-full ${healthColor}`} />
-        <Badge variant="outline" className="text-[10px] uppercase">
+      <div className="flex items-center gap-1.5 px-4">
+        <span className={`inline-block h-2.5 w-2.5 rounded-full ${healthColor}`} />
+        <Badge variant="outline" className="text-[11px] uppercase">
           {kpis.apiHealth}
         </Badge>
       </div>
@@ -46,5 +46,5 @@ export function KpiStrip({ kpis }: KpiStripProps) {
 }
 
 function Separator() {
-  return <div className="h-5 w-px bg-border" />;
+  return <div className="h-6 w-px bg-zinc-600" />;
 }
