@@ -11,11 +11,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  format:
+    name: Auto-format
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: jdx/mise-action@v2
+      - run: bun install --frozen-lockfile
+      - run: cd apps/backend && uv sync
+      - run: mise run format
+      - name: Commit formatting fixes
+        run: |
+          git config user.name "ci-format-bot"
+          git config user.email "ci-format-bot@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "style: auto-format"
+            git push
+          else
+            echo "No formatting changes needed"
+          fi
+
   check:
     name: Lint, Format & Types
+    needs: [format]
+    if: always() && !cancelled()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
       - uses: jdx/mise-action@v2
       - run: bun install --frozen-lockfile
       - run: cd apps/backend && uv sync
@@ -29,6 +60,17 @@ jobs:
       - uses: jdx/mise-action@v2
       - run: cd apps/backend && uv sync
       - run: mise run test
+
+  test-e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: bun install --frozen-lockfile
+      - run: cd apps/backend && uv sync
+      - run: bunx playwright install chromium
+      - run: mise run test:e2e
 
   rules-sync:
     name: Rules Sync Check

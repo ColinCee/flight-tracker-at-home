@@ -11,10 +11,11 @@ python.uv_venv_auto = true
 VIRTUAL_ENV = "{{config_root}}/apps/backend/.venv"
 
 [tasks.setup]
-description = "Install all dependencies (JS + Python)"
+description = "Install all dependencies (JS + Python) and git hooks"
 run = """
 bun install
 cd apps/backend && uv sync
+git config core.hooksPath .githooks
 """
 
 [tasks.dev]
@@ -33,9 +34,9 @@ run = "cd apps/backend && uv sync"
 description = "Format all code (ruff + biome)"
 run = """
 uvx ruff format apps/backend/
-uvx ruff check --fix apps/backend/
+uvx ruff check --fix apps/backend/ || true
 bunx @biomejs/biome format --write .
-bunx @biomejs/biome lint --fix .
+bunx @biomejs/biome lint --fix . || true
 """
 
 [tasks.check]

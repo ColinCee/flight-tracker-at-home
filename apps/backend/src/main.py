@@ -1,21 +1,30 @@
+"""Flight Tracker at Home API"""
+
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.fixtures import build_mock_response
+from src.cache import airspace_cache
 from src.models import AircraftResponse
 
 app = FastAPI(title="Flight Tracker at Home API")
 
+# Setup CORS so the React frontend can talk to this backend
+# Defaults to localhost:4200 for local development
+allowed_origins = [os.getenv("CORS_ORIGINS", "http://localhost:4200")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],
+    allow_origins=allowed_origins,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
 
 
-@app.get("/health", operation_id="getHealth", summary="Health")
+@app.get("/health", operation_id="getHealth", summary="Health Check")
 async def health():
+    """Simple health check for Render deployment."""
     return {"status": "ok"}
 
 
@@ -23,7 +32,13 @@ async def health():
     "/aircraft",
     response_model=AircraftResponse,
     operation_id="getAircraft",
-    summary="Get aircraft",
+    summary="Get Aircraft State",
 )
 async def get_aircraft() -> AircraftResponse:
-    return build_mock_response()
+    """
+    Main polling endpoint.
+    Fetches the lazy-cached state, abstracting the OpenSky API rate limits.
+    """
+    # This single call handles the 10s TTL, OpenSky fetching, and KPI math.
+    state = await airspace_cache.get_state()
+    return state

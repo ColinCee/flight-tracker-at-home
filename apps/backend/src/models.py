@@ -28,6 +28,8 @@ class AircraftState(BaseModel):
     on_ground: bool
     squawk: str | None
     last_contact: int
+    # position_source: str | None
+    # category: str | None
     is_approaching_lhr: bool
 
 
