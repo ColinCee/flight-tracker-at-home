@@ -1,7 +1,7 @@
-<!-- AUTO-GENERATED from RULES.md — do not edit directly. Run: mise run rules:sync -->
-
 # Project Rules — Flight Tracker at Home
 
+> **This is the single source of truth for AI assistant context.**
+> Run `mise run rules:sync` to generate tool-specific files (CLAUDE.md, .cursorrules, etc.)
 
 ## What is this?
 

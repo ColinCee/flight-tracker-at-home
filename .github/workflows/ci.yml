@@ -27,8 +27,8 @@ jobs:
       - name: Ruff format check
         run: uvx ruff format --check apps/backend/
 
-      - name: Prettier check
-        run: bunx prettier --check .
+      - name: Biome check
+        run: bunx @biomejs/biome check .
 
   typecheck:
     name: Type Check
@@ -62,3 +62,18 @@ jobs:
 
       - name: pytest
         run: cd apps/backend && uv run pytest -v
+
+  rules-sync:
+    name: Rules Sync Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check AI config files are in sync
+        run: |
+          bash scripts/sync-rules.sh
+          if ! git diff --quiet CLAUDE.md .cursorrules .github/copilot-instructions.md; then
+            echo "::error::AI config files are out of sync with RULES.md. Run: mise run rules:sync"
+            git diff --stat CLAUDE.md .cursorrules .github/copilot-instructions.md
+            exit 1
+          fi
