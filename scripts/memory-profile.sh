@@ -95,10 +95,10 @@ BACKEND_SOAK_START_KB=$(tail -1 "$BACKEND_SAMPLES" 2>/dev/null || echo "0")
 FRONTEND_SOAK_START_KB=$(tail -1 "$FRONTEND_SAMPLES" 2>/dev/null || echo "0")
 
 # Run the browser memory spec — it opens the page in Chromium and samples JS heap
-BROWSER_MEMORY_JSON="$REPO_ROOT/apps/e2e/browser-memory.json"
-cd apps/e2e
-SERVERS_EXTERNAL=1 CI=true MEMORY_SOAK_SECONDS="$SOAK_DURATION" MEMORY_REPORT_DIR="$REPO_ROOT/apps/e2e" \
-  bunx playwright test profiling/memory.spec.ts --reporter=list 2>&1 || true
+BROWSER_MEMORY_JSON="$REPO_ROOT/apps/e2e/profiling/browser-memory.json"
+cd apps/e2e/profiling
+SERVERS_EXTERNAL=1 CI=true MEMORY_SOAK_SECONDS="$SOAK_DURATION" MEMORY_REPORT_DIR="$REPO_ROOT/apps/e2e/profiling" \
+  bunx playwright test --config playwright.config.ts --reporter=list 2>&1 || true
 cd - > /dev/null
 
 # Capture server RSS at end of soak
@@ -106,12 +106,12 @@ BACKEND_SOAK_END_KB=$(tail -1 "$BACKEND_SAMPLES" 2>/dev/null || echo "0")
 FRONTEND_SOAK_END_KB=$(tail -1 "$FRONTEND_SAMPLES" 2>/dev/null || echo "0")
 
 # Parse browser memory JSON (if it was produced)
-if [[ -f "$BROWSER_MEMORY_JSON" ]]; then
-  BROWSER_PEAK_MB=$(python3 -c "import json; print(json.load(open('$BROWSER_MEMORY_JSON'))['peak_mb'])")
-  BROWSER_START_MB=$(python3 -c "import json; print(json.load(open('$BROWSER_MEMORY_JSON'))['start_mb'])")
-  BROWSER_END_MB=$(python3 -c "import json; print(json.load(open('$BROWSER_MEMORY_JSON'))['end_mb'])")
-  BROWSER_DELTA_MB=$(python3 -c "import json; print(json.load(open('$BROWSER_MEMORY_JSON'))['delta_mb'])")
-  BROWSER_SAMPLES=$(python3 -c "import json; print(json.load(open('$BROWSER_MEMORY_JSON'))['samples'])")
+if [[ -f "${BROWSER_MEMORY_JSON}" ]]; then
+  BROWSER_PEAK_MB=$(python3 -c "import json; print(json.load(open('${BROWSER_MEMORY_JSON}'))['peak_mb'])")
+  BROWSER_START_MB=$(python3 -c "import json; print(json.load(open('${BROWSER_MEMORY_JSON}'))['start_mb'])")
+  BROWSER_END_MB=$(python3 -c "import json; print(json.load(open('${BROWSER_MEMORY_JSON}'))['end_mb'])")
+  BROWSER_DELTA_MB=$(python3 -c "import json; print(json.load(open('${BROWSER_MEMORY_JSON}'))['delta_mb'])")
+  BROWSER_SAMPLES=$(python3 -c "import json; print(json.load(open('${BROWSER_MEMORY_JSON}'))['samples'])")
 else
   BROWSER_PEAK_MB=0
   BROWSER_START_MB=0
