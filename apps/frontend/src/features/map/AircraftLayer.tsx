@@ -1,7 +1,7 @@
 import type { PickingInfo } from '@deck.gl/core';
 import { IconLayer } from '@deck.gl/layers';
 import { MapboxOverlay, type MapboxOverlayProps } from '@deck.gl/mapbox';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useControl } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
 import { type AircraftFilter, matchesFilter } from '@/shared/filters';
@@ -18,8 +18,14 @@ const COLOR_DEFAULT: [number, number, number, number] = [255, 255, 255, 200];
 const COLOR_APPROACHING: [number, number, number, number] = [255, 170, 0, 230];
 const COLOR_SELECTED: [number, number, number, number] = [100, 200, 255, 255];
 const COLOR_DIMMED: [number, number, number, number] = [255, 255, 255, 40];
+const PICKING_RADIUS = 5;
 
-function DeckGLOverlay(props: MapboxOverlayProps) {
+function DeckGLOverlay(
+  props: MapboxOverlayProps & {
+    getCursor?: (state: { isDragging: boolean; isHovering: boolean }) => string;
+    pickingRadius?: number;
+  },
+) {
   const overlay = useControl(() => new MapboxOverlay(props));
   overlay.setProps(props);
   return null;
@@ -38,11 +44,26 @@ export function AircraftLayer({
   activeFilter,
   onAircraftClick,
 }: AircraftLayerProps) {
+  const [hoveredIcao24, setHoveredIcao24] = useState<string | null>(null);
+
   const handleClick = useCallback(
     (info: PickingInfo<AircraftState>) => {
       onAircraftClick?.(info.object?.icao24 ?? null);
     },
     [onAircraftClick],
+  );
+
+  const handleHover = useCallback((info: PickingInfo<AircraftState>) => {
+    setHoveredIcao24(info.object?.icao24 ?? null);
+  }, []);
+
+  const getCursor = useCallback(
+    ({ isDragging, isHovering }: { isDragging: boolean; isHovering: boolean }) => {
+      if (isDragging) return 'grabbing';
+      if (isHovering) return 'pointer';
+      return 'grab';
+    },
+    [],
   );
 
   const layers = useMemo(
@@ -52,7 +73,11 @@ export function AircraftLayer({
         data: aircraft,
         getIcon: () => AIRCRAFT_ICON,
         getPosition: (d) => [d.longitude, d.latitude],
-        getSize: (d) => (d.icao24 === selectedIcao24 ? 30 : 24),
+        getSize: (d) => {
+          if (d.icao24 === selectedIcao24) return 30;
+          if (d.icao24 === hoveredIcao24) return 27;
+          return 24;
+        },
         getAngle: (d) => -(d.trueTrack ?? 0),
         getColor: (d) => {
           if (d.icao24 === selectedIcao24) return COLOR_SELECTED;
@@ -62,15 +87,17 @@ export function AircraftLayer({
         sizeScale: 1,
         sizeUnits: 'pixels',
         pickable: true,
+        autoHighlight: true,
         onClick: handleClick,
+        onHover: handleHover,
         updateTriggers: {
-          getSize: selectedIcao24,
+          getSize: [selectedIcao24, hoveredIcao24],
           getColor: [selectedIcao24, activeFilter],
         },
       }),
     ],
-    [aircraft, selectedIcao24, activeFilter, handleClick],
+    [aircraft, selectedIcao24, hoveredIcao24, activeFilter, handleClick, handleHover],
   );
 
-  return <DeckGLOverlay layers={layers} />;
+  return <DeckGLOverlay layers={layers} getCursor={getCursor} pickingRadius={PICKING_RADIUS} />;
 }
