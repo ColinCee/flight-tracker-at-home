@@ -14,13 +14,7 @@ import type {
   UseQueryResult
 } from '@tanstack/react-query';
 
-import * as axios from 'axios';
-import type {
-  AxiosError,
-  AxiosRequestConfig,
-  AxiosResponse
-} from 'axios';
-
+import { fetchClient } from '../lib/fetch-client';
 /**
  * Single response for the main polling endpoint.
  */
@@ -87,15 +81,17 @@ export interface KPIs {
  * @summary Health
  */
 export const getHealth = (
-     options?: AxiosRequestConfig
- ): Promise<AxiosResponse<unknown>> => {
     
-    
-    return axios.default.get(
-      `/health`,options
-    );
-  }
-
+ signal?: AbortSignal
+) => {
+      
+      
+      return fetchClient<unknown>(
+      {url: `/health`, method: 'GET', signal
+    },
+      );
+    }
+  
 
 
 
@@ -106,16 +102,16 @@ export const getGetHealthQueryKey = () => {
     }
 
     
-export const getGetHealthQueryOptions = <TData = Awaited<ReturnType<typeof getHealth>>, TError = AxiosError<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>, axios?: AxiosRequestConfig}
+export const getGetHealthQueryOptions = <TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>, }
 ) => {
 
-const {query: queryOptions, axios: axiosOptions} = options ?? {};
+const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetHealthQueryKey();
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHealth>>> = ({ signal }) => getHealth({ signal, ...axiosOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHealth>>> = ({ signal }) => getHealth(signal);
 
       
 
@@ -125,15 +121,15 @@ const {query: queryOptions, axios: axiosOptions} = options ?? {};
 }
 
 export type GetHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getHealth>>>
-export type GetHealthQueryError = AxiosError<unknown>
+export type GetHealthQueryError = unknown
 
 
 /**
  * @summary Health
  */
 
-export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = AxiosError<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>, axios?: AxiosRequestConfig}
+export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>, }
   
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
@@ -154,15 +150,17 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
  * @summary Get aircraft
  */
 export const getAircraft = (
-     options?: AxiosRequestConfig
- ): Promise<AxiosResponse<AircraftResponse>> => {
     
-    
-    return axios.default.get(
-      `/aircraft`,options
-    );
-  }
-
+ signal?: AbortSignal
+) => {
+      
+      
+      return fetchClient<AircraftResponse>(
+      {url: `/aircraft`, method: 'GET', signal
+    },
+      );
+    }
+  
 
 
 
@@ -173,16 +171,16 @@ export const getGetAircraftQueryKey = () => {
     }
 
     
-export const getGetAircraftQueryOptions = <TData = Awaited<ReturnType<typeof getAircraft>>, TError = AxiosError<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAircraft>>, TError, TData>, axios?: AxiosRequestConfig}
+export const getGetAircraftQueryOptions = <TData = Awaited<ReturnType<typeof getAircraft>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAircraft>>, TError, TData>, }
 ) => {
 
-const {query: queryOptions, axios: axiosOptions} = options ?? {};
+const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetAircraftQueryKey();
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAircraft>>> = ({ signal }) => getAircraft({ signal, ...axiosOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAircraft>>> = ({ signal }) => getAircraft(signal);
 
       
 
@@ -192,15 +190,15 @@ const {query: queryOptions, axios: axiosOptions} = options ?? {};
 }
 
 export type GetAircraftQueryResult = NonNullable<Awaited<ReturnType<typeof getAircraft>>>
-export type GetAircraftQueryError = AxiosError<unknown>
+export type GetAircraftQueryError = unknown
 
 
 /**
  * @summary Get aircraft
  */
 
-export function useGetAircraft<TData = Awaited<ReturnType<typeof getAircraft>>, TError = AxiosError<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAircraft>>, TError, TData>, axios?: AxiosRequestConfig}
+export function useGetAircraft<TData = Awaited<ReturnType<typeof getAircraft>>, TError = unknown>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAircraft>>, TError, TData>, }
   
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 

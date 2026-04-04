@@ -11,6 +11,10 @@ export default defineConfig({
       mode: 'single',
       clean: true,
       override: {
+        mutator: {
+          path: './apps/frontend/src/lib/fetch-client.ts',
+          name: 'fetchClient',
+        },
         query: {
           useQuery: true,
           useInfinite: false,
