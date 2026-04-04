@@ -1,9 +1,7 @@
-import { useMemo } from 'react';
-import type { AircraftState, KPIs } from '@/api/generated';
+import type { KPIs } from '@/api/generated';
 import { Badge } from '@/components/ui/badge';
-import { computeDerivedStats, type DerivedStats } from '@/lib/derived-stats';
-
-export type AircraftFilter = 'airborne' | 'inbound-lhr' | 'climbing' | 'descending' | null;
+import type { DerivedStats } from '@/lib/derived-stats';
+import type { AircraftFilter } from '@/lib/filters';
 
 const HEALTH_COLORS: Record<string, string> = {
   green: 'bg-emerald-500',
@@ -13,7 +11,7 @@ const HEALTH_COLORS: Record<string, string> = {
 
 interface KpiStripProps {
   kpis: KPIs | null;
-  aircraft: AircraftState[];
+  derived: DerivedStats;
   activeFilter: AircraftFilter;
   onFilterChange: (filter: AircraftFilter) => void;
 }
@@ -48,9 +46,7 @@ function KpiItem({ label, value, tooltip, filterId, activeFilter, onFilterChange
   );
 }
 
-export function KpiStrip({ kpis, aircraft, activeFilter, onFilterChange }: KpiStripProps) {
-  const derived: DerivedStats = useMemo(() => computeDerivedStats(aircraft), [aircraft]);
-
+export function KpiStrip({ kpis, derived, activeFilter, onFilterChange }: KpiStripProps) {
   if (!kpis) return null;
 
   const healthColor = HEALTH_COLORS[kpis.apiHealth] ?? HEALTH_COLORS.red;

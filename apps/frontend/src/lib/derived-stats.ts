@@ -1,4 +1,5 @@
 import type { AircraftState } from '@/api/generated';
+import { METRES_TO_FEET } from './units';
 
 export interface DerivedStats {
   airborne: number;
@@ -8,7 +9,6 @@ export interface DerivedStats {
   avgAltitudeFt: number | null;
 }
 
-const METRES_TO_FEET = 3.28084;
 const VERTICAL_RATE_THRESHOLD = 1; // m/s
 
 export function computeDerivedStats(aircraft: AircraftState[]): DerivedStats {

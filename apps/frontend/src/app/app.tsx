@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
-import { type AircraftFilter, KpiStrip } from '@/components/KpiStrip';
+import { KpiStrip } from '@/components/KpiStrip';
 import { MapView } from '@/components/MapView';
 import { useAircraftData } from '@/hooks/useAircraftData';
+import { computeDerivedStats } from '@/lib/derived-stats';
+import type { AircraftFilter } from '@/lib/filters';
 
 export function App() {
   const { aircraft, kpis } = useAircraftData();
@@ -12,6 +14,8 @@ export function App() {
     () => aircraft.find((a) => a.icao24 === selectedIcao24) ?? null,
     [aircraft, selectedIcao24],
   );
+
+  const derived = useMemo(() => computeDerivedStats(aircraft), [aircraft]);
 
   const handleAircraftClick = useCallback((icao24: string | null) => {
     setSelectedIcao24((prev) => (prev === icao24 ? null : icao24));
@@ -30,12 +34,10 @@ export function App() {
       />
       <KpiStrip
         kpis={kpis}
-        aircraft={aircraft}
+        derived={derived}
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
       />
     </div>
   );
 }
-
-export default App;

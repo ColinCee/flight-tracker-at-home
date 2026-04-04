@@ -5,7 +5,7 @@ import { useCallback, useMemo } from 'react';
 import { useControl } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
 import aircraftIconUrl from '@/assets/aircraft.svg';
-import type { AircraftFilter } from './KpiStrip';
+import { type AircraftFilter, matchesFilter } from '@/lib/filters';
 
 const AIRCRAFT_ICON = {
   url: aircraftIconUrl,
@@ -18,21 +18,6 @@ const COLOR_DEFAULT: [number, number, number, number] = [255, 255, 255, 200];
 const COLOR_APPROACHING: [number, number, number, number] = [255, 170, 0, 230];
 const COLOR_SELECTED: [number, number, number, number] = [100, 200, 255, 255];
 const COLOR_DIMMED: [number, number, number, number] = [255, 255, 255, 40];
-
-function matchesFilter(ac: AircraftState, filter: AircraftFilter): boolean {
-  switch (filter) {
-    case null:
-      return true;
-    case 'airborne':
-      return !ac.onGround;
-    case 'inbound-lhr':
-      return ac.isApproachingLhr;
-    case 'climbing':
-      return (ac.verticalRate ?? 0) > 1;
-    case 'descending':
-      return (ac.verticalRate ?? 0) < -1;
-  }
-}
 
 function DeckGLOverlay(props: MapboxOverlayProps) {
   const overlay = useControl(() => new MapboxOverlay(props));

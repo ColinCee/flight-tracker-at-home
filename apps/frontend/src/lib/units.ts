@@ -1,6 +1,6 @@
 // Metres → feet, m/s → knots conversions for display
 
-const METRES_TO_FEET = 3.28084;
+export const METRES_TO_FEET = 3.28084;
 const MS_TO_KNOTS = 1.94384;
 
 /** Convert metres to feet, rounded to nearest 100 */
