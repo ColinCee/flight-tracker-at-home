@@ -10,6 +10,7 @@ test.describe('aircraft endpoint', () => {
     const data = await response.json();
     expect(data).toHaveProperty('timestamp');
     expect(data).toHaveProperty('cacheAgeSeconds');
+    expect(data).toHaveProperty('refreshIntervalMs');
     expect(data).toHaveProperty('aircraft');
     expect(data).toHaveProperty('kpis');
     expect(Array.isArray(data.aircraft)).toBe(true);
@@ -26,7 +27,7 @@ test.describe('aircraft endpoint', () => {
       climbingAircraft: expect.any(Number),
       descendingAircraft: expect.any(Number),
       throughputLast60Min: expect.any(Number),
-      apiHealth: expect.stringMatching(/^(green|amber|red)$/),
+      apiHealth: expect.stringMatching(/^(live|stale|offline)$/),
     });
   });
 
