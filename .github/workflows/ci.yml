@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Ruff check
+        run: uvx ruff check apps/backend/
+
+      - name: Ruff format check
+        run: uvx ruff format --check apps/backend/
+
+      - name: Biome check
+        run: bunx @biomejs/biome check .
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Install Python deps
+        run: cd apps/backend && uv sync --extra dev
+
+      - name: TypeScript
+        run: bunx tsc --build
+
+      - name: Python (ty)
+        run: cd apps/backend && uvx ty check
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+
+      - name: Install Python deps
+        run: cd apps/backend && uv sync --extra dev
+
+      - name: pytest
+        run: cd apps/backend && uv run pytest -v
+
+  rules-sync:
+    name: Rules Sync Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check AI config files are in sync
+        run: |
+          bash scripts/sync-rules.sh
+          if ! git diff --quiet CLAUDE.md .cursorrules .github/copilot-instructions.md; then
+            echo "::error::AI config files are out of sync with RULES.md. Run: mise run rules:sync"
+            git diff --stat CLAUDE.md .cursorrules .github/copilot-instructions.md
+            exit 1
+          fi

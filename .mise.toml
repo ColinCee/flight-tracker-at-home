@@ -28,3 +28,47 @@ run = "bun install"
 [tasks."setup:backend"]
 description = "Install backend dependencies only"
 run = "cd apps/backend && uv sync"
+
+[tasks.format]
+description = "Format all code (ruff + biome)"
+run = """
+uvx ruff format apps/backend/
+uvx ruff check --fix apps/backend/
+bunx @biomejs/biome format --write .
+bunx @biomejs/biome lint --fix .
+"""
+
+[tasks.check]
+description = "Lint and format check (no modifications)"
+run = """
+uvx ruff check apps/backend/
+uvx ruff format --check apps/backend/
+cd apps/backend && uvx ty check
+cd -
+bunx @biomejs/biome check .
+"""
+
+[tasks.typecheck]
+description = "Type check all code"
+run = """
+cd apps/backend && uvx ty check
+cd -
+bunx tsc --build
+"""
+
+[tasks."rules:sync"]
+description = "Regenerate AI config files from RULES.md"
+run = "bash scripts/sync-rules.sh"
+
+[tasks."rules:check"]
+description = "Check AI config files are in sync with RULES.md"
+run = """
+bash scripts/sync-rules.sh
+if ! git diff --quiet CLAUDE.md .cursorrules .github/copilot-instructions.md; then
+  echo "ERROR: AI config files are out of sync with RULES.md"
+  echo "Run: mise run rules:sync"
+  git diff --stat CLAUDE.md .cursorrules .github/copilot-instructions.md
+  exit 1
+fi
+echo "AI config files are in sync"
+"""
