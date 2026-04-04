@@ -64,17 +64,17 @@ bunx tsc --build
 """
 
 [tasks."rules:sync"]
-description = "Regenerate AI config files from RULES.md"
-run = "bash scripts/sync-rules.sh"
+description = "Regenerate AI config files from .rulesync/"
+run = "npx rulesync generate"
 
 [tasks."rules:check"]
-description = "Check AI config files are in sync with RULES.md"
+description = "Check AI config files are in sync with .rulesync/"
 run = """
-bash scripts/sync-rules.sh
-if ! git diff --quiet CLAUDE.md .cursorrules .github/copilot-instructions.md; then
-  echo "ERROR: AI config files are out of sync with RULES.md"
+npx rulesync generate
+if ! git diff --quiet; then
+  echo "ERROR: AI config files are out of sync with .rulesync/"
   echo "Run: mise run rules:sync"
-  git diff --stat CLAUDE.md .cursorrules .github/copilot-instructions.md
+  git diff --stat
   exit 1
 fi
 echo "AI config files are in sync"

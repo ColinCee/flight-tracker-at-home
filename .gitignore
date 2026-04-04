@@ -23,6 +23,7 @@ node_modules
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+!.vscode/mcp.json
 
 # misc
 /.sass-cache
@@ -48,3 +49,11 @@ vite.config.*.timestamp*
 .venv/
 __pycache__/
 *.pyc
+
+# Rulesync — local overrides and caches (never commit)
+.rulesync/skills/.curated/
+.rulesync/rules/*.local.md
+rulesync.local.jsonc
+**/CLAUDE.local.md
+**/AGENTS.local.md
+.claude/memories/
