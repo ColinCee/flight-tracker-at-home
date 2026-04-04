@@ -1,12 +1,12 @@
-"""Flight Tracker at Home API
-"""
+"""Flight Tracker at Home API"""
 
 import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.models import AircraftResponse
 from src.cache import airspace_cache
+from src.models import AircraftResponse
 
 app = FastAPI(title="Flight Tracker at Home API")
 
@@ -21,10 +21,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/health", operation_id="getHealth", summary="Health Check")
 async def health():
     """Simple health check for Render deployment."""
     return {"status": "ok"}
+
 
 @app.get(
     "/aircraft",
