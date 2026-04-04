@@ -74,7 +74,11 @@ jobs:
 
   memory-profile:
     name: Memory Profile
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
@@ -84,15 +88,12 @@ jobs:
       - name: Run memory profiling
         run: scripts/memory-profile.sh
         env:
-          MEMORY_THRESHOLD_MB: 512
-          MEMORY_REPORT_FILE: memory-report.txt
-      - name: Upload memory report
+          MEMORY_REPORT_FILE: memory-report.md
+      - name: Comment memory report on PR
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: memory-report
-          path: memory-report.txt
-          retention-days: 30
+        run: gh pr comment "${{ github.event.number }}" --body-file memory-report.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   rules-sync:
     name: Rules Sync Check

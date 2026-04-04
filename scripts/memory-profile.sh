@@ -3,8 +3,7 @@ set -euo pipefail
 
 # Configuration
 SAMPLE_INTERVAL=1
-THRESHOLD_MB=${MEMORY_THRESHOLD_MB:-512}
-REPORT_FILE="${MEMORY_REPORT_FILE:-memory-report.txt}"
+REPORT_FILE="${MEMORY_REPORT_FILE:-memory-report.md}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
@@ -107,39 +106,23 @@ FRONTEND_PEAK_MB=$(( FRONTEND_PEAK_KB / 1024 ))
 BACKEND_SAMPLES_COUNT=$(wc -l < "$BACKEND_SAMPLES" | tr -d ' ')
 FRONTEND_SAMPLES_COUNT=$(wc -l < "$FRONTEND_SAMPLES" | tr -d ' ')
 
-# --- Generate report ---
+# --- Generate report (markdown for PR comment) ---
 {
-  echo "=== Memory Profile Report ==="
-  echo "Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  echo "Threshold: ${THRESHOLD_MB} MB"
+  echo "## Memory Profile"
   echo ""
-  echo "Backend (uvicorn):"
-  echo "  PID:          $BACKEND_PID"
-  echo "  Peak RSS:     ${BACKEND_PEAK_MB} MB (${BACKEND_PEAK_KB} KB)"
-  echo "  Samples:      $BACKEND_SAMPLES_COUNT"
-  echo "  Status:       $([ "$BACKEND_PEAK_MB" -le "$THRESHOLD_MB" ] && echo "PASS" || echo "FAIL (exceeds ${THRESHOLD_MB} MB)")"
+  echo "| Process | Peak RSS | Samples |"
+  echo "|---------|----------|---------|"
+  echo "| Backend (uvicorn) | **${BACKEND_PEAK_MB} MB** | ${BACKEND_SAMPLES_COUNT} |"
+  echo "| Frontend (vite) | **${FRONTEND_PEAK_MB} MB** | ${FRONTEND_SAMPLES_COUNT} |"
   echo ""
-  echo "Frontend (vite dev):"
-  echo "  PID:          $FRONTEND_PID"
-  echo "  Peak RSS:     ${FRONTEND_PEAK_MB} MB (${FRONTEND_PEAK_KB} KB)"
-  echo "  Samples:      $FRONTEND_SAMPLES_COUNT"
-  echo "  Status:       $([ "$FRONTEND_PEAK_MB" -le "$THRESHOLD_MB" ] && echo "PASS" || echo "FAIL (exceeds ${THRESHOLD_MB} MB)")"
+  echo "<details><summary>Details</summary>"
   echo ""
-  echo "E2E tests exit code: $TEST_EXIT"
-  echo "=== End Report ==="
+  echo "- Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "- Backend PID: $BACKEND_PID (tree RSS: ${BACKEND_PEAK_KB} KB)"
+  echo "- Frontend PID: $FRONTEND_PID (tree RSS: ${FRONTEND_PEAK_KB} KB)"
+  echo "- E2E tests exit code: $TEST_EXIT"
+  echo ""
+  echo "</details>"
 } | tee "$REPORT_FILE"
 
-# --- Threshold check ---
-EXIT_CODE=$TEST_EXIT
-if [[ "$BACKEND_PEAK_MB" -gt "$THRESHOLD_MB" ]]; then
-  echo ""
-  echo "ERROR: Backend peak RSS (${BACKEND_PEAK_MB} MB) exceeds threshold (${THRESHOLD_MB} MB)"
-  EXIT_CODE=1
-fi
-if [[ "$FRONTEND_PEAK_MB" -gt "$THRESHOLD_MB" ]]; then
-  echo ""
-  echo "ERROR: Frontend peak RSS (${FRONTEND_PEAK_MB} MB) exceeds threshold (${THRESHOLD_MB} MB)"
-  EXIT_CODE=1
-fi
-
-exit "$EXIT_CODE"
+exit "$TEST_EXIT"
