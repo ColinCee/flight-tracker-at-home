@@ -98,7 +98,7 @@ FRONTEND_SOAK_START_KB=$(tail -1 "$FRONTEND_SAMPLES" 2>/dev/null || echo "0")
 BROWSER_MEMORY_JSON="$REPO_ROOT/apps/e2e/browser-memory.json"
 cd apps/e2e
 SERVERS_EXTERNAL=1 CI=true MEMORY_SOAK_SECONDS="$SOAK_DURATION" MEMORY_REPORT_DIR="$REPO_ROOT/apps/e2e" \
-  bunx playwright test tests/memory.spec.ts --reporter=list 2>&1 || true
+  bunx playwright test profiling/memory.spec.ts --reporter=list 2>&1 || true
 cd - > /dev/null
 
 # Capture server RSS at end of soak
