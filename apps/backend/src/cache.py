@@ -94,7 +94,7 @@ class AirspaceCache:
         try:
             aircraft_list = await get_current_airspace_state()
         except Exception as e:
-            logger.warning("OpenSky fetch failed: %s", e)
+            logger.warning("OpenSky fetch failed: %r", e)
             # Serve stale cache instead of losing data
             if self.cached_response:
                 self.cached_response.cache_age_seconds = round(cache_age, 1)
