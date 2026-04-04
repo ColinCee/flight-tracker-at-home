@@ -205,21 +205,40 @@
       },
       "KPIs": {
         "properties": {
-          "inboundLhr": {
+          "trackedAircraft": {
             "type": "integer",
-            "title": "Inboundlhr"
+            "title": "Trackedaircraft"
+          },
+          "airborneAircraft": {
+            "type": "integer",
+            "title": "Airborneaircraft"
+          },
+          "inboundLhrAircraft": {
+            "type": "integer",
+            "title": "Inboundlhraircraft"
+          },
+          "climbingAircraft": {
+            "type": "integer",
+            "title": "Climbingaircraft"
+          },
+          "descendingAircraft": {
+            "type": "integer",
+            "title": "Descendingaircraft"
           },
           "throughputLast60Min": {
             "type": "integer",
             "title": "Throughputlast60Min"
           },
-          "trackedAircraft": {
-            "type": "integer",
-            "title": "Trackedaircraft"
-          },
-          "dataFreshnessSeconds": {
-            "type": "number",
-            "title": "Datafreshnessseconds"
+          "avgAltitudeFt": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avgaltitudeft"
           },
           "apiHealth": {
             "type": "string",
@@ -233,10 +252,13 @@
         },
         "type": "object",
         "required": [
-          "inboundLhr",
-          "throughputLast60Min",
           "trackedAircraft",
-          "dataFreshnessSeconds",
+          "airborneAircraft",
+          "inboundLhrAircraft",
+          "climbingAircraft",
+          "descendingAircraft",
+          "throughputLast60Min",
+          "avgAltitudeFt",
           "apiHealth"
         ],
         "title": "KPIs"

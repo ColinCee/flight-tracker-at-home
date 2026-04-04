@@ -45,10 +45,13 @@ export const KPIsApiHealth = {
 } as const;
 
 export interface KPIs {
-  inboundLhr: number;
-  throughputLast60Min: number;
   trackedAircraft: number;
-  dataFreshnessSeconds: number;
+  airborneAircraft: number;
+  inboundLhrAircraft: number;
+  climbingAircraft: number;
+  descendingAircraft: number;
+  throughputLast60Min: number;
+  avgAltitudeFt: number | null;
   apiHealth: KPIsApiHealth;
 }
 

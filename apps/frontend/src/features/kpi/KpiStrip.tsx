@@ -1,5 +1,4 @@
 import type { KPIs } from '@/api/generated';
-import type { DerivedStats } from '@/features/kpi/derived-stats';
 import type { AircraftFilter } from '@/shared/filters';
 import { Badge } from '@/shared/ui/badge';
 
@@ -11,7 +10,6 @@ const HEALTH_COLORS: Record<string, string> = {
 
 interface KpiStripProps {
   kpis: KPIs | null;
-  derived: DerivedStats;
   activeFilter: AircraftFilter;
   onFilterChange: (filter: AircraftFilter) => void;
 }
@@ -46,7 +44,7 @@ function KpiItem({ label, value, tooltip, filterId, activeFilter, onFilterChange
   );
 }
 
-export function KpiStrip({ kpis, derived, activeFilter, onFilterChange }: KpiStripProps) {
+export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) {
   if (!kpis) return null;
 
   const healthColor = HEALTH_COLORS[kpis.apiHealth] ?? HEALTH_COLORS.red;
@@ -61,7 +59,7 @@ export function KpiStrip({ kpis, derived, activeFilter, onFilterChange }: KpiStr
       <Separator />
       <KpiItem
         label="Airborne"
-        value={derived.airborne}
+        value={kpis.airborneAircraft}
         tooltip="Aircraft currently in flight — click to highlight"
         filterId="airborne"
         activeFilter={activeFilter}
@@ -70,7 +68,7 @@ export function KpiStrip({ kpis, derived, activeFilter, onFilterChange }: KpiStr
       <Separator />
       <KpiItem
         label="Inbound LHR"
-        value={kpis.inboundLhr}
+        value={kpis.inboundLhrAircraft}
         tooltip="Aircraft approaching London Heathrow — click to highlight"
         filterId="inbound-lhr"
         activeFilter={activeFilter}
@@ -79,7 +77,7 @@ export function KpiStrip({ kpis, derived, activeFilter, onFilterChange }: KpiStr
       <Separator />
       <KpiItem
         label="Climbing"
-        value={`${derived.climbing}↑ ${derived.descending}↓`}
+        value={`${kpis.climbingAircraft}↑ ${kpis.descendingAircraft}↓`}
         tooltip="Aircraft gaining / losing altitude — click to highlight climbing"
         filterId="climbing"
         activeFilter={activeFilter}
@@ -88,7 +86,7 @@ export function KpiStrip({ kpis, derived, activeFilter, onFilterChange }: KpiStr
       <Separator />
       <KpiItem
         label="Avg Alt"
-        value={derived.avgAltitudeFt != null ? `${derived.avgAltitudeFt.toLocaleString()} ft` : '—'}
+        value={kpis.avgAltitudeFt != null ? `${kpis.avgAltitudeFt.toLocaleString()} ft` : '—'}
         tooltip="Average barometric altitude of airborne aircraft"
       />
       <Separator />
