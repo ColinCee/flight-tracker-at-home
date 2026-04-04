@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
       - run: bun install --frozen-lockfile
-      - run: cd apps/backend && uv sync --extra dev
+      - run: cd apps/backend && uv sync
       - run: mise run check
 
   test:
@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
-      - run: cd apps/backend && uv sync --extra dev
+      - run: cd apps/backend && uv sync
       - run: mise run test
 
   rules-sync:

@@ -7,17 +7,19 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.0.0",
     "ruff>=0.8.0",
     "httpx>=0.27.0",
-]
-
-[dependency-groups]
-dev = [
     "ty>=0.0.28",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ty.environment]
+python = ".venv"
 
 [tool.ty.src]
 include = ["src"]
@@ -25,9 +27,3 @@ include = ["src"]
 [tool.ty.rules]
 all = "error"
 unused-ignore-comment = "warn"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-
-[tool.ty.environment]
-python = ".venv"

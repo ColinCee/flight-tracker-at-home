@@ -1,51 +1,13 @@
 {
   "name": "backend",
-  "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "projectType": "application",
-  "sourceRoot": "apps/backend/src",
   "targets": {
     "serve": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
-        "options": { "cwd": "apps/backend" }
-      }
+      "command": "uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
+      "options": { "cwd": "apps/backend" }
     },
     "test": {
-      "executor": "nx:run-commands",
-      "outputs": ["{workspaceRoot}/coverage/apps/backend"],
-      "options": {
-        "command": "uv run pytest --cov=src",
-        "options": { "cwd": "apps/backend" }
-      }
-    },
-    "lint": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "uv run ruff check .",
-        "options": { "cwd": "apps/backend" }
-      }
-    },
-    "format": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "uv run ruff format .",
-        "options": { "cwd": "apps/backend" }
-      }
-    },
-    "typecheck": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "uv run ty check",
-        "options": { "cwd": "apps/backend" }
-      }
-    },
-    "sync": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "uv sync",
-        "options": { "cwd": "apps/backend" }
-      }
+      "command": "uv run pytest",
+      "options": { "cwd": "apps/backend" }
     }
   }
 }
