@@ -37,6 +37,33 @@ TOKEN_URL = (
 TOKEN_REFRESH_MARGIN = 60
 
 
+# --- Data Dictionaries (Initialized once at startup) ---
+POSITION_SOURCE_MAP = {0: "ADS-B", 1: "ASTERIX", 2: "MLAT", 3: "FLARM"}
+
+# 13 is reserved (who knows for what?)
+CATEGORY_MAP = {
+    0: "Unknown",
+    1: "Unknown",
+    2: "Light",
+    3: "Small",
+    4: "Large",
+    5: "High Vortex Large",
+    6: "Heavy",
+    7: "High Performance",
+    8: "Rotorcraft",
+    9: "Glider",
+    10: "Lighter-than-air",
+    11: "Skydiver",
+    12: "Ultralight",
+    14: "UAV",
+    15: "Space Vehicle",
+    16: "Emergency Surface Vehicle",
+    17: "Service Surface Vehicle",
+    18: "Point Obstacle",
+    19: "Line Obstacle",
+}
+
+
 class _TokenManager:
     """Handles OAuth2 client credentials flow with automatic token refresh."""
 
@@ -90,10 +117,10 @@ _token_manager = _TokenManager()
 _remaining_credits: int | None = None
 
 
+# --- Phase 1: Extraction ---
 async def fetch_london_airspace() -> list[list]:
     """Phase 1: Extraction - Fetches raw state vectors from OpenSky."""
     global _remaining_credits
-    url = "https://opensky-network.org/api/states/all"
 
     # Passing the bounding box ensures we only use 1 API credit
     params = {"lamin": LAMIN, "lamax": LAMAX, "lomin": LOMIN, "lomax": LOMAX}
@@ -101,18 +128,22 @@ async def fetch_london_airspace() -> list[list]:
     auth_headers = await _token_manager.get_headers()
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(
-            url, params=params, headers=auth_headers, timeout=10.0
-        )
-        response.raise_for_status()
+        try:
+            response = await client.get(
+                OPENSKY_URL, params=params, headers=auth_headers, timeout=10.0
+            )
+            response.raise_for_status()
 
-        remaining = response.headers.get("X-Rate-Limit-Remaining")
-        if remaining is not None:
-            _remaining_credits = int(remaining)
+            remaining = response.headers.get("X-Rate-Limit-Remaining")
+            if remaining is not None:
+                _remaining_credits = int(remaining)
 
-        data = response.json()
-        # OpenSky returns the arrays under the "states" key
-        return data.get("states") or []
+            data = response.json()
+            # OpenSky returns the arrays under the "states" key
+            return data.get("states") or []
+        except httpx.HTTPError as e:
+            logger.warning("Error fetching from OpenSky: %s", e)
+            return []
 
 
 def get_remaining_credits() -> int | None:
@@ -120,38 +151,9 @@ def get_remaining_credits() -> int | None:
     return _remaining_credits
 
 
+# --- Phase 2: Transformation ---
 def parse_state_vector(vector: list) -> AircraftState | None:
-    """Phase 2: Transformation - Maps array indices to the Pydantic contract."""
-
-    # OpenSky Array Indices:
-    # 0: icao24, 1: callsign, 2: origin_country, 3: time_position, 4: last_contact
-    # 5: longitude, 6: latitude, 7: baro_altitude, 8: on_ground, 9: velocity
-    # 10: true_track, 11: vertical_rate, 12: sensors, 13: geo_altitude, 14: squawk
-    # 16: position_source, 17: aircraft_category
-
-    POSITION_SOURCE_MAP = {0: "ADS-B", 1: "ASTERIX", 2: "MLAT", 3: "FLARM"}
-
-    CATEGORY_MAP = {
-        0: "Unknown",
-        1: "Unknown",
-        2: "Light",
-        3: "Small",
-        4: "Large",
-        5: "High Vortex Large",
-        6: "Heavy",
-        7: "High Performance",
-        8: "Rotorcraft",
-        9: "Glider",
-        10: "Lighter-than-air",
-        11: "Skydiver",
-        12: "Ultralight",
-        14: "UAV",
-        15: "Space Vehicle",
-        16: "Emergency Surface Vehicle",
-        17: "Service Surface Vehicle",
-        18: "Point Obstacle",
-    }
-
+    """Phase 2: Transformation - Maps raw array indices to the Pydantic AircraftState contract."""
     try:
         # Strict validation: Drop if positional data is missing
         if vector[5] is None or vector[6] is None:
@@ -193,8 +195,7 @@ def parse_state_vector(vector: list) -> AircraftState | None:
 # --- Phase 3: Spatial Math & Business Logic ---
 def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates the great-circle distance between two GPS points in kilometers."""
-    R = 6371.0  # Earth radius in kilometers
-
+    R = 6371.0
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
 
@@ -209,11 +210,7 @@ def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) ->
 
 
 def check_lhr_approach(aircraft: AircraftState) -> bool:
-    """
-    Determines if an aircraft is on final approach to Heathrow.
-    Checks are ordered from least to most computationally expensive.
-    """
-    # 1. Must be in the air
+    """Evaluates if an aircraft meets the heuristic criteria for a Heathrow approach."""
     if aircraft.on_ground:
         return False
 
@@ -256,6 +253,7 @@ async def get_current_airspace_state() -> list[AircraftState]:
     for vector in raw_vectors:
         parsed = parse_state_vector(vector)
         if parsed:
+            # Inject the Approach Logic here
             parsed.is_approaching_lhr = check_lhr_approach(parsed)
             valid_aircraft.append(parsed)
 
