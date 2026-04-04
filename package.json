@@ -2,11 +2,7 @@
   "name": "@flight-tracker-at-home/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {
-    "dev": "bunx nx run-many -t serve -p backend,frontend --parallel=2",
-    "export:openapi": "cd apps/backend && uv run python scripts/export_openapi.py",
-    "generate:api": "bun run export:openapi && bunx orval --config orval.config.ts"
-  },
+  "scripts": {},
   "private": true,
   "workspaces": [
     "apps/*",

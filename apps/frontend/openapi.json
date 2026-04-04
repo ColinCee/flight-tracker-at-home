@@ -7,7 +7,8 @@
   "paths": {
     "/health": {
       "get": {
-        "summary": "Health",
+        "summary": "Health Check",
+        "description": "Simple health check for Render deployment.",
         "operationId": "getHealth",
         "responses": {
           "200": {
@@ -23,7 +24,8 @@
     },
     "/aircraft": {
       "get": {
-        "summary": "Get aircraft",
+        "summary": "Get Aircraft State",
+        "description": "Main polling endpoint.\nFetches the lazy-cached state, abstracting the OpenSky API rate limits.",
         "operationId": "getAircraft",
         "responses": {
           "200": {

@@ -63,7 +63,8 @@ export interface AircraftResponse {
 }
 
 /**
- * @summary Health
+ * Simple health check for Render deployment.
+ * @summary Health Check
  */
 export type getHealthResponse200 = {
   data: unknown
@@ -130,7 +131,7 @@ export type GetHealthQueryError = unknown
 
 
 /**
- * @summary Health
+ * @summary Health Check
  */
 
 export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>(
@@ -150,7 +151,9 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
 
 
 /**
- * @summary Get aircraft
+ * Main polling endpoint.
+Fetches the lazy-cached state, abstracting the OpenSky API rate limits.
+ * @summary Get Aircraft State
  */
 export type getAircraftResponse200 = {
   data: AircraftResponse
@@ -217,7 +220,7 @@ export type GetAircraftQueryError = unknown
 
 
 /**
- * @summary Get aircraft
+ * @summary Get Aircraft State
  */
 
 export function useGetAircraft<TData = Awaited<ReturnType<typeof getAircraft>>, TError = unknown>(
