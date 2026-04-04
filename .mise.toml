@@ -103,6 +103,7 @@ run = "npx rulesync generate"
 [tasks."rules:check"]
 description = "Check AI config files are in sync with .rulesync/"
 run = """
+bash scripts/check-mise-docs-sync.sh
 npx rulesync generate
 if ! git diff --quiet; then
   echo "ERROR: AI config files are out of sync with .rulesync/"
