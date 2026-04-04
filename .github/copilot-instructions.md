@@ -49,9 +49,19 @@ flight-tracker-at-home/
 
 ### Backend (apps/backend)
 
-- **opensky.py** — 3-phase ETL: fetch London airspace from OpenSky API → parse state vectors into `AircraftState` → enrich with `is_approaching_lhr` heuristic (haversine distance, altitude, heading, descent rate)
-- **cache.py** — `AirspaceCache` singleton with 10s TTL lazy refresh; tracks rolling 60-min throughput for KPIs
+- **opensky.py** — 3-phase ETL: fetch London airspace from OpenSky API → parse state vectors into `AircraftState` → enrich with `is_approaching_lhr` heuristic (haversine distance, altitude, heading, descent rate). Authenticates via OAuth2 client credentials flow (tokens auto-cached and refreshed). Falls back to anonymous if no credentials.
+- **cache.py** — `AirspaceCache` singleton with 10s TTL lazy refresh; tracks rolling 60-min throughput for KPIs. On upstream failure (rate limit, timeout), serves stale cached data instead of losing aircraft.
 - **models.py** — Pydantic models (`AircraftState`, `KPIs`, `AircraftResponse`) with `alias_generator=to_camel`
+
+### OpenSky API credentials
+
+The backend works without credentials (anonymous: 400 calls/day, 10s resolution) but rate limits are tight. For authenticated access (4000+ calls/day, 5s resolution):
+
+1. Create a free account at https://opensky-network.org
+2. Go to Account → API Clients → Create and download your credentials
+3. `cp apps/backend/.env.example apps/backend/.env` and fill in `OPENSKY_CLIENT_ID` and `OPENSKY_CLIENT_SECRET`
+
+The `.env` file is gitignored. See `.env.example` for the template.
 
 ### Data Flow
 
@@ -89,6 +99,7 @@ mise run test:e2e:ui        # Run Playwright with interactive UI
 mise run rules:sync         # Regenerate AI config files from .rulesync/
 mise run rules:check        # Verify AI config files are in sync (CI)
 mise run codegen            # Regenerate frontend types from backend schema
+mise run codegen:check      # Verify generated types are in sync (CI)
 ```
 
 ## CI (GitHub Actions)

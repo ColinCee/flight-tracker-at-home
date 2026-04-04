@@ -41,9 +41,9 @@ export type KPIsApiHealth = typeof KPIsApiHealth[keyof typeof KPIsApiHealth];
 
 
 export const KPIsApiHealth = {
-  green: 'green',
-  amber: 'amber',
-  red: 'red',
+  live: 'live',
+  stale: 'stale',
+  offline: 'offline',
 } as const;
 
 export interface KPIs {
@@ -63,6 +63,7 @@ export interface KPIs {
 export interface AircraftResponse {
   timestamp: number;
   cacheAgeSeconds: number;
+  refreshIntervalMs: number;
   aircraft: AircraftState[];
   kpis: KPIs;
 }

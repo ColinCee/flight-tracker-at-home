@@ -14,7 +14,7 @@ export function App() {
     [aircraft, selectedIcao24],
   );
 
-  const handleAircraftClick = useCallback((icao24: string | null) => {
+  const handleAircraftClick = useCallback((icao24: string) => {
     setSelectedIcao24((prev) => (prev === icao24 ? null : icao24));
   }, []);
 

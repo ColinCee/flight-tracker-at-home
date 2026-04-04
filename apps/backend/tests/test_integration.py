@@ -100,7 +100,7 @@ def test_full_aircraft_pipeline(mock_get):
     # Check KPIs
     assert data["kpis"]["trackedAircraft"] == 1  # Ghost plane was dropped!
     assert data["kpis"]["inboundLhrAircraft"] == 1  # BAW1 was flagged as approaching
-    assert data["kpis"]["apiHealth"] == "green"
+    assert data["kpis"]["apiHealth"] == "live"
 
     # Check Aircraft Array
     aircraft_list = data["aircraft"]

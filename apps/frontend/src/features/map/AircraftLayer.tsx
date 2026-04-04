@@ -30,7 +30,7 @@ interface AircraftLayerProps {
   aircraft: AircraftState[];
   selectedIcao24?: string | null;
   activeFilter?: AircraftFilter;
-  onAircraftClick?: (icao24: string | null) => void;
+  onAircraftClick?: (icao24: string) => void;
   onHoverChange?: (isHovering: boolean) => void;
 }
 
@@ -45,7 +45,9 @@ export function AircraftLayer({
 
   const handleClick = useCallback(
     (info: PickingInfo<AircraftState>) => {
-      onAircraftClick?.(info.object?.icao24 ?? null);
+      if (info.object) {
+        onAircraftClick?.(info.object.icao24);
+      }
     },
     [onAircraftClick],
   );

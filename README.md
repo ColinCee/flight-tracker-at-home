@@ -41,12 +41,31 @@ That runs:
 - `bun install` for the JS workspace
 - `cd apps/backend && uv sync` for the Python backend
 
+### OpenSky Network API credentials (optional)
+
+The backend fetches live aircraft data from the [OpenSky Network](https://opensky-network.org/) REST API.
+It works without credentials (anonymous access) but you'll hit rate limits quickly (400 calls/day, 10 s resolution).
+
+To get **10× more capacity** (4 000+ calls/day, 5 s resolution):
+
+1. Create a free account at <https://opensky-network.org>
+2. Go to **Account → API Clients → Create** and download your credentials
+3. Copy the example env file and fill in your keys:
+
+```sh
+cp apps/backend/.env.example apps/backend/.env
+# Then edit apps/backend/.env with your client_id and client_secret
+```
+
+The backend authenticates via OAuth2 client credentials flow — tokens are cached and auto-refreshed.
+If no credentials are set, it falls back to anonymous access.
+
 ## API contract generation
 
 The frontend API client is generated from the FastAPI OpenAPI schema with Orval:
 
 ```sh
-bun run generate:api
+mise run codegen
 ```
 
 That exports `apps/backend`'s OpenAPI schema and regenerates the frontend client in

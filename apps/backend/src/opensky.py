@@ -4,6 +4,7 @@ It then runs a series of checks to determine
 if an aircraft is inbound to Heathrow.
 """
 
+import logging
 import math
 import os
 import time
@@ -11,6 +12,8 @@ import time
 import httpx
 
 from src.models import AircraftState
+
+logger = logging.getLogger(__name__)
 
 # London Bounding Box from ARCHITECTURE.md
 LAMIN = 51.20
@@ -22,6 +25,65 @@ LOMAX = 0.25
 LHR_LAT = 51.4700
 LHR_LON = -0.4543
 
+# OpenSky OAuth2 token endpoint (Keycloak)
+TOKEN_URL = (
+    "https://auth.opensky-network.org/auth/realms/"
+    "opensky-network/protocol/openid-connect/token"
+)
+
+# Refresh the token 60s before it actually expires
+TOKEN_REFRESH_MARGIN = 60
+
+
+class _TokenManager:
+    """Handles OAuth2 client credentials flow with automatic token refresh."""
+
+    def __init__(self):
+        self._access_token: str | None = None
+        self._expires_at: float = 0.0
+
+    @property
+    def is_authenticated(self) -> bool:
+        """Whether credentials are configured."""
+        return bool(
+            os.getenv("OPENSKY_CLIENT_ID") and os.getenv("OPENSKY_CLIENT_SECRET")
+        )
+
+    async def get_headers(self) -> dict[str, str]:
+        """Return Authorization headers, refreshing the token if needed."""
+        client_id = os.getenv("OPENSKY_CLIENT_ID")
+        client_secret = os.getenv("OPENSKY_CLIENT_SECRET")
+
+        if not client_id or not client_secret:
+            return {}
+
+        if self._access_token and time.time() < self._expires_at:
+            return {"Authorization": f"Bearer {self._access_token}"}
+
+        # Request a new token
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                TOKEN_URL,
+                data={
+                    "grant_type": "client_credentials",
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                },
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            token_data = response.json()
+
+        self._access_token = token_data["access_token"]
+        expires_in = token_data.get("expires_in", 300)
+        self._expires_at = time.time() + expires_in - TOKEN_REFRESH_MARGIN
+        logger.info("OpenSky OAuth2 token acquired (expires in %ds)", expires_in)
+
+        return {"Authorization": f"Bearer {self._access_token}"}
+
+
+_token_manager = _TokenManager()
+
 
 async def fetch_london_airspace() -> list[list]:
     """Phase 1: Extraction - Fetches raw state vectors from OpenSky."""
@@ -30,24 +92,16 @@ async def fetch_london_airspace() -> list[list]:
     # Passing the bounding box ensures we only use 1 API credit
     params = {"lamin": LAMIN, "lamax": LAMAX, "lomin": LOMIN, "lomax": LOMAX}
 
-    # OpenSky credentials (optional but recommended for rate limits)
-    # Fetch these from your .env file
-    auth = None
-    client_id = os.getenv("OPENSKY_CLIENT_ID")
-    client_secret = os.getenv("OPENSKY_CLIENT_SECRET")
-    if client_id and client_secret:
-        auth = httpx.BasicAuth(client_id, client_secret)
+    auth_headers = await _token_manager.get_headers()
 
     async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url, params=params, auth=auth, timeout=10.0)
-            response.raise_for_status()
-            data = response.json()
-            # OpenSky returns the arrays under the "states" key
-            return data.get("states") or []
-        except httpx.HTTPError as e:
-            print(f"Error fetching from OpenSky: {e}")
-            return []
+        response = await client.get(
+            url, params=params, headers=auth_headers, timeout=10.0
+        )
+        response.raise_for_status()
+        data = response.json()
+        # OpenSky returns the arrays under the "states" key
+        return data.get("states") or []
 
 
 def parse_state_vector(vector: list) -> AircraftState | None:
@@ -116,7 +170,7 @@ def parse_state_vector(vector: list) -> AircraftState | None:
         )
         return aircraft
     except (IndexError, TypeError) as e:
-        print(f"Failed to parse vector: {e}")
+        logger.warning("Failed to parse vector: %s", e)
         return None
 
 
