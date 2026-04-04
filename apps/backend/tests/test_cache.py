@@ -24,7 +24,7 @@ def create_mock_aircraft(icao: str, approaching: bool) -> AircraftState:
         geo_altitude=1000.0,
         squawk=None,
         position_source="ADS-B",
-        category="light",
+        category="Light",
         is_approaching_lhr=approaching,
     )
 

@@ -59,6 +59,29 @@ def parse_state_vector(vector: list) -> AircraftState | None:
     # 10: true_track, 11: vertical_rate, 12: sensors, 13: geo_altitude, 14: squawk
     # 16: position_source, 17: aircraft_category
 
+    POSITION_SOURCE_MAP = {0: "ADS-B", 1: "ASTERIX", 2: "MLAT", 3: "FLARM"}
+
+    CATEGORY_MAP = {
+        0: "Unknown",
+        1: "Unknown",
+        2: "Light",
+        3: "Small",
+        4: "Large",
+        5: "High Vortex Large",
+        6: "Heavy",
+        7: "High Performance",
+        8: "Rotorcraft",
+        9: "Glider",
+        10: "Lighter-than-air",
+        11: "Skydiver",
+        12: "Ultralight",
+        14: "UAV",
+        15: "Space Vehicle",
+        16: "Emergency Surface Vehicle",
+        17: "Service Surface Vehicle",
+        18: "Point Obstacle",
+    }
+
     try:
         # Strict validation: Drop if positional data is missing
         if vector[5] is None or vector[6] is None:
@@ -67,6 +90,10 @@ def parse_state_vector(vector: list) -> AircraftState | None:
         # Clean the callsign (OpenSky pads it with spaces)
         raw_callsign = vector[1]
         clean_callsign = raw_callsign.strip() if raw_callsign else None
+
+        # Map positional_source and category to a map string value
+        raw_position = vector[16] if len(vector) > 16 else 0
+        raw_category = vector[17] if len(vector) > 17 else 0
 
         # Build the structured Pydantic object
         aircraft = AircraftState(
@@ -83,8 +110,8 @@ def parse_state_vector(vector: list) -> AircraftState | None:
             vertical_rate=vector[11],
             geo_altitude=vector[13],
             squawk=vector[14],
-            position_source=vector[16],
-            category=vector[17],
+            position_source=POSITION_SOURCE_MAP.get(raw_position, "Unknown"),
+            category=CATEGORY_MAP.get(raw_category, "Unknown"),
             is_approaching_lhr=False,  # Default to false, handled in Phase 3
         )
         return aircraft
@@ -124,8 +151,8 @@ def check_lhr_approach(aircraft: AircraftState) -> bool:
     if aircraft.vertical_rate is None or aircraft.vertical_rate >= 0:
         return False
 
-    # 3. Must be below 1,200 meters (~4,000 ft)
-    if aircraft.baro_altitude is None or aircraft.baro_altitude > 1200:
+    # 3. Must be below 2000 meters (~6,500 ft)
+    if aircraft.baro_altitude is None or aircraft.baro_altitude > 2000:
         return False
 
     # 4. Heading Check: Heathrow uses runways 09 (East) and 27 (West)

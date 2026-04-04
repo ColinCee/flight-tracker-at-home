@@ -34,8 +34,8 @@ def test_parse_state_vector_valid():
         1050.0,
         "7700",
         False,
-        None,
-        None,
+        0,
+        0,
         0,
     ]
 
@@ -67,8 +67,8 @@ def test_parse_state_vector_missing_coords():
         1050.0,
         "7700",
         False,
-        None,
-        None,
+        0,
+        0,
         0,
     ]
 
