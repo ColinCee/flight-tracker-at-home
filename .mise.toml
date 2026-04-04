@@ -24,3 +24,29 @@ run = "bun install"
 [tasks."setup:backend"]
 description = "Install backend dependencies only"
 run = "cd apps/backend && uv sync"
+
+[tasks.format]
+description = "Format all code (ruff + prettier)"
+run = """
+uvx ruff format apps/backend/
+uvx ruff check --fix apps/backend/
+bunx prettier --write .
+"""
+
+[tasks.check]
+description = "Lint and format check (no modifications)"
+run = """
+uvx ruff check apps/backend/
+uvx ruff format --check apps/backend/
+cd apps/backend && uvx ty check
+cd -
+bunx prettier --check .
+"""
+
+[tasks.typecheck]
+description = "Type check all code"
+run = """
+cd apps/backend && uvx ty check
+cd -
+bunx tsc --build
+"""

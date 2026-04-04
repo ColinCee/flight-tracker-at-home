@@ -13,14 +13,14 @@ Heathrow arrival tracking — built as a portfolio project.
 
 ## Tooling at a glance
 
-| Tool | What it does here | Docs |
-| --- | --- | --- |
-| **mise** | Installs the runtimes this repo expects: Bun, Node, Python, and uv. It also gives us shared setup commands. | <https://mise.jdx.dev> |
-| **bun** | Installs and runs the JavaScript/TypeScript side of the repo. Think of it as the JS package manager/runtime. | <https://bun.sh/docs> |
-| **uv** | Installs Python dependencies and manages the backend virtual environment. Think of it as the Python package manager for this repo. | <https://docs.astral.sh/uv/> |
-| **Nx** | Runs repo tasks from one place. It is the monorepo task runner, so you use it to start apps, run tests, and so on. | <https://nx.dev> |
-| **Vite** | Dev server and build tool for the React frontend. | <https://vite.dev/guide/> |
-| **FastAPI** | Python web framework used by the backend API. | <https://fastapi.tiangolo.com> |
+| Tool        | What it does here                                                                                                                  | Docs                           |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| **mise**    | Installs the runtimes this repo expects: Bun, Node, Python, and uv. It also gives us shared setup commands.                        | <https://mise.jdx.dev>         |
+| **bun**     | Installs and runs the JavaScript/TypeScript side of the repo. Think of it as the JS package manager/runtime.                       | <https://bun.sh/docs>          |
+| **uv**      | Installs Python dependencies and manages the backend virtual environment. Think of it as the Python package manager for this repo. | <https://docs.astral.sh/uv/>   |
+| **Nx**      | Runs repo tasks from one place. It is the monorepo task runner, so you use it to start apps, run tests, and so on.                 | <https://nx.dev>               |
+| **Vite**    | Dev server and build tool for the React frontend.                                                                                  | <https://vite.dev/guide/>      |
+| **FastAPI** | Python web framework used by the backend API.                                                                                      | <https://fastapi.tiangolo.com> |
 
 ## How the tools fit together
 

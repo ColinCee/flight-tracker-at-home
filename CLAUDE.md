@@ -1,0 +1,90 @@
+# CLAUDE.md — Flight Tracker at Home
+
+## What is this?
+
+Real-time aviation dashboard showing aircraft over London with Heathrow arrival tracking.
+Built by Colin & Calvin Cheung as a portfolio/learning project.
+
+## Repository Structure
+
+```
+flight-tracker-at-home/
+├── apps/
+│   ├── frontend/          # React + Vite + Tailwind + TanStack Query
+│   │   ├── src/api/       # Orval-generated typed React Query hooks (DO NOT edit)
+│   │   └── openapi.json   # Exported OpenAPI spec from backend
+│   └── backend/           # Python FastAPI + Pydantic
+│       ├── src/models.py  # Data contract — source of truth for API schema
+│       └── src/main.py    # FastAPI app + endpoints
+├── docs/
+│   ├── ARCHITECTURE.md    # Technical reference, data contract, design decisions
+│   └── MVP.md             # Product requirements and scope
+├── nx.json                # Nx monorepo config (Vite plugin)
+├── orval.config.ts        # Pydantic → OpenAPI → TypeScript codegen
+└── .mise.toml             # Tool versions + tasks (bun, node, python, uv)
+```
+
+## Essential Commands
+
+```bash
+mise run setup              # Install all dependencies (JS + Python)
+mise run setup:frontend     # Install frontend dependencies only
+mise run setup:backend      # Install backend dependencies only
+
+mise run format             # Format all code (ruff + prettier)
+mise run check              # Lint/format check without modifying (for CI)
+
+bun run generate:api        # Regenerate frontend types from backend schema
+```
+
+### Running locally
+
+```bash
+# Backend (from apps/backend/)
+uv run uvicorn src.main:app --reload --port 8000
+
+# Frontend (from repo root)
+bunx nx serve frontend      # Starts on http://localhost:4200
+```
+
+## Key Conventions
+
+- **Pydantic is the schema source of truth** — change `apps/backend/src/models.py`, run `bun run generate:api` to update frontend types
+- **camelCase in JSON** — Pydantic `alias_generator=to_camel` handles this automatically; Python stays `snake_case`, TypeScript gets `camelCase`
+- **Generated code is committed** — `apps/frontend/src/api/generated.ts` and `apps/frontend/openapi.json` are checked in so the frontend builds without the backend running
+- **Single `/aircraft` endpoint** — KPIs are derived from the aircraft list and bundled atomically
+
+## Stack
+
+| Layer     | Tech                                    |
+| --------- | --------------------------------------- |
+| Frontend  | React 19 + Vite 8 + Tailwind CSS        |
+| Map       | MapLibre GL JS + react-map-gl + Deck.gl |
+| State     | TanStack Query (auto-polling 10s)       |
+| Backend   | Python 3.12 / FastAPI                   |
+| Data      | OpenSky Network REST API                |
+| Monorepo  | Nx + Bun + mise                         |
+| Deploy FE | Cloudflare Pages                        |
+| Deploy BE | Render                                  |
+
+## Tooling
+
+Tool versions are managed by [mise](https://mise.jdx.dev/) (see `.mise.toml`):
+
+- **bun** 1.3 — JS package manager + runtime
+- **node** 22 — Required by Nx
+- **python** 3.12 — Backend runtime
+- **uv** — Python package/project manager
+
+Formatting and linting:
+
+- **ruff** — Python linting + formatting
+- **ty** — Python type checking (Astral)
+- **prettier** — TypeScript/JavaScript/CSS formatting
+
+## Anti-Patterns
+
+- Don't edit `apps/frontend/src/api/generated.ts` by hand — it's overwritten by Orval
+- Don't add Python type stubs manually — use ty for type checking
+- Don't install Python deps with pip — use `uv add` in `apps/backend/`
+- Don't install JS deps with npm/yarn — use `bun add` from repo root

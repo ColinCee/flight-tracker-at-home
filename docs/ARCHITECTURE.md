@@ -73,10 +73,10 @@ few false positives.
 
 ## API Endpoints
 
-| Method | Path            | Response             | Notes                                          |
-| ------ | --------------- | -------------------- | ---------------------------------------------- |
-| GET    | `/aircraft` | `AircraftResponse`   | Aircraft + KPIs in a single atomic response    |
-| GET    | `/health`   | `{ status: "ok" }`   | Health check for Render                        |
+| Method | Path        | Response           | Notes                                       |
+| ------ | ----------- | ------------------ | ------------------------------------------- |
+| GET    | `/aircraft` | `AircraftResponse` | Aircraft + KPIs in a single atomic response |
+| GET    | `/health`   | `{ status: "ok" }` | Health check for Render                     |
 
 ---
 
@@ -169,19 +169,19 @@ export interface KPIs {
   throughputLast60Min: number;
   trackedAircraft: number;
   dataFreshnessSeconds: number;
-  apiHealth: "green" | "amber" | "red";
+  apiHealth: 'green' | 'amber' | 'red';
 }
 ```
 
 ### KPI definitions
 
-| KPI                    | JSON field               | Source                                       |
-| ---------------------- | ------------------------ | -------------------------------------------- |
-| Inbound to LHR         | `inboundLhr`            | Count of aircraft matching arrival heuristic |
-| Estimated throughput   | `throughputLast60Min`  | Arrivals detected in rolling 60-min window   |
-| Tracked aircraft       | `trackedAircraft`       | Total aircraft in bounding box               |
-| Data freshness         | `dataFreshnessSeconds`  | Seconds since last successful OpenSky fetch  |
-| API health             | `apiHealth`             | `"green"` / `"amber"` / `"red"` based on recent errors |
+| KPI                  | JSON field             | Source                                                 |
+| -------------------- | ---------------------- | ------------------------------------------------------ |
+| Inbound to LHR       | `inboundLhr`           | Count of aircraft matching arrival heuristic           |
+| Estimated throughput | `throughputLast60Min`  | Arrivals detected in rolling 60-min window             |
+| Tracked aircraft     | `trackedAircraft`      | Total aircraft in bounding box                         |
+| Data freshness       | `dataFreshnessSeconds` | Seconds since last successful OpenSky fetch            |
+| API health           | `apiHealth`            | `"green"` / `"amber"` / `"red"` based on recent errors |
 
 ---
 
@@ -207,12 +207,12 @@ export interface KPIs {
 
 ## Environment Variables
 
-| Variable                 | Where        | Description                                      |
-| ------------------------ | ------------ | ------------------------------------------------ |
-| `OPENSKY_CLIENT_ID`      | Backend      | OAuth2 client ID from [OpenSky account page](https://opensky-network.org/my-opensky/account) |
-| `OPENSKY_CLIENT_SECRET`  | Backend      | OAuth2 client secret                             |
-| `CORS_ORIGINS`           | Backend      | Allowed origins, e.g. `https://flight-tracker.pages.dev` |
-| `VITE_API_BASE_URL`      | Frontend     | Backend URL, e.g. `https://flight-tracker-api.onrender.com` |
+| Variable                | Where    | Description                                                                                  |
+| ----------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `OPENSKY_CLIENT_ID`     | Backend  | OAuth2 client ID from [OpenSky account page](https://opensky-network.org/my-opensky/account) |
+| `OPENSKY_CLIENT_SECRET` | Backend  | OAuth2 client secret                                                                         |
+| `CORS_ORIGINS`          | Backend  | Allowed origins, e.g. `https://flight-tracker.pages.dev`                                     |
+| `VITE_API_BASE_URL`     | Frontend | Backend URL, e.g. `https://flight-tracker-api.onrender.com`                                  |
 
 ### CORS
 
@@ -248,17 +248,17 @@ The OpenAPI spec is always available at `/docs` (Swagger UI) and `/openapi.json`
 
 ## Stack Details
 
-| Layer        | Technology                              | Rationale                                                    |
-| ------------ | --------------------------------------- | ------------------------------------------------------------ |
-| Frontend     | React + Vite + Tailwind CSS             | Already scaffolded in Nx monorepo                            |
-| Map          | MapLibre GL JS + react-map-gl           | Free, open-source, WebGL-accelerated, no API key             |
-| Data overlay | Deck.gl (IconLayer)                     | GPU-rendered aircraft icons with heading rotation + smooth interpolation |
-| Map tiles    | OpenFreeMap (dark style)                | Free, no API key, no rate limits                             |
-| State mgmt   | TanStack Query (React Query)            | Auto-polling via `refetchInterval`, caching, loading states  |
-| Backend      | Python / FastAPI                        | Auto-generates OpenAPI spec from Pydantic models             |
-| Data source  | OpenSky Network REST API (`/states/all`)| Free registered account — 4,000 credits/day, 10s resolution  |
-| API contract | Pydantic → OpenAPI → Orval (future)     | Typed React Query hooks + Zod schemas from FastAPI spec      |
-| Monorepo     | Nx + Bun                                | Polyglot task orchestration (JS + Python)                    |
-| Tooling      | mise (Bun, Node, Python, uv)            | Single command to bootstrap all runtimes from zero           |
-| Deploy (FE)  | Cloudflare Pages                        | Fastest CDN, unlimited free bandwidth, auto-deploy from GitHub |
-| Deploy (BE)  | Render                                  | Free tier (750 hrs/mo), auto-deploy from GitHub, zero config |
+| Layer        | Technology                               | Rationale                                                                |
+| ------------ | ---------------------------------------- | ------------------------------------------------------------------------ |
+| Frontend     | React + Vite + Tailwind CSS              | Already scaffolded in Nx monorepo                                        |
+| Map          | MapLibre GL JS + react-map-gl            | Free, open-source, WebGL-accelerated, no API key                         |
+| Data overlay | Deck.gl (IconLayer)                      | GPU-rendered aircraft icons with heading rotation + smooth interpolation |
+| Map tiles    | OpenFreeMap (dark style)                 | Free, no API key, no rate limits                                         |
+| State mgmt   | TanStack Query (React Query)             | Auto-polling via `refetchInterval`, caching, loading states              |
+| Backend      | Python / FastAPI                         | Auto-generates OpenAPI spec from Pydantic models                         |
+| Data source  | OpenSky Network REST API (`/states/all`) | Free registered account — 4,000 credits/day, 10s resolution              |
+| API contract | Pydantic → OpenAPI → Orval (future)      | Typed React Query hooks + Zod schemas from FastAPI spec                  |
+| Monorepo     | Nx + Bun                                 | Polyglot task orchestration (JS + Python)                                |
+| Tooling      | mise (Bun, Node, Python, uv)             | Single command to bootstrap all runtimes from zero                       |
+| Deploy (FE)  | Cloudflare Pages                         | Fastest CDN, unlimited free bandwidth, auto-deploy from GitHub           |
+| Deploy (BE)  | Render                                   | Free tier (750 hrs/mo), auto-deploy from GitHub, zero config             |

@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Ruff check
+        run: uvx ruff check apps/backend/
+
+      - name: Ruff format check
+        run: uvx ruff format --check apps/backend/
+
+      - name: Prettier check
+        run: bunx prettier --check .
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Install Python deps
+        run: cd apps/backend && uv sync
+
+      - name: TypeScript
+        run: bunx tsc --build
+
+      - name: Python (ty)
+        run: cd apps/backend && uvx ty check
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+
+      - name: Install Python deps
+        run: cd apps/backend && uv sync
+
+      - name: pytest
+        run: cd apps/backend && uv run pytest -v

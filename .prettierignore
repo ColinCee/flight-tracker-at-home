@@ -1,0 +1,6 @@
+dist
+node_modules
+.nx
+bun.lock
+apps/frontend/src/api/generated.ts
+apps/frontend/openapi.json
