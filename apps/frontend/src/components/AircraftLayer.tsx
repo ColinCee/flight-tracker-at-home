@@ -5,6 +5,7 @@ import { useCallback, useMemo } from 'react';
 import { useControl } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
 import aircraftIconUrl from '@/assets/aircraft.svg';
+import type { AircraftFilter } from './KpiStrip';
 
 const AIRCRAFT_ICON = {
   url: aircraftIconUrl,
@@ -16,6 +17,22 @@ const AIRCRAFT_ICON = {
 const COLOR_DEFAULT: [number, number, number, number] = [255, 255, 255, 200];
 const COLOR_APPROACHING: [number, number, number, number] = [255, 170, 0, 230];
 const COLOR_SELECTED: [number, number, number, number] = [100, 200, 255, 255];
+const COLOR_DIMMED: [number, number, number, number] = [255, 255, 255, 40];
+
+function matchesFilter(ac: AircraftState, filter: AircraftFilter): boolean {
+  switch (filter) {
+    case null:
+      return true;
+    case 'airborne':
+      return !ac.onGround;
+    case 'inbound-lhr':
+      return ac.isApproachingLhr;
+    case 'climbing':
+      return (ac.verticalRate ?? 0) > 1;
+    case 'descending':
+      return (ac.verticalRate ?? 0) < -1;
+  }
+}
 
 function DeckGLOverlay(props: MapboxOverlayProps) {
   const overlay = useControl(() => new MapboxOverlay(props));
@@ -26,10 +43,16 @@ function DeckGLOverlay(props: MapboxOverlayProps) {
 interface AircraftLayerProps {
   aircraft: AircraftState[];
   selectedIcao24?: string | null;
+  activeFilter?: AircraftFilter;
   onAircraftClick?: (icao24: string | null) => void;
 }
 
-export function AircraftLayer({ aircraft, selectedIcao24, onAircraftClick }: AircraftLayerProps) {
+export function AircraftLayer({
+  aircraft,
+  selectedIcao24,
+  activeFilter,
+  onAircraftClick,
+}: AircraftLayerProps) {
   const handleClick = useCallback(
     (info: PickingInfo<AircraftState>) => {
       onAircraftClick?.(info.object?.icao24 ?? null);
@@ -48,6 +71,7 @@ export function AircraftLayer({ aircraft, selectedIcao24, onAircraftClick }: Air
         getAngle: (d) => -(d.trueTrack ?? 0),
         getColor: (d) => {
           if (d.icao24 === selectedIcao24) return COLOR_SELECTED;
+          if (activeFilter && !matchesFilter(d, activeFilter)) return COLOR_DIMMED;
           return d.isApproachingLhr ? COLOR_APPROACHING : COLOR_DEFAULT;
         },
         sizeScale: 1,
@@ -56,11 +80,11 @@ export function AircraftLayer({ aircraft, selectedIcao24, onAircraftClick }: Air
         onClick: handleClick,
         updateTriggers: {
           getSize: selectedIcao24,
-          getColor: selectedIcao24,
+          getColor: [selectedIcao24, activeFilter],
         },
       }),
     ],
-    [aircraft, selectedIcao24, handleClick],
+    [aircraft, selectedIcao24, activeFilter, handleClick],
   );
 
   return <DeckGLOverlay layers={layers} />;

@@ -1,14 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
-import { KpiStrip } from '@/components/KpiStrip';
+import { type AircraftFilter, KpiStrip } from '@/components/KpiStrip';
 import { MapView } from '@/components/MapView';
 import { useAircraftData } from '@/hooks/useAircraftData';
 
 export function App() {
   const { aircraft, kpis } = useAircraftData();
   const [selectedIcao24, setSelectedIcao24] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<AircraftFilter>(null);
 
-  // Derive selected aircraft from latest data so position stays current
-  // and popup auto-dismisses when aircraft leaves radar
   const selectedAircraft = useMemo(
     () => aircraft.find((a) => a.icao24 === selectedIcao24) ?? null,
     [aircraft, selectedIcao24],
@@ -25,10 +24,16 @@ export function App() {
       <MapView
         aircraft={aircraft}
         selectedAircraft={selectedAircraft}
+        activeFilter={activeFilter}
         onAircraftClick={handleAircraftClick}
         onCloseInspector={handleCloseInspector}
       />
-      <KpiStrip kpis={kpis} />
+      <KpiStrip
+        kpis={kpis}
+        aircraft={aircraft}
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Map as MapGL, Popup } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
 import { AircraftInspector } from './AircraftInspector';
 import { AircraftLayer } from './AircraftLayer';
+import type { AircraftFilter } from './KpiStrip';
 
 const INITIAL_VIEW_STATE = {
   longitude: -0.12,
@@ -18,6 +19,7 @@ const MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 interface MapViewProps {
   aircraft: AircraftState[];
   selectedAircraft?: AircraftState | null;
+  activeFilter?: AircraftFilter;
   onAircraftClick?: (icao24: string | null) => void;
   onCloseInspector: () => void;
 }
@@ -25,6 +27,7 @@ interface MapViewProps {
 export function MapView({
   aircraft,
   selectedAircraft,
+  activeFilter,
   onAircraftClick,
   onCloseInspector,
 }: MapViewProps) {
@@ -47,6 +50,7 @@ export function MapView({
       <AircraftLayer
         aircraft={aircraft}
         selectedIcao24={selectedAircraft?.icao24}
+        activeFilter={activeFilter}
         onAircraftClick={onAircraftClick}
       />
       {selectedAircraft && (
