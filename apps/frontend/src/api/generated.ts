@@ -32,8 +32,8 @@ export interface AircraftState {
   onGround: boolean;
   squawk: string | null;
   lastContact: number;
-  positionSource: string | null;
-  category: string | null;
+  positionSource: string;
+  category: string;
   isApproachingLhr: boolean;
 }
 

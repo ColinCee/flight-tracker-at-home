@@ -1,7 +1,6 @@
-"""This class handles the extraction of the data from the opensky API,
-using Pydantic to check types and putting the data into a dictionary.
-It then runs a series of checks to determine
-if an aircraft is inbound to Heathrow.
+"""This module handles the extraction and transformation of OpenSky API data.
+It maps raw positional arrays to strict Pydantic contracts and applies
+spatial heuristics to determine Heathrow approach status.
 """
 
 import logging
@@ -15,7 +14,10 @@ from src.models import AircraftState
 
 logger = logging.getLogger(__name__)
 
-# London Bounding Box from ARCHITECTURE.md
+# --- Configuration & Constants ---
+OPENSKY_URL = "https://opensky-network.org/api/states/all"
+
+# London Bounding Box
 LAMIN = 51.20
 LOMIN = -0.90
 LAMAX = 51.70
@@ -163,8 +165,9 @@ def parse_state_vector(vector: list) -> AircraftState | None:
         raw_position = vector[16] if len(vector) > 16 else 0
         raw_category = vector[17] if len(vector) > 17 else 0
 
-        # Build the structured Pydantic object
-        aircraft = AircraftState(
+        # Some fields are not required, if need to add more check out:
+        # https://openskynetwork.github.io/opensky-api/rest.html
+        return AircraftState(
             icao24=vector[0],
             callsign=clean_callsign,
             origin_country=vector[2],
@@ -180,14 +183,14 @@ def parse_state_vector(vector: list) -> AircraftState | None:
             squawk=vector[14],
             position_source=POSITION_SOURCE_MAP.get(raw_position, "Unknown"),
             category=CATEGORY_MAP.get(raw_category, "Unknown"),
-            is_approaching_lhr=False,  # Default to false, handled in Phase 3
+            is_approaching_lhr=False,  # Evaluated downstream
         )
-        return aircraft
     except (IndexError, TypeError) as e:
         logger.warning("Failed to parse vector: %s", e)
         return None
 
 
+# --- Phase 3: Spatial Math & Business Logic ---
 def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates the great-circle distance between two GPS points in kilometers."""
     R = 6371.0  # Earth radius in kilometers
@@ -202,8 +205,7 @@ def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) ->
         * math.sin(dlon / 2) ** 2
     )
 
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
+    return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)))
 
 
 def check_lhr_approach(aircraft: AircraftState) -> bool:
@@ -245,14 +247,15 @@ def check_lhr_approach(aircraft: AircraftState) -> bool:
     return dist <= 20.0
 
 
+# --- Main Orchestrator ---
 async def get_current_airspace_state() -> list[AircraftState]:
+    """Executes the ETL pipeline: Fetches, parses, and applies ATC logic."""
     raw_vectors = await fetch_london_airspace()
 
     valid_aircraft = []
     for vector in raw_vectors:
         parsed = parse_state_vector(vector)
         if parsed:
-            # Inject the Approach Logic here
             parsed.is_approaching_lhr = check_lhr_approach(parsed)
             valid_aircraft.append(parsed)
 

@@ -93,8 +93,8 @@ def test_check_lhr_approach_valid():
         vertical_rate=-3.0,  # Descending
         geo_altitude=850.0,
         squawk=None,
-        position_source=None,
-        category=None,
+        position_source="ADS-B",
+        category="Light",
         is_approaching_lhr=False,
     )
     assert check_lhr_approach(aircraft) is True
@@ -116,8 +116,8 @@ def test_check_lhr_approach_wrong_heading():
         vertical_rate=-3.0,
         geo_altitude=850.0,
         squawk=None,
-        position_source=None,
-        category=None,
+        position_source="ADS-B",
+        category="Heavy",
         is_approaching_lhr=False,
     )
     assert check_lhr_approach(aircraft) is False
