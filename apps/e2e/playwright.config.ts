@@ -4,7 +4,6 @@ const serversExternal = !!process.env.SERVERS_EXTERNAL;
 
 export default defineConfig({
   testDir: './tests',
-  testIgnore: ['**/memory.spec.ts'],
   timeout: 30_000,
   retries: 0,
   use: {

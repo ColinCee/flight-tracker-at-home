@@ -66,7 +66,7 @@ bunx tsc --build
 
 [tasks."test:e2e"]
 description = "Run Playwright end-to-end tests"
-run = "cd apps/e2e && bunx playwright test"
+run = "cd apps/e2e && bunx playwright test --ignore-pattern memory.spec.ts"
 
 [tasks."test:e2e:ui"]
 description = "Run Playwright tests with interactive UI"
