@@ -3,7 +3,7 @@ import time
 from unittest.mock import patch
 
 import pytest
-from src.cache import AirspaceCache
+from src.cache import AirspaceCache, get_effective_ttl
 from src.models import AircraftState
 
 
@@ -99,3 +99,50 @@ async def test_cache_serves_stale_data_on_error(mock_get_state):
     assert response_2.kpis.api_health == "stale"
     # Original aircraft data preserved
     assert response_2.kpis.tracked_aircraft == 1
+
+
+@patch("src.cache.get_remaining_credits")
+def test_effective_ttl_defaults_to_anonymous(mock_credits):
+    """Without env vars or auth, TTL defaults to 10s (anonymous)."""
+    mock_credits.return_value = None
+    assert get_effective_ttl() == 10.0
+
+
+@patch.dict("os.environ", {"CACHE_TTL": "20"})
+@patch("src.cache.get_remaining_credits")
+def test_effective_ttl_uses_env_var(mock_credits):
+    """CACHE_TTL env var overrides the default."""
+    mock_credits.return_value = None
+    assert get_effective_ttl() == 20.0
+
+
+@patch.dict("os.environ", {"CACHE_TTL": "20"})
+@patch("src.cache.get_remaining_credits")
+def test_effective_ttl_throttles_below_1000_credits(mock_credits):
+    """Below 1000 credits, TTL scales up to 30s."""
+    mock_credits.return_value = 800
+    assert get_effective_ttl() == 30.0
+
+
+@patch.dict("os.environ", {"CACHE_TTL": "20"})
+@patch("src.cache.get_remaining_credits")
+def test_effective_ttl_throttles_below_500_credits(mock_credits):
+    """Below 500 credits, TTL scales up to 60s."""
+    mock_credits.return_value = 300
+    assert get_effective_ttl() == 60.0
+
+
+@patch.dict("os.environ", {"CACHE_TTL": "20"})
+@patch("src.cache.get_remaining_credits")
+def test_effective_ttl_throttles_below_100_credits(mock_credits):
+    """Below 100 credits, TTL scales up to 120s (conservation mode)."""
+    mock_credits.return_value = 50
+    assert get_effective_ttl() == 120.0
+
+
+@patch.dict("os.environ", {"CACHE_TTL": "20"})
+@patch("src.cache.get_remaining_credits")
+def test_effective_ttl_no_throttle_above_1000_credits(mock_credits):
+    """Above 1000 credits, no throttling — base TTL applies."""
+    mock_credits.return_value = 2000
+    assert get_effective_ttl() == 20.0

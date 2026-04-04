@@ -59,7 +59,7 @@ flight-tracker-at-home/
 ### Backend (apps/backend)
 
 - **opensky.py** — 3-phase ETL: fetch London airspace from OpenSky API → parse state vectors into `AircraftState` → enrich with `is_approaching_lhr` heuristic (haversine distance, altitude, heading, descent rate). Authenticates via OAuth2 client credentials flow (tokens auto-cached and refreshed). Falls back to anonymous if no credentials.
-- **cache.py** — `AirspaceCache` singleton with 10s TTL lazy refresh; tracks rolling 60-min throughput for KPIs. On upstream failure (rate limit, timeout), serves stale cached data instead of losing aircraft.
+- **cache.py** — `AirspaceCache` singleton with dynamic TTL lazy refresh; tracks rolling 60-min throughput for KPIs. On upstream failure (rate limit, timeout), serves stale cached data instead of losing aircraft. Credit-aware throttling scales TTL up (20s → 30s → 60s → 120s) as remaining API credits deplete.
 - **models.py** — Pydantic models (`AircraftState`, `KPIs`, `AircraftResponse`) with `alias_generator=to_camel`
 
 ### OpenSky API credentials
@@ -72,14 +72,24 @@ The backend works without credentials (anonymous: 400 calls/day, 10s resolution)
 
 The `.env` file is gitignored. See `.env.example` for the template.
 
+### Production environment variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OPENSKY_CLIENT_ID` | No | — | OAuth2 client ID (4000+ credits/day) |
+| `OPENSKY_CLIENT_SECRET` | No | — | OAuth2 client secret |
+| `CACHE_TTL` | No | `5`/`10` | Base cache TTL in seconds (production: `20`) |
+| `CORS_ORIGINS` | No | `http://localhost:4200` | Comma-separated allowed origins |
+| `VITE_API_BASE_URL` | No | `http://localhost:8000` | Backend URL (set at frontend build time) |
+
 ### Data Flow
 
 ```
-OpenSky API (every 10s, lazy)
+OpenSky API (dynamic TTL, credit-aware)
   → opensky.py (fetch + parse + enrich)
-  → cache.py (TTL + KPIs)
+  → cache.py (adaptive TTL + KPIs + stale fallback)
   → GET /aircraft (AircraftResponse JSON)
-  → useAircraftData (React Query, 10s refetch)
+  → useAircraftData (React Query, adaptive refetch)
   → AircraftLayer (Deck.gl IconLayer)
 ```
 
