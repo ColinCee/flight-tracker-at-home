@@ -6,6 +6,9 @@ SAMPLE_INTERVAL=1
 THRESHOLD_MB=${MEMORY_THRESHOLD_MB:-512}
 REPORT_FILE="${MEMORY_REPORT_FILE:-memory-report.txt}"
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
+
 # Temp files for peak tracking
 BACKEND_SAMPLES=$(mktemp)
 FRONTEND_SAMPLES=$(mktemp)
@@ -31,20 +34,39 @@ FRONTEND_PID=$!
 
 # --- Wait for servers ---
 echo "Waiting for backend (port 8000)..."
-timeout 30 bash -c 'until curl -sf http://localhost:8000/health > /dev/null 2>&1; do sleep 0.5; done'
+if ! timeout 30 bash -c 'until curl -sf http://localhost:8000/health > /dev/null 2>&1; do sleep 0.5; done'; then
+  echo "ERROR: Backend did not become ready within 30s" >&2
+  exit 1
+fi
 echo "Backend ready (PID: $BACKEND_PID)"
 
 echo "Waiting for frontend (port 4200)..."
-timeout 60 bash -c 'until curl -sf http://localhost:4200 > /dev/null 2>&1; do sleep 0.5; done'
+if ! timeout 60 bash -c 'until curl -sf http://localhost:4200 > /dev/null 2>&1; do sleep 0.5; done'; then
+  echo "ERROR: Frontend did not become ready within 60s" >&2
+  exit 1
+fi
 echo "Frontend ready (PID: $FRONTEND_PID)"
 
 # --- Start memory samplers ---
+# Get all descendant PIDs recursively via /proc
+get_descendants() {
+  local parent=$1
+  local children
+  children=$(ps -o pid= --ppid "$parent" 2>/dev/null) || true
+  for child in $children; do
+    echo "$child"
+    get_descendants "$child"
+  done
+}
+
 sample_rss() {
   local pid=$1 output=$2
   while kill -0 "$pid" 2>/dev/null; do
-    # ps reports RSS in KB
-    rss_kb=$(ps -o rss= -p "$pid" 2>/dev/null || echo "0")
-    echo "${rss_kb// /}" >> "$output"
+    # Collect pid + all descendants
+    local all_pids="$pid $(get_descendants "$pid")"
+    # Sum RSS across all
+    rss_kb=$(ps -o rss= -p $(echo $all_pids | tr ' ' ',') 2>/dev/null | awk '{s+=$1} END{print s+0}')
+    [[ "$rss_kb" -gt 0 ]] && echo "$rss_kb" >> "$output"
     sleep "$SAMPLE_INTERVAL"
   done
 }
