@@ -72,6 +72,28 @@ jobs:
       - run: bunx playwright install chromium
       - run: mise run test:e2e
 
+  memory-profile:
+    name: Memory Profile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: bun install --frozen-lockfile
+      - run: cd apps/backend && uv sync
+      - run: bunx playwright install chromium
+      - name: Run memory profiling
+        run: scripts/memory-profile.sh
+        env:
+          MEMORY_THRESHOLD_MB: 512
+          MEMORY_REPORT_FILE: memory-report.txt
+      - name: Upload memory report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: memory-report
+          path: memory-report.txt
+          retention-days: 30
+
   rules-sync:
     name: Rules Sync Check
     runs-on: ubuntu-latest
