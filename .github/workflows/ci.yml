@@ -72,6 +72,33 @@ jobs:
       - run: bunx playwright install chromium
       - run: mise run test:e2e
 
+  memory-profile:
+    name: Memory Profile
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: bun install --frozen-lockfile
+      - run: cd apps/backend && uv sync
+      - run: bunx playwright install chromium
+      - name: Run memory profiling
+        run: scripts/memory-profile.sh
+        env:
+          MEMORY_REPORT_FILE: memory-report.md
+          MEMORY_SOAK_SECONDS: 120
+      - name: Comment memory report on PR
+        if: always()
+        run: |
+          if ! gh pr comment "${{ github.event.number }}" --edit-last --body-file memory-report.md 2>/dev/null; then
+            gh pr comment "${{ github.event.number }}" --body-file memory-report.md
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   rules-sync:
     name: Rules Sync Check
     runs-on: ubuntu-latest
