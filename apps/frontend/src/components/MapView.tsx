@@ -16,9 +16,11 @@ const MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 
 interface MapViewProps {
   aircraft: AircraftState[];
+  selectedIcao24?: string | null;
+  onAircraftClick?: (aircraft: AircraftState | null) => void;
 }
 
-export function MapView({ aircraft }: MapViewProps) {
+export function MapView({ aircraft, selectedIcao24, onAircraftClick }: MapViewProps) {
   // OpenFreeMap dark style references a "wood-pattern" sprite that's missing
   // from their sprite sheet. Remove the broken layer once the style loads.
   const handleStyleData = useCallback((e: MapStyleDataEvent) => {
@@ -35,7 +37,11 @@ export function MapView({ aircraft }: MapViewProps) {
       mapStyle={MAP_STYLE}
       onStyleData={handleStyleData}
     >
-      <AircraftLayer aircraft={aircraft} />
+      <AircraftLayer
+        aircraft={aircraft}
+        selectedIcao24={selectedIcao24}
+        onAircraftClick={onAircraftClick}
+      />
     </MapGL>
   );
 }

@@ -1,6 +1,7 @@
+import type { PickingInfo } from '@deck.gl/core';
 import { IconLayer } from '@deck.gl/layers';
 import { MapboxOverlay, type MapboxOverlayProps } from '@deck.gl/mapbox';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useControl } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
 import aircraftIconUrl from '@/assets/aircraft.svg';
@@ -14,6 +15,7 @@ const AIRCRAFT_ICON = {
 
 const COLOR_DEFAULT: [number, number, number, number] = [255, 255, 255, 200];
 const COLOR_APPROACHING: [number, number, number, number] = [255, 170, 0, 230];
+const COLOR_SELECTED: [number, number, number, number] = [100, 200, 255, 255];
 
 function DeckGLOverlay(props: MapboxOverlayProps) {
   const overlay = useControl(() => new MapboxOverlay(props));
@@ -23,9 +25,18 @@ function DeckGLOverlay(props: MapboxOverlayProps) {
 
 interface AircraftLayerProps {
   aircraft: AircraftState[];
+  selectedIcao24?: string | null;
+  onAircraftClick?: (aircraft: AircraftState | null) => void;
 }
 
-export function AircraftLayer({ aircraft }: AircraftLayerProps) {
+export function AircraftLayer({ aircraft, selectedIcao24, onAircraftClick }: AircraftLayerProps) {
+  const handleClick = useCallback(
+    (info: PickingInfo<AircraftState>) => {
+      onAircraftClick?.(info.object ?? null);
+    },
+    [onAircraftClick],
+  );
+
   const layers = useMemo(
     () => [
       new IconLayer<AircraftState>({
@@ -33,15 +44,23 @@ export function AircraftLayer({ aircraft }: AircraftLayerProps) {
         data: aircraft,
         getIcon: () => AIRCRAFT_ICON,
         getPosition: (d) => [d.longitude, d.latitude],
-        getSize: 24,
+        getSize: (d) => (d.icao24 === selectedIcao24 ? 30 : 24),
         getAngle: (d) => -(d.trueTrack ?? 0),
-        getColor: (d) => (d.isApproachingLhr ? COLOR_APPROACHING : COLOR_DEFAULT),
+        getColor: (d) => {
+          if (d.icao24 === selectedIcao24) return COLOR_SELECTED;
+          return d.isApproachingLhr ? COLOR_APPROACHING : COLOR_DEFAULT;
+        },
         sizeScale: 1,
         sizeUnits: 'pixels',
         pickable: true,
+        onClick: handleClick,
+        updateTriggers: {
+          getSize: selectedIcao24,
+          getColor: selectedIcao24,
+        },
       }),
     ],
-    [aircraft],
+    [aircraft, selectedIcao24, handleClick],
   );
 
   return <DeckGLOverlay layers={layers} />;
