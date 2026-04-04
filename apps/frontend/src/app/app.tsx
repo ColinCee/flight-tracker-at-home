@@ -1,33 +1,34 @@
-import { useCallback, useState } from 'react';
-import type { AircraftState } from '@/api/generated';
-import { AircraftInspector } from '@/components/AircraftInspector';
+import { useCallback, useMemo, useState } from 'react';
 import { KpiStrip } from '@/components/KpiStrip';
 import { MapView } from '@/components/MapView';
 import { useAircraftData } from '@/hooks/useAircraftData';
 
 export function App() {
   const { aircraft, kpis } = useAircraftData();
-  const [selectedAircraft, setSelectedAircraft] = useState<AircraftState | null>(null);
+  const [selectedIcao24, setSelectedIcao24] = useState<string | null>(null);
 
-  const handleAircraftClick = useCallback((ac: AircraftState | null) => {
-    setSelectedAircraft((prev) => (prev?.icao24 === ac?.icao24 ? null : ac));
+  // Derive selected aircraft from latest data so position stays current
+  // and popup auto-dismisses when aircraft leaves radar
+  const selectedAircraft = useMemo(
+    () => aircraft.find((a) => a.icao24 === selectedIcao24) ?? null,
+    [aircraft, selectedIcao24],
+  );
+
+  const handleAircraftClick = useCallback((icao24: string | null) => {
+    setSelectedIcao24((prev) => (prev === icao24 ? null : icao24));
   }, []);
 
-  const handleCloseInspector = useCallback(() => setSelectedAircraft(null), []);
+  const handleCloseInspector = useCallback(() => setSelectedIcao24(null), []);
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-background text-foreground">
+    <div className="relative h-screen w-screen bg-background text-foreground">
+      <MapView
+        aircraft={aircraft}
+        selectedAircraft={selectedAircraft}
+        onAircraftClick={handleAircraftClick}
+        onCloseInspector={handleCloseInspector}
+      />
       <KpiStrip kpis={kpis} />
-      <main className="relative flex-1">
-        <MapView
-          aircraft={aircraft}
-          selectedIcao24={selectedAircraft?.icao24}
-          onAircraftClick={handleAircraftClick}
-        />
-        {selectedAircraft && (
-          <AircraftInspector aircraft={selectedAircraft} onClose={handleCloseInspector} />
-        )}
-      </main>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { X } from 'lucide-react';
 import type { AircraftState } from '@/api/generated';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatHeading, metresToFeet, msToKnots } from '@/lib/units';
 
 interface AircraftInspectorProps {
@@ -22,10 +21,10 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
   const callsign = aircraft.callsign?.trim() || aircraft.icao24.toUpperCase();
 
   return (
-    <Card className="absolute right-4 top-4 z-10 w-64 gap-0 border-border bg-background/90 py-0 backdrop-blur-sm">
-      <CardHeader className="flex-row items-center justify-between px-4 py-3">
+    <div className="w-56">
+      <div className="flex items-center justify-between pb-2">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-sm">{callsign}</CardTitle>
+          <span className="text-sm font-semibold text-foreground">{callsign}</span>
           {aircraft.isApproachingLhr && (
             <Badge variant="outline" className="border-amber-500/50 text-[10px] text-amber-400">
               LHR
@@ -37,17 +36,17 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
           onClick={onClose}
           className="rounded p-0.5 text-muted-foreground hover:text-foreground"
         >
-          <X className="h-4 w-4" />
+          <X className="h-3.5 w-3.5" />
         </button>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-1.5 px-4 pb-3">
+      </div>
+      <div className="flex flex-col gap-1">
         <Field label="Altitude" value={`${metresToFeet(aircraft.baroAltitude)} ft`} />
         <Field label="Speed" value={`${msToKnots(aircraft.velocity)} kts`} />
         <Field label="Heading" value={formatHeading(aircraft.trueTrack)} />
         <Field label="Origin" value={aircraft.originCountry} />
         {aircraft.squawk && <Field label="Squawk" value={aircraft.squawk} />}
         <Field label="On Ground" value={aircraft.onGround ? 'Yes' : 'No'} />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

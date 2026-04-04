@@ -26,13 +26,13 @@ function DeckGLOverlay(props: MapboxOverlayProps) {
 interface AircraftLayerProps {
   aircraft: AircraftState[];
   selectedIcao24?: string | null;
-  onAircraftClick?: (aircraft: AircraftState | null) => void;
+  onAircraftClick?: (icao24: string | null) => void;
 }
 
 export function AircraftLayer({ aircraft, selectedIcao24, onAircraftClick }: AircraftLayerProps) {
   const handleClick = useCallback(
     (info: PickingInfo<AircraftState>) => {
-      onAircraftClick?.(info.object ?? null);
+      onAircraftClick?.(info.object?.icao24 ?? null);
     },
     [onAircraftClick],
   );

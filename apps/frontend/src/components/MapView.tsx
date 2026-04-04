@@ -2,8 +2,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 import type { MapStyleDataEvent } from 'maplibre-gl';
 import { useCallback } from 'react';
-import { Map as MapGL } from 'react-map-gl/maplibre';
+import { Map as MapGL, Popup } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
+import { AircraftInspector } from './AircraftInspector';
 import { AircraftLayer } from './AircraftLayer';
 
 const INITIAL_VIEW_STATE = {
@@ -16,11 +17,17 @@ const MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 
 interface MapViewProps {
   aircraft: AircraftState[];
-  selectedIcao24?: string | null;
-  onAircraftClick?: (aircraft: AircraftState | null) => void;
+  selectedAircraft?: AircraftState | null;
+  onAircraftClick?: (icao24: string | null) => void;
+  onCloseInspector: () => void;
 }
 
-export function MapView({ aircraft, selectedIcao24, onAircraftClick }: MapViewProps) {
+export function MapView({
+  aircraft,
+  selectedAircraft,
+  onAircraftClick,
+  onCloseInspector,
+}: MapViewProps) {
   // OpenFreeMap dark style references a "wood-pattern" sprite that's missing
   // from their sprite sheet. Remove the broken layer once the style loads.
   const handleStyleData = useCallback((e: MapStyleDataEvent) => {
@@ -39,9 +46,22 @@ export function MapView({ aircraft, selectedIcao24, onAircraftClick }: MapViewPr
     >
       <AircraftLayer
         aircraft={aircraft}
-        selectedIcao24={selectedIcao24}
+        selectedIcao24={selectedAircraft?.icao24}
         onAircraftClick={onAircraftClick}
       />
+      {selectedAircraft && (
+        <Popup
+          longitude={selectedAircraft.longitude}
+          latitude={selectedAircraft.latitude}
+          closeButton={false}
+          closeOnClick={false}
+          className="aircraft-popup"
+          offset={20}
+          maxWidth="none"
+        >
+          <AircraftInspector aircraft={selectedAircraft} onClose={onCloseInspector} />
+        </Popup>
+      )}
     </MapGL>
   );
 }
