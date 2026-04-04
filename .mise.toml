@@ -1,0 +1,26 @@
+[tools]
+bun = "1.3"
+node = "22"
+python = "3.12"
+uv = "latest"
+
+[settings]
+python.uv_venv_auto = true
+
+[env]
+VIRTUAL_ENV = "{{config_root}}/apps/backend/.venv"
+
+[tasks.setup]
+description = "Install all dependencies (JS + Python)"
+run = """
+bun install
+cd apps/backend && uv sync
+"""
+
+[tasks."setup:frontend"]
+description = "Install frontend dependencies only"
+run = "bun install"
+
+[tasks."setup:backend"]
+description = "Install backend dependencies only"
+run = "cd apps/backend && uv sync"
