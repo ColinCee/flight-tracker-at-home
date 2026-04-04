@@ -17,6 +17,10 @@ bun install
 cd apps/backend && uv sync
 """
 
+[tasks.dev]
+description = "Run frontend and backend together"
+run = "bun run dev"
+
 [tasks."setup:frontend"]
 description = "Install frontend dependencies only"
 run = "bun install"

@@ -1,0 +1,25 @@
+{
+  "name": "frontend",
+  "targets": {
+    "build": {
+      "command": "vite build",
+      "options": { "cwd": "apps/frontend" }
+    },
+    "serve": {
+      "command": "vite",
+      "options": { "cwd": "apps/frontend" }
+    },
+    "dev": {
+      "command": "vite",
+      "options": { "cwd": "apps/frontend" }
+    },
+    "preview": {
+      "command": "vite preview",
+      "options": { "cwd": "apps/frontend" }
+    },
+    "typecheck": {
+      "command": "tsc --build --emitDeclarationOnly",
+      "options": { "cwd": "apps/frontend" }
+    }
+  }
+}

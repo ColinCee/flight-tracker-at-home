@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "dev": "NX_TUI=false bunx nx run-many -t serve -p backend,frontend --parallel=2 --outputStyle=stream",
     "export:openapi": "cd apps/backend && uv run python scripts/export_openapi.py",
     "generate:api": "bun run export:openapi && bunx orval --config orval.config.ts"
   },

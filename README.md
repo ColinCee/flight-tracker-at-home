@@ -55,14 +55,24 @@ That exports `apps/backend`'s OpenAPI schema and regenerates the frontend client
 ## Typical commands
 
 ```sh
-bunx nx show projects
-bunx nx serve backend
+mise run dev
 ```
 
-For the frontend, use the project name shown by `bunx nx show projects`:
+Or with Bun/Nx directly:
 
 ```sh
-bunx nx <target> @flight-tracker-at-home/frontend
+bun run dev
+```
+
+That starts the frontend on `http://localhost:4200` and the backend on
+`http://localhost:8000`.
+
+Other useful commands:
+
+```sh
+bunx nx show projects
+bunx nx serve backend
+bunx nx serve frontend
 ```
 
 ## Lockfiles

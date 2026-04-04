@@ -2,15 +2,15 @@
   "name": "backend",
   "targets": {
     "serve": {
-      "command": "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
+      "command": "uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
       "options": { "cwd": "apps/backend" }
     },
     "test": {
-      "command": "pytest",
+      "command": "uv run pytest",
       "options": { "cwd": "apps/backend" }
     },
     "lint": {
-      "command": "ruff check src/",
+      "command": "uv run ruff check src/ scripts/",
       "options": { "cwd": "apps/backend" }
     }
   }
