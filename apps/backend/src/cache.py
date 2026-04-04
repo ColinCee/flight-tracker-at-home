@@ -1,8 +1,14 @@
-"""Cache for AircraftResponse, refreshes the data every 10 seconds.
-The Python class acts as a Singleton - only one instance of this stace will ever exist.
+"""Cache for AircraftResponse — singleton that refreshes on a dynamic TTL.
+
+TTL behaviour:
+- Development (no CACHE_TTL env var): 5s authenticated / 10s anonymous,
+  matching OpenSky's data resolution.
+- Production (CACHE_TTL=20): 20s base, scaled up automatically when
+  remaining API credits drop below safety thresholds.
 """
 
 import logging
+import os
 import time
 from collections import deque
 
@@ -15,9 +21,52 @@ from src.opensky import (
 
 logger = logging.getLogger(__name__)
 
-# OpenSky data resolution: 5s authenticated, 10s anonymous
-TTL_AUTHENTICATED = 5.0
-TTL_ANONYMOUS = 10.0
+# Dev defaults match OpenSky data resolution
+_TTL_DEV_AUTHENTICATED = 5.0
+_TTL_DEV_ANONYMOUS = 10.0
+
+# Credit-aware throttle thresholds: (credit_floor, minimum_ttl)
+# Ordered lowest-first so the strictest match wins.
+_CREDIT_THRESHOLDS: list[tuple[int, float]] = [
+    (100, 120.0),
+    (500, 60.0),
+    (1000, 30.0),
+]
+
+
+def get_effective_ttl() -> float:
+    """Return the cache TTL in seconds, factoring in credit budget.
+
+    1. If CACHE_TTL is set, use it as the base (production).
+       Otherwise fall back to 5s/10s dev defaults.
+    2. If remaining credits are known and low, scale up to conserve them.
+    """
+    env_ttl = os.getenv("CACHE_TTL")
+    if env_ttl:
+        base = float(env_ttl)
+    else:
+        base = (
+            _TTL_DEV_AUTHENTICATED
+            if _token_manager.is_authenticated
+            else _TTL_DEV_ANONYMOUS
+        )
+
+    credits = get_remaining_credits()
+    if credits is None:
+        return base
+
+    for floor, minimum in _CREDIT_THRESHOLDS:
+        if credits < floor:
+            if minimum > base:
+                logger.info(
+                    "Credit-aware throttle: %d credits remaining, TTL %gs → %gs",
+                    credits,
+                    base,
+                    minimum,
+                )
+            return max(base, minimum)
+
+    return base
 
 
 class AirspaceCache:
@@ -34,7 +83,7 @@ class AirspaceCache:
         """The main entry point for the API route."""
         now = time.time()
         cache_age = now - self.last_update
-        ttl = TTL_AUTHENTICATED if _token_manager.is_authenticated else TTL_ANONYMOUS
+        ttl = get_effective_ttl()
 
         # 1. The "Lazy" Check: If data is fresh, return it immediately
         if self.cached_response and cache_age < ttl:

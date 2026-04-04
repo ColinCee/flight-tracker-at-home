@@ -100,3 +100,51 @@ bunx nx serve frontend
 - `apps/backend/uv.lock` pins Python dependency versions
 
 If you are new to the repo, start with **mise**, then **bun/uv**, then **Nx**.
+
+## Deployment
+
+The app is designed to run for free on **Cloudflare Pages** (frontend) + **Render** (backend).
+
+### Backend → Render
+
+1. Go to [render.com](https://render.com) → **New** → **Blueprint**
+2. Connect this GitHub repo — Render reads `render.yaml` automatically
+3. In the Render dashboard, set the secret env vars:
+   - `OPENSKY_CLIENT_ID` — your OpenSky OAuth2 client ID
+   - `OPENSKY_CLIENT_SECRET` — your OpenSky OAuth2 client secret
+4. Once deployed, note the service URL (e.g. `https://flight-tracker-api.onrender.com`)
+
+### Frontend → Cloudflare Pages
+
+1. Go to [pages.cloudflare.com](https://pages.cloudflare.com) → **Create a project** → connect this repo
+2. Configure build settings:
+   - **Build command:** `bun install && bunx nx build frontend`
+   - **Build output directory:** `apps/frontend/dist`
+   - **Root directory:** `/` (repo root)
+3. Add environment variable:
+   - `VITE_API_BASE_URL` = your Render backend URL (e.g. `https://flight-tracker-api.onrender.com`)
+4. Deploy — Cloudflare will auto-deploy on every push to `main`
+
+### Environment variables reference
+
+| Variable | Where | Required | Default | Description |
+|----------|-------|----------|---------|-------------|
+| `OPENSKY_CLIENT_ID` | Backend (Render) | No | — | OAuth2 client ID for higher rate limits |
+| `OPENSKY_CLIENT_SECRET` | Backend (Render) | No | — | OAuth2 client secret |
+| `CACHE_TTL` | Backend (Render) | No | `5`/`10` | Base cache TTL in seconds (production: `20`) |
+| `CORS_ORIGINS` | Backend (Render) | No | `http://localhost:4200` | Comma-separated allowed origins |
+| `VITE_API_BASE_URL` | Frontend (Cloudflare) | No | `http://localhost:8000` | Backend API URL |
+
+### Credit-aware throttling
+
+With `CACHE_TTL=20` and OpenSky auth credentials (4,000 credits/day), the backend
+automatically scales polling when credits run low:
+
+| Credits remaining | Effective TTL | Calls/day budget |
+|-------------------|---------------|------------------|
+| > 1,000 | 20s (base) | 4,320 |
+| < 1,000 | 30s | 2,880 |
+| < 500 | 60s | 1,440 |
+| < 100 | 120s | 720 |
+
+This ensures the tracker stays live all day instead of exhausting credits in a few hours.

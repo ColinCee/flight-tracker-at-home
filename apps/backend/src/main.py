@@ -11,8 +11,9 @@ from src.models import AircraftResponse
 app = FastAPI(title="Flight Tracker at Home API")
 
 # Setup CORS so the React frontend can talk to this backend
-# Defaults to localhost:4200 for local development
-allowed_origins = [os.getenv("CORS_ORIGINS", "http://localhost:4200")]
+# Comma-separated for multiple origins (e.g., "https://app.pages.dev,https://custom.com")
+cors_env = os.getenv("CORS_ORIGINS", "http://localhost:4200")
+allowed_origins = [origin.strip() for origin in cors_env.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
