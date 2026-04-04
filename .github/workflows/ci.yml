@@ -92,7 +92,10 @@ jobs:
           MEMORY_SOAK_SECONDS: 120
       - name: Comment memory report on PR
         if: always()
-        run: gh pr comment "${{ github.event.number }}" --body-file memory-report.md
+        run: |
+          if ! gh pr comment "${{ github.event.number }}" --edit-last --body-file memory-report.md 2>/dev/null; then
+            gh pr comment "${{ github.event.number }}" --body-file memory-report.md
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
