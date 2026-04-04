@@ -1,9 +1,15 @@
 # Flight Tracker at Home
 
-A small monorepo for a flight-tracking app:
+A real-time aviation dashboard showing aircraft over London airspace with
+Heathrow arrival tracking — built as a portfolio project.
 
 - **Frontend:** React + Vite + Tailwind in `apps/frontend`
 - **Backend:** FastAPI in `apps/backend`
+
+## Project docs
+
+- **[docs/MVP.md](./docs/MVP.md)** — Product spec, scope, and risks
+- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — Technical decisions, data contract, and stack
 
 ## Tooling at a glance
 
