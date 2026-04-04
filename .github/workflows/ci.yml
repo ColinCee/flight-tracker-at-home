@@ -89,6 +89,7 @@ jobs:
         run: scripts/memory-profile.sh
         env:
           MEMORY_REPORT_FILE: memory-report.md
+          MEMORY_SOAK_SECONDS: 120
       - name: Comment memory report on PR
         if: always()
         run: gh pr comment "${{ github.event.number }}" --body-file memory-report.md

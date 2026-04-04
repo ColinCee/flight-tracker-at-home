@@ -3,6 +3,8 @@ set -euo pipefail
 
 # Configuration
 SAMPLE_INTERVAL=1
+SOAK_DURATION=${MEMORY_SOAK_SECONDS:-120}
+SOAK_POLL_INTERVAL=10
 REPORT_FILE="${MEMORY_REPORT_FILE:-memory-report.md}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -85,6 +87,28 @@ TEST_EXIT=0
 SERVERS_EXTERNAL=1 CI=true bunx playwright test --reporter=list 2>&1 || TEST_EXIT=$?
 cd - > /dev/null
 
+# --- Soak test: simulate normal dashboard polling ---
+echo ""
+echo "Soak test: polling /aircraft every ${SOAK_POLL_INTERVAL}s for ${SOAK_DURATION}s..."
+
+# Capture RSS at start of soak
+BACKEND_SOAK_START_KB=$(tail -1 "$BACKEND_SAMPLES" 2>/dev/null || echo "0")
+FRONTEND_SOAK_START_KB=$(tail -1 "$FRONTEND_SAMPLES" 2>/dev/null || echo "0")
+
+SOAK_END=$((SECONDS + SOAK_DURATION))
+SOAK_REQUESTS=0
+while [[ $SECONDS -lt $SOAK_END ]]; do
+  curl -sf http://localhost:8000/aircraft > /dev/null 2>&1 || true
+  SOAK_REQUESTS=$((SOAK_REQUESTS + 1))
+  sleep "$SOAK_POLL_INTERVAL"
+done
+
+# Capture RSS at end of soak
+BACKEND_SOAK_END_KB=$(tail -1 "$BACKEND_SAMPLES" 2>/dev/null || echo "0")
+FRONTEND_SOAK_END_KB=$(tail -1 "$FRONTEND_SAMPLES" 2>/dev/null || echo "0")
+
+echo "Soak complete: ${SOAK_REQUESTS} requests over ${SOAK_DURATION}s"
+
 # --- Stop samplers and servers ---
 kill "$BACKEND_SAMPLER_PID" "$FRONTEND_SAMPLER_PID" 2>/dev/null || true
 wait "$BACKEND_SAMPLER_PID" "$FRONTEND_SAMPLER_PID" 2>/dev/null || true
@@ -106,21 +130,50 @@ FRONTEND_PEAK_MB=$(( FRONTEND_PEAK_KB / 1024 ))
 BACKEND_SAMPLES_COUNT=$(wc -l < "$BACKEND_SAMPLES" | tr -d ' ')
 FRONTEND_SAMPLES_COUNT=$(wc -l < "$FRONTEND_SAMPLES" | tr -d ' ')
 
+# --- Calculate soak trend ---
+BACKEND_SOAK_START_MB=$(( ${BACKEND_SOAK_START_KB:-0} / 1024 ))
+BACKEND_SOAK_END_MB=$(( ${BACKEND_SOAK_END_KB:-0} / 1024 ))
+BACKEND_SOAK_DELTA=$(( BACKEND_SOAK_END_MB - BACKEND_SOAK_START_MB ))
+FRONTEND_SOAK_START_MB=$(( ${FRONTEND_SOAK_START_KB:-0} / 1024 ))
+FRONTEND_SOAK_END_MB=$(( ${FRONTEND_SOAK_END_KB:-0} / 1024 ))
+FRONTEND_SOAK_DELTA=$(( FRONTEND_SOAK_END_MB - FRONTEND_SOAK_START_MB ))
+
+trend_indicator() {
+  local delta=$1
+  if [[ "$delta" -gt 10 ]]; then
+    echo "📈 +${delta} MB"
+  elif [[ "$delta" -lt -10 ]]; then
+    echo "📉 ${delta} MB"
+  else
+    echo "~ stable (${delta:+$delta} MB)"
+  fi
+}
+
 # --- Generate report (markdown for PR comment) ---
 {
   echo "## Memory Profile"
+  echo ""
+  echo "### Peak RSS"
   echo ""
   echo "| Process | Peak RSS | Samples |"
   echo "|---------|----------|---------|"
   echo "| Backend (uvicorn) | **${BACKEND_PEAK_MB} MB** | ${BACKEND_SAMPLES_COUNT} |"
   echo "| Frontend (vite) | **${FRONTEND_PEAK_MB} MB** | ${FRONTEND_SAMPLES_COUNT} |"
   echo ""
+  echo "### Soak Test (${SOAK_DURATION}s, ${SOAK_REQUESTS} requests)"
+  echo ""
+  echo "| Process | Start | End | Trend |"
+  echo "|---------|-------|-----|-------|"
+  echo "| Backend | ${BACKEND_SOAK_START_MB} MB | ${BACKEND_SOAK_END_MB} MB | $(trend_indicator "$BACKEND_SOAK_DELTA") |"
+  echo "| Frontend | ${FRONTEND_SOAK_START_MB} MB | ${FRONTEND_SOAK_END_MB} MB | $(trend_indicator "$FRONTEND_SOAK_DELTA") |"
+  echo ""
   echo "<details><summary>Details</summary>"
   echo ""
   echo "- Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  echo "- Backend PID: $BACKEND_PID (tree RSS: ${BACKEND_PEAK_KB} KB)"
-  echo "- Frontend PID: $FRONTEND_PID (tree RSS: ${FRONTEND_PEAK_KB} KB)"
+  echo "- Backend PID: $BACKEND_PID (peak: ${BACKEND_PEAK_KB} KB)"
+  echo "- Frontend PID: $FRONTEND_PID (peak: ${FRONTEND_PEAK_KB} KB)"
   echo "- E2E tests exit code: $TEST_EXIT"
+  echo "- Soak: polled \`/aircraft\` every ${SOAK_POLL_INTERVAL}s for ${SOAK_DURATION}s"
   echo ""
   echo "</details>"
 } | tee "$REPORT_FILE"
