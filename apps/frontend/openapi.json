@@ -277,6 +277,17 @@
               "offline"
             ],
             "title": "Apihealth"
+          },
+          "apiCreditsRemaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apicreditsremaining"
           }
         },
         "type": "object",
@@ -288,7 +299,8 @@
           "descendingAircraft",
           "throughputLast60Min",
           "avgAltitudeFt",
-          "apiHealth"
+          "apiHealth",
+          "apiCreditsRemaining"
         ],
         "title": "KPIs"
       }

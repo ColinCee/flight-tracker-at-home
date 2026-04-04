@@ -55,6 +55,7 @@ export interface KPIs {
   throughputLast60Min: number;
   avgAltitudeFt: number | null;
   apiHealth: KPIsApiHealth;
+  apiCreditsRemaining: number | null;
 }
 
 /**

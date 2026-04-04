@@ -84,9 +84,13 @@ class _TokenManager:
 
 _token_manager = _TokenManager()
 
+# Last known API credits remaining (from X-Rate-Limit-Remaining header)
+_remaining_credits: int | None = None
+
 
 async def fetch_london_airspace() -> list[list]:
     """Phase 1: Extraction - Fetches raw state vectors from OpenSky."""
+    global _remaining_credits
     url = "https://opensky-network.org/api/states/all"
 
     # Passing the bounding box ensures we only use 1 API credit
@@ -99,9 +103,19 @@ async def fetch_london_airspace() -> list[list]:
             url, params=params, headers=auth_headers, timeout=10.0
         )
         response.raise_for_status()
+
+        remaining = response.headers.get("X-Rate-Limit-Remaining")
+        if remaining is not None:
+            _remaining_credits = int(remaining)
+
         data = response.json()
         # OpenSky returns the arrays under the "states" key
         return data.get("states") or []
+
+
+def get_remaining_credits() -> int | None:
+    """Return the last known API credits remaining, or None if unknown."""
+    return _remaining_credits
 
 
 def parse_state_vector(vector: list) -> AircraftState | None:
