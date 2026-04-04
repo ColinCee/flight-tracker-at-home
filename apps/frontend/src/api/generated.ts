@@ -14,7 +14,7 @@ import type {
   UseQueryResult
 } from '@tanstack/react-query';
 
-import { fetchClient } from '../lib/fetch-client';
+import { fetchClient } from './fetch-client';
 /**
  * One aircraft's state, transformed from OpenSky's positional array.
  */

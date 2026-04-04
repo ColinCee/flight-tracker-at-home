@@ -4,7 +4,7 @@ import type { MapStyleDataEvent } from 'maplibre-gl';
 import { useCallback } from 'react';
 import { Map as MapGL, Popup } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
-import type { AircraftFilter } from '@/lib/filters';
+import type { AircraftFilter } from '@/shared/filters';
 import { AircraftInspector } from './AircraftInspector';
 import { AircraftLayer } from './AircraftLayer';
 

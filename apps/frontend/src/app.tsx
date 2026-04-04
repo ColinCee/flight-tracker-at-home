@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
-import { KpiStrip } from '@/components/KpiStrip';
-import { MapView } from '@/components/MapView';
-import { useAircraftData } from '@/hooks/useAircraftData';
-import { computeDerivedStats } from '@/lib/derived-stats';
-import type { AircraftFilter } from '@/lib/filters';
+import { useAircraftData } from '@/api/use-aircraft-data';
+import { computeDerivedStats } from '@/features/kpi/derived-stats';
+import { KpiStrip } from '@/features/kpi/KpiStrip';
+import { MapView } from '@/features/map/MapView';
+import type { AircraftFilter } from '@/shared/filters';
 
 export function App() {
   const { aircraft, kpis } = useAircraftData();

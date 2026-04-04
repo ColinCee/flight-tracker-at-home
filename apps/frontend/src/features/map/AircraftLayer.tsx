@@ -4,8 +4,8 @@ import { MapboxOverlay, type MapboxOverlayProps } from '@deck.gl/mapbox';
 import { useCallback, useMemo } from 'react';
 import { useControl } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
-import aircraftIconUrl from '@/assets/aircraft.svg';
-import { type AircraftFilter, matchesFilter } from '@/lib/filters';
+import { type AircraftFilter, matchesFilter } from '@/shared/filters';
+import aircraftIconUrl from './aircraft.svg';
 
 const AIRCRAFT_ICON = {
   url: aircraftIconUrl,

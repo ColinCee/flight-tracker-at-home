@@ -18,7 +18,10 @@ Built by Colin & Calvin Cheung as a portfolio/learning project.
 flight-tracker-at-home/
 ├── apps/
 │   ├── frontend/          # React + Vite + Tailwind + TanStack Query
-│   │   ├── src/api/       # Orval-generated typed React Query hooks (DO NOT edit)
+│   │   ├── src/
+│   │   │   ├── api/       # API layer: Orval-generated hooks + fetch client
+│   │   │   ├── features/  # Feature modules (map/, kpi/) with colocated tests
+│   │   │   └── shared/    # Cross-feature: ui/, filters, units, utils
 │   │   └── openapi.json   # Exported OpenAPI spec from backend
 │   └── backend/           # Python FastAPI + Pydantic
 │       ├── src/models.py  # Data contract — source of truth for API schema

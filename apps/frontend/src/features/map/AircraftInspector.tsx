@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import type { AircraftState } from '@/api/generated';
-import { Badge } from '@/components/ui/badge';
-import { formatHeading, metresToFeet, msToKnots } from '@/lib/units';
+import { Badge } from '@/shared/ui/badge';
+import { formatHeading, metresToFeet, msToKnots } from '@/shared/units';
 
 interface AircraftInspectorProps {
   aircraft: AircraftState;

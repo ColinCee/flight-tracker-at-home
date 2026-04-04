@@ -1,5 +1,5 @@
 import type { AircraftState } from '@/api/generated';
-import { METRES_TO_FEET } from './units';
+import { METRES_TO_FEET } from '@/shared/units';
 
 export interface DerivedStats {
   airborne: number;

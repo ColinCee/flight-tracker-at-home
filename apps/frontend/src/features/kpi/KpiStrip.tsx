@@ -1,7 +1,7 @@
 import type { KPIs } from '@/api/generated';
-import { Badge } from '@/components/ui/badge';
-import type { DerivedStats } from '@/lib/derived-stats';
-import type { AircraftFilter } from '@/lib/filters';
+import type { DerivedStats } from '@/features/kpi/derived-stats';
+import type { AircraftFilter } from '@/shared/filters';
+import { Badge } from '@/shared/ui/badge';
 
 const HEALTH_COLORS: Record<string, string> = {
   green: 'bg-emerald-500',

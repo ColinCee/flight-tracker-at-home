@@ -54,8 +54,7 @@ bunx tsc --build
 description = "Run all tests"
 run = """
 cd apps/backend && uv run pytest
-cd {{config_root}}
-bunx vitest run --exclude 'apps/e2e/**'
+cd {{config_root}}/apps/frontend && bunx vitest run
 """
 
 [tasks.typecheck]
