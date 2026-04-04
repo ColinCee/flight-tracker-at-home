@@ -13,7 +13,7 @@ VIRTUAL_ENV = "{{config_root}}/apps/backend/.venv"
 [tasks.setup]
 description = "Install all dependencies (JS + Python) and git hooks"
 run = """
-bun install
+bun install ${CI:+--frozen-lockfile}
 cd apps/backend && uv sync
 git config core.hooksPath .githooks
 """

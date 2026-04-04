@@ -23,8 +23,7 @@ jobs:
           ref: ${{ github.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: jdx/mise-action@v2
-      - run: bun install --frozen-lockfile
-      - run: cd apps/backend && uv sync
+      - run: mise run setup
       - run: mise run format
       - name: Commit formatting fixes
         run: |
@@ -48,8 +47,7 @@ jobs:
         with:
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
       - uses: jdx/mise-action@v2
-      - run: bun install --frozen-lockfile
-      - run: cd apps/backend && uv sync
+      - run: mise run setup
       - run: mise run check
 
   test:
@@ -58,7 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
-      - run: cd apps/backend && uv sync
+      - run: mise run setup
       - run: mise run test
 
   test-e2e:
@@ -67,8 +65,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
-      - run: bun install --frozen-lockfile
-      - run: cd apps/backend && uv sync
+      - run: mise run setup
       - run: bunx playwright install chromium
       - run: mise run test:e2e
 
@@ -82,8 +79,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
-      - run: bun install --frozen-lockfile
-      - run: cd apps/backend && uv sync
+      - run: mise run setup
       - run: bunx playwright install chromium
       - name: Run memory profiling
         run: scripts/memory-profile.sh
