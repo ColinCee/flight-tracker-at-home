@@ -39,17 +39,24 @@ bunx @biomejs/biome lint --fix .
 """
 
 [tasks.check]
-description = "Lint and format check (no modifications)"
+description = "Lint, format, and type check (no modifications)"
 run = """
 uvx ruff check apps/backend/
 uvx ruff format --check apps/backend/
+bunx @biomejs/biome check .
 cd apps/backend && uvx ty check
 cd -
-bunx @biomejs/biome check .
+bunx tsc --build
+"""
+
+[tasks.test]
+description = "Run all tests"
+run = """
+cd apps/backend && uv run pytest
 """
 
 [tasks.typecheck]
-description = "Type check all code"
+description = "Type check all code (subset of check)"
 run = """
 cd apps/backend && uvx ty check
 cd -

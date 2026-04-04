@@ -35,7 +35,9 @@ mise run setup:frontend     # Install frontend dependencies only
 mise run setup:backend      # Install backend dependencies only
 
 mise run format             # Format all code (ruff + biome)
-mise run check              # Lint/format check without modifying (for CI)
+mise run check              # Lint, format, and type check (for CI)
+mise run test               # Run all tests (pytest)
+mise run typecheck          # Type check only (ty + tsc)
 mise run rules:sync         # Regenerate AI config files from RULES.md
 
 bun run generate:api        # Regenerate frontend types from backend schema
