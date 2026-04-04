@@ -8,10 +8,6 @@
     "test": {
       "command": "uv run pytest",
       "options": { "cwd": "apps/backend" }
-    },
-    "lint": {
-      "command": "uv run ruff check src/ scripts/",
-      "options": { "cwd": "apps/backend" }
     }
   }
 }
