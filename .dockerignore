@@ -1,0 +1,13 @@
+node_modules/
+.git/
+.venv/
+*.pyc
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+dist/
+.nx/
+.claude/
+.cursor/
+.codex/
+.vscode/
