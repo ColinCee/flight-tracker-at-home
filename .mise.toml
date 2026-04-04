@@ -63,6 +63,14 @@ cd -
 bunx tsc --build
 """
 
+[tasks."test:e2e"]
+description = "Run Playwright end-to-end tests"
+run = "cd apps/e2e && bunx playwright test"
+
+[tasks."test:e2e:ui"]
+description = "Run Playwright tests with interactive UI"
+run = "cd apps/e2e && bunx playwright test --ui"
+
 [tasks."rules:sync"]
 description = "Regenerate AI config files from .rulesync/"
 run = "npx rulesync generate"
