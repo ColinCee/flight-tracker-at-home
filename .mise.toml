@@ -81,6 +81,21 @@ cd {{config_root}}
 bunx orval --config orval.config.ts
 """
 
+[tasks."codegen:check"]
+description = "Check generated frontend types are in sync with backend schema"
+run = """
+cd apps/backend && uv run python scripts/export_openapi.py
+cd {{config_root}}
+bunx orval --config orval.config.ts
+if ! git diff --quiet apps/frontend/openapi.json apps/frontend/src/api/generated.ts; then
+  echo "ERROR: Generated API types are out of sync with backend schema"
+  echo "Run: mise run codegen"
+  git diff --stat apps/frontend/openapi.json apps/frontend/src/api/generated.ts
+  exit 1
+fi
+echo "Generated API types are in sync"
+"""
+
 [tasks."rules:sync"]
 description = "Regenerate AI config files from .rulesync/"
 run = "npx rulesync generate"
