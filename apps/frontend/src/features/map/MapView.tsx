@@ -1,7 +1,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import type { MapStyleDataEvent } from 'maplibre-gl';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Map as MapGL, Popup } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
 import type { AircraftFilter } from '@/shared/filters';
@@ -31,6 +31,8 @@ export function MapView({
   onAircraftClick,
   onCloseInspector,
 }: MapViewProps) {
+  const [isHoveringAircraft, setIsHoveringAircraft] = useState(false);
+
   // OpenFreeMap dark style references a "wood-pattern" sprite that's missing
   // from their sprite sheet. Remove the broken layer once the style loads.
   const handleStyleData = useCallback((e: MapStyleDataEvent) => {
@@ -45,6 +47,7 @@ export function MapView({
       initialViewState={INITIAL_VIEW_STATE}
       style={{ width: '100%', height: '100%' }}
       mapStyle={MAP_STYLE}
+      cursor={isHoveringAircraft ? 'pointer' : 'grab'}
       onStyleData={handleStyleData}
     >
       <AircraftLayer
@@ -52,6 +55,7 @@ export function MapView({
         selectedIcao24={selectedAircraft?.icao24}
         activeFilter={activeFilter}
         onAircraftClick={onAircraftClick}
+        onHoverChange={setIsHoveringAircraft}
       />
       {selectedAircraft && (
         <Popup
