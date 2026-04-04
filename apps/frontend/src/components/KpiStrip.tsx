@@ -96,12 +96,6 @@ export function KpiStrip({ kpis, aircraft, activeFilter, onFilterChange }: KpiSt
         tooltip="Average barometric altitude of airborne aircraft"
       />
       <Separator />
-      <KpiItem
-        label="Freshness"
-        value={`${kpis.dataFreshnessSeconds}s`}
-        tooltip="Seconds since last update from OpenSky Network"
-      />
-      <Separator />
       <div className="group relative flex items-center gap-1.5 px-3">
         <span className={`inline-block h-2.5 w-2.5 rounded-full ${healthColor}`} />
         <Badge variant="outline" className="text-[11px] uppercase">
