@@ -34,6 +34,8 @@ def test_parse_state_vector_valid():
         1050.0,
         "7700",
         False,
+        None,
+        None,
         0,
     ]
 
@@ -65,6 +67,8 @@ def test_parse_state_vector_missing_coords():
         1050.0,
         "7700",
         False,
+        None,
+        None,
         0,
     ]
 
@@ -89,6 +93,8 @@ def test_check_lhr_approach_valid():
         vertical_rate=-3.0,  # Descending
         geo_altitude=850.0,
         squawk=None,
+        position_source=None,
+        category=None,
         is_approaching_lhr=False,
     )
     assert check_lhr_approach(aircraft) is True
@@ -110,6 +116,8 @@ def test_check_lhr_approach_wrong_heading():
         vertical_rate=-3.0,
         geo_altitude=850.0,
         squawk=None,
+        position_source=None,
+        category=None,
         is_approaching_lhr=False,
     )
     assert check_lhr_approach(aircraft) is False

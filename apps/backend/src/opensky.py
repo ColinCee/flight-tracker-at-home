@@ -83,8 +83,8 @@ def parse_state_vector(vector: list) -> AircraftState | None:
             vertical_rate=vector[11],
             geo_altitude=vector[13],
             squawk=vector[14],
-            # position_source=vector[16],
-            # category=vector[17],
+            position_source=vector[16],
+            category=vector[17],
             is_approaching_lhr=False,  # Default to false, handled in Phase 3
         )
         return aircraft
