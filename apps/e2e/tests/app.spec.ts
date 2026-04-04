@@ -24,4 +24,27 @@ test.describe('frontend app', () => {
 
     expect(data.aircraft.length).toBeGreaterThan(0);
   });
+
+  test('displays KPI strip with tracked aircraft count', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for data to load and KPI strip to render
+    const trackedLabel = page.getByRole('button', { name: 'Tracked' });
+    await expect(trackedLabel).toBeVisible({ timeout: 10_000 });
+
+    // KPI labels should be present
+    await expect(page.getByRole('button', { name: 'Inbound LHR' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Airborne' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Avg Alt' })).toBeVisible();
+  });
+
+  test('shows API health indicator', async ({ page }) => {
+    await page.goto('/');
+
+    // Health badge should show green/amber/red
+    const healthBadge = page.locator('[data-slot="badge"]');
+    await expect(healthBadge).toBeVisible({ timeout: 10_000 });
+    const text = await healthBadge.textContent();
+    expect(['green', 'amber', 'red']).toContain(text?.trim());
+  });
 });

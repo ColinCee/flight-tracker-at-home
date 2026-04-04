@@ -20,5 +20,3 @@ export async function fetchClient<T>(url: string, config: RequestInit = {}): Pro
   // Orval expects { data, status, headers } shape from the fetch client
   return { data, status: response.status, headers: response.headers } as T;
 }
-
-export default fetchClient;

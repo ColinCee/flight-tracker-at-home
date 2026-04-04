@@ -53,3 +53,41 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* MapLibre popup overrides for dark theme */
+.aircraft-popup .maplibregl-popup-content {
+  background: oklch(0.16 0 0 / 0.92);
+  color: oklch(0.985 0 0);
+  border: 1px solid oklch(0.35 0 0);
+  border-radius: 0.625rem;
+  padding: 0.75rem;
+  box-shadow:
+    0 4px 16px rgb(0 0 0 / 0.5),
+    0 0 0 1px rgb(0 0 0 / 0.15);
+  backdrop-filter: blur(12px);
+}
+
+.aircraft-popup .maplibregl-popup-tip {
+  border-top-color: oklch(0.16 0 0 / 0.92);
+  border-bottom-color: oklch(0.16 0 0 / 0.92);
+}
+
+.aircraft-popup.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: oklch(0.16 0 0 / 0.92);
+  border-top-color: transparent;
+}
+
+.aircraft-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: oklch(0.16 0 0 / 0.92);
+  border-bottom-color: transparent;
+}
+
+.aircraft-popup.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: oklch(0.16 0 0 / 0.92);
+  border-left-color: transparent;
+}
+
+.aircraft-popup.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: oklch(0.16 0 0 / 0.92);
+  border-right-color: transparent;
+}

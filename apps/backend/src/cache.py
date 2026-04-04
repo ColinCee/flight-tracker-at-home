@@ -36,8 +36,27 @@ class AirspaceCache:
         # 3. Process KPIs
         now = time.time()  # Update 'now' after the async await finishes
         inbound_count = 0
+        airborne_count = 0
+        climbing_count = 0
+        descending_count = 0
+        altitude_sum = 0.0
+        altitude_count = 0
 
         for ac in aircraft_list:
+            if ac.on_ground:
+                pass
+            else:
+                airborne_count += 1
+                if ac.baro_altitude is not None:
+                    altitude_sum += ac.baro_altitude
+                    altitude_count += 1
+
+            vr = ac.vertical_rate or 0.0
+            if vr > 1.0:
+                climbing_count += 1
+            elif vr < -1.0:
+                descending_count += 1
+
             if ac.is_approaching_lhr:
                 inbound_count += 1
                 # If we haven't seen this plane approaching before,
@@ -51,12 +70,22 @@ class AirspaceCache:
         while self.arrival_times and self.arrival_times[0] < (now - 3600):
             self.arrival_times.popleft()
 
+        metres_to_feet = 3.28084
+        avg_alt = (
+            round(altitude_sum / altitude_count * metres_to_feet / 100) * 100
+            if altitude_count > 0
+            else None
+        )
+
         # 5. Build the Data Contract
         kpis = KPIs(
-            inbound_lhr=inbound_count,
-            throughput_last_60min=len(self.arrival_times),
             tracked_aircraft=len(aircraft_list),
-            data_freshness_seconds=0.0,
+            airborne_aircraft=airborne_count,
+            inbound_lhr_aircraft=inbound_count,
+            climbing_aircraft=climbing_count,
+            descending_aircraft=descending_count,
+            throughput_last_60min=len(self.arrival_times),
+            avg_altitude_ft=avg_alt,
             api_health="green"
             if aircraft_list
             else "amber",  # Amber if OpenSky returns empty

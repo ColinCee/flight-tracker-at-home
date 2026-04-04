@@ -14,10 +14,10 @@ Built by Colin & Calvin Cheung as a portfolio/learning project.
 flight-tracker-at-home/
 ├── apps/
 │   ├── frontend/              # React + Vite + Tailwind + TanStack Query
-│   │   ├── src/api/           # Orval-generated typed React Query hooks (DO NOT edit)
-│   │   ├── src/components/    # MapView, AircraftLayer
-│   │   ├── src/hooks/         # useAircraftData (polling hook)
-│   │   ├── src/assets/        # aircraft.svg icon
+│   │   ├── src/
+│   │   │   ├── api/           # API layer: Orval-generated hooks + fetch client
+│   │   │   ├── features/      # Feature modules (map/, kpi/) with colocated tests
+│   │   │   └── shared/        # Cross-feature: ui/, filters, units, utils
 │   │   └── openapi.json       # Exported OpenAPI spec from backend
 │   ├── backend/               # Python FastAPI + Pydantic
 │   │   ├── src/main.py        # FastAPI app + endpoints (/health, /aircraft)
@@ -86,14 +86,14 @@ mise run dev                # Run frontend and backend together
 mise run format             # Format all code (ruff + biome), auto-fix
 mise run check              # Lint, format check, and type check (read-only, for CI)
 mise run typecheck          # Type check only (subset of check)
-mise run test               # Run all tests (pytest)
+mise run test               # Run all tests (pytest + vitest)
 mise run test:e2e           # Run Playwright e2e tests
 mise run test:e2e:ui        # Run Playwright with interactive UI
 
 # Codegen & config
 mise run rules:sync         # Regenerate AI config files from .rulesync/
 mise run rules:check        # Verify AI config files are in sync (CI)
-bun run generate:api        # Regenerate frontend types from backend schema
+mise run codegen            # Regenerate frontend types from backend schema
 ```
 
 ## CI (GitHub Actions)
@@ -110,7 +110,7 @@ bun run generate:api        # Regenerate frontend types from backend schema
 
 ## Key Conventions
 
-- **Pydantic is the schema source of truth** — change `apps/backend/src/models.py`, run `bun run generate:api` to update frontend types
+- **Pydantic is the schema source of truth** — change `apps/backend/src/models.py`, run `mise run codegen` to update frontend types
 - **camelCase in JSON** — Pydantic `alias_generator=to_camel` handles this automatically; Python stays `snake_case`, TypeScript gets `camelCase`
 - **Generated code is committed** — `apps/frontend/src/api/generated.ts` and `apps/frontend/openapi.json` are checked in so the frontend builds without the backend running
 - **Single `/aircraft` endpoint** — KPIs are derived from the aircraft list and bundled atomically

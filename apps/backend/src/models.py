@@ -36,10 +36,13 @@ class AircraftState(BaseModel):
 class KPIs(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
-    inbound_lhr: int
-    throughput_last_60min: int
     tracked_aircraft: int
-    data_freshness_seconds: float
+    airborne_aircraft: int
+    inbound_lhr_aircraft: int
+    climbing_aircraft: int
+    descending_aircraft: int
+    throughput_last_60min: int
+    avg_altitude_ft: int | None
     api_health: Literal["green", "amber", "red"]
 
 

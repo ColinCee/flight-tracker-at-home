@@ -9,10 +9,10 @@ export default defineConfig({
       target: './apps/frontend/src/api/generated.ts',
       client: 'react-query',
       mode: 'single',
-      clean: true,
+      clean: false,
       override: {
         mutator: {
-          path: './apps/frontend/src/lib/fetch-client.ts',
+          path: './apps/frontend/src/api/fetch-client.ts',
           name: 'fetchClient',
         },
         query: {

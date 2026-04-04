@@ -45,9 +45,13 @@ async def test_cache_kpi_calculation(mock_get_state):
 
     # Assert KPIs
     assert response.kpis.tracked_aircraft == 2
-    assert response.kpis.inbound_lhr == 1
+    assert response.kpis.inbound_lhr_aircraft == 1
     assert response.kpis.throughput_last_60min == 1
     assert response.kpis.api_health == "green"
+    assert response.kpis.airborne_aircraft == 2
+    assert response.kpis.climbing_aircraft == 0
+    assert response.kpis.descending_aircraft == 0
+    assert response.kpis.avg_altitude_ft == 3300  # 1000m ≈ 3281ft → rounds to 3300
 
 
 @pytest.mark.asyncio
