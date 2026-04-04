@@ -17,7 +17,7 @@
 ### Lazy caching
 
 Backend does NOT poll OpenSky continuously. When the frontend requests
-`/api/aircraft`, the backend checks its in-memory cache. If stale (>10s), it
+`/aircraft`, the backend checks its in-memory cache. If stale (>10s), it
 fetches fresh data from OpenSky, caches it, and responds.
 
 - Zero credits consumed when nobody is viewing the dashboard
@@ -40,7 +40,7 @@ bounding box is <25 sq° → 1 credit per request. At 10s polling, that supports
 ## Data Source — OpenSky Network
 
 - **Endpoint:** `GET https://opensky-network.org/api/states/all`
-- **Auth:** OAuth2 client credentials (free registered account)
+- **Auth:** OAuth2 client credentials ([register free](https://opensky-network.org/index.php/-account/register))
 - **Response:** `{ time: int, states: [...arrays...] }`
 - **Each state vector** is a positional array (17-18 fields by index, not named keys)
 
@@ -75,8 +75,8 @@ few false positives.
 
 | Method | Path            | Response             | Notes                                          |
 | ------ | --------------- | -------------------- | ---------------------------------------------- |
-| GET    | `/api/aircraft` | `AircraftResponse`   | Aircraft + KPIs in a single atomic response    |
-| GET    | `/health`       | `{ status: "ok" }`   | Health check for Render                        |
+| GET    | `/aircraft` | `AircraftResponse`   | Aircraft + KPIs in a single atomic response    |
+| GET    | `/health`   | `{ status: "ok" }`   | Health check for Render                        |
 
 ---
 
@@ -120,7 +120,7 @@ class KPIs(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     inbound_lhr: int                        # Aircraft currently matching arrival heuristic
-    throughput_60min: int                    # Arrivals detected in rolling 60-min window
+    throughput_last_60min: int               # Arrivals detected in rolling 60-min window (resets on cold start)
     tracked_aircraft: int                   # Total aircraft in bounding box
     data_freshness_seconds: float           # Seconds since last successful OpenSky fetch
     api_health: Literal["green", "amber", "red"]  # Based on recent error rate
@@ -166,7 +166,7 @@ export interface AircraftState {
 
 export interface KPIs {
   inboundLhr: number;
-  throughput60min: number;
+  throughputLast60Min: number;
   trackedAircraft: number;
   dataFreshnessSeconds: number;
   apiHealth: "green" | "amber" | "red";
@@ -178,7 +178,7 @@ export interface KPIs {
 | KPI                    | JSON field               | Source                                       |
 | ---------------------- | ------------------------ | -------------------------------------------- |
 | Inbound to LHR         | `inboundLhr`            | Count of aircraft matching arrival heuristic |
-| Estimated throughput   | `throughput60min`       | Arrivals detected in rolling 60-min window   |
+| Estimated throughput   | `throughputLast60Min`  | Arrivals detected in rolling 60-min window   |
 | Tracked aircraft       | `trackedAircraft`       | Total aircraft in bounding box               |
 | Data freshness         | `dataFreshnessSeconds`  | Seconds since last successful OpenSky fetch  |
 | API health             | `apiHealth`             | `"green"` / `"amber"` / `"red"` based on recent errors |
@@ -201,6 +201,34 @@ export interface KPIs {
 - **`origin_country` included** — cheap to pass through, useful for datablock
   tooltips.
 - **`geo_altitude` included** — fallback when `baro_altitude` is null.
+- **`throughputLast60min` resets on cold start** — in-memory rolling window is
+  lost when the backend sleeps on Render's free tier. Frontend shows `"-"` until
+  data accumulates. Acceptable for a portfolio demo.
+
+## Environment Variables
+
+| Variable                 | Where        | Description                                      |
+| ------------------------ | ------------ | ------------------------------------------------ |
+| `OPENSKY_CLIENT_ID`      | Backend      | OAuth2 client ID from [OpenSky account page](https://opensky-network.org/my-opensky/account) |
+| `OPENSKY_CLIENT_SECRET`  | Backend      | OAuth2 client secret                             |
+| `CORS_ORIGINS`           | Backend      | Allowed origins, e.g. `https://flight-tracker.pages.dev` |
+| `VITE_API_BASE_URL`      | Frontend     | Backend URL, e.g. `https://flight-tracker-api.onrender.com` |
+
+### CORS
+
+Frontend on Cloudflare Pages and backend on Render are different origins.
+FastAPI's `CORSMiddleware` must allow the frontend origin:
+
+```python
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[os.getenv("CORS_ORIGINS", "http://localhost:4200")],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
+```
+
+`localhost:4200` as default ensures local dev works without env vars.
 
 ## API Contract Pipeline (Future)
 

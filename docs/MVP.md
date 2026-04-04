@@ -43,7 +43,7 @@ Heathrow. Deployed and shareable via a public URL.
 
 ## Not Building (Yet)
 
-- ~~WebSockets / SSE~~ — REST polling matches OpenSky's 10s cadence perfectly
+- WebSockets / SSE — REST polling matches OpenSky's 10s cadence perfectly
 - Airspace Pressure Index — future feature
 - Stack debt / holding pattern detection — complex, future
 - Historical persistence / database — in-memory only for MVP
