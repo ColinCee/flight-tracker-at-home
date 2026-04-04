@@ -1,7 +1,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-import { useEffect, useState } from 'react';
-import type { StyleSpecification } from 'react-map-gl/maplibre';
+import type { MapStyleDataEvent } from 'maplibre-gl';
+import { useCallback } from 'react';
 import { Map as MapGL } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
 import { AircraftLayer } from './AircraftLayer';
@@ -12,37 +12,28 @@ const INITIAL_VIEW_STATE = {
   zoom: 10,
 };
 
-const STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 
 interface MapViewProps {
   aircraft: AircraftState[];
 }
 
-// OpenFreeMap dark style references a "wood-pattern" fill-pattern sprite
-// that doesn't exist in their sprite sheet. Strip the broken layer.
-async function fetchCleanStyle(): Promise<StyleSpecification> {
-  const res = await fetch(STYLE_URL);
-  const style: StyleSpecification = await res.json();
-  style.layers = style.layers.filter(
-    (l) => !('paint' in l && l.paint && 'fill-pattern' in l.paint),
-  );
-  return style;
-}
-
 export function MapView({ aircraft }: MapViewProps) {
-  const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
-
-  useEffect(() => {
-    fetchCleanStyle().then(setMapStyle);
+  // OpenFreeMap dark style references a "wood-pattern" sprite that's missing
+  // from their sprite sheet. Remove the broken layer once the style loads.
+  const handleStyleData = useCallback((e: MapStyleDataEvent) => {
+    const map = e.target;
+    if (map.getLayer('landcover_wood')) {
+      map.removeLayer('landcover_wood');
+    }
   }, []);
-
-  if (!mapStyle) return null;
 
   return (
     <MapGL
       initialViewState={INITIAL_VIEW_STATE}
       style={{ width: '100%', height: '100%' }}
-      mapStyle={mapStyle}
+      mapStyle={MAP_STYLE}
+      onStyleData={handleStyleData}
     >
       <AircraftLayer aircraft={aircraft} />
     </MapGL>
