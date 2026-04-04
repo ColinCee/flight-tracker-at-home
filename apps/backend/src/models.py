@@ -44,6 +44,7 @@ class KPIs(BaseModel):
     throughput_last_60min: int
     avg_altitude_ft: int | None
     api_health: Literal["live", "stale", "offline"]
+    api_credits_remaining: int | None
 
 
 class AircraftResponse(BaseModel):
