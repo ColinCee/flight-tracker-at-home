@@ -50,6 +50,10 @@ vite.config.*.timestamp*
 __pycache__/
 *.pyc
 
+# Playwright
+test-results/
+playwright-report/
+
 # Rulesync — local overrides and caches (never commit)
 .rulesync/skills/.curated/
 .rulesync/rules/*.local.md
