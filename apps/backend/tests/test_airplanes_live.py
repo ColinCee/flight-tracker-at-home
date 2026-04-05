@@ -341,3 +341,200 @@ def test_check_lhr_approach_not_descending():
         is_approaching_lhr=False,
     )
     assert check_lhr_approach(aircraft) is False
+
+
+# --- 17. check_lhr_approach: too far from Heathrow ---
+def test_check_lhr_approach_too_far():
+    """Aircraft more than 20km away should not be on approach."""
+    aircraft = AircraftState(
+        icao24="123456",
+        callsign="BAW1",
+        registration="G-EUAA",
+        aircraft_type="A320",
+        category="Heavy",
+        latitude=52.0,
+        longitude=0.5,
+        baro_altitude_ft=3000,
+        geo_altitude_ft=3050,
+        ground_speed_kts=150.0,
+        true_track=270.0,
+        vertical_rate_fpm=-500,
+        on_ground=False,
+        squawk=None,
+        last_contact=0,
+        position_source="ADS-B",
+        is_climbing=False,
+        is_descending=True,
+        is_approaching_lhr=False,
+    )
+    assert check_lhr_approach(aircraft) is False
+
+
+# --- 18. check_lhr_approach: on_ground ---
+def test_check_lhr_approach_on_ground():
+    """Aircraft on the ground should never be on approach."""
+    aircraft = AircraftState(
+        icao24="123456",
+        callsign="BAW1",
+        registration="G-EUAA",
+        aircraft_type="A320",
+        category="Heavy",
+        latitude=51.47,
+        longitude=-0.45,
+        baro_altitude_ft=0,
+        geo_altitude_ft=0,
+        ground_speed_kts=10.0,
+        true_track=270.0,
+        vertical_rate_fpm=-100,
+        on_ground=True,
+        squawk=None,
+        last_contact=0,
+        position_source="ADS-B",
+        is_climbing=False,
+        is_descending=False,
+        is_approaching_lhr=False,
+    )
+    assert check_lhr_approach(aircraft) is False
+
+
+# --- 19. check_lhr_approach: westbound valid ---
+def test_check_lhr_approach_westbound():
+    """Aircraft on valid westbound (runway 27) approach should be detected."""
+    aircraft = AircraftState(
+        icao24="123456",
+        callsign="BAW1",
+        registration="G-EUAA",
+        aircraft_type="A320",
+        category="Heavy",
+        latitude=51.47,
+        longitude=-0.30,
+        baro_altitude_ft=2000,
+        geo_altitude_ft=2050,
+        ground_speed_kts=140.0,
+        true_track=272.0,
+        vertical_rate_fpm=-700,
+        on_ground=False,
+        squawk=None,
+        last_contact=0,
+        position_source="ADS-B",
+        is_climbing=False,
+        is_descending=True,
+        is_approaching_lhr=False,
+    )
+    assert check_lhr_approach(aircraft) is True
+
+
+# --- 20. check_lhr_approach: null vertical rate ---
+def test_check_lhr_approach_null_vertical_rate():
+    """Aircraft with no vertical rate data should not be on approach."""
+    aircraft = AircraftState(
+        icao24="123456",
+        callsign="BAW1",
+        registration="G-EUAA",
+        aircraft_type="A320",
+        category="Heavy",
+        latitude=51.47,
+        longitude=-0.50,
+        baro_altitude_ft=2000,
+        geo_altitude_ft=2050,
+        ground_speed_kts=140.0,
+        true_track=90.0,
+        vertical_rate_fpm=None,
+        on_ground=False,
+        squawk=None,
+        last_contact=0,
+        position_source="ADS-B",
+        is_climbing=False,
+        is_descending=False,
+        is_approaching_lhr=False,
+    )
+    assert check_lhr_approach(aircraft) is False
+
+
+# --- 21. check_lhr_approach: null altitude ---
+def test_check_lhr_approach_null_altitude():
+    """Aircraft with no barometric altitude should not be on approach."""
+    aircraft = AircraftState(
+        icao24="123456",
+        callsign="BAW1",
+        registration="G-EUAA",
+        aircraft_type="A320",
+        category="Heavy",
+        latitude=51.47,
+        longitude=-0.50,
+        baro_altitude_ft=None,
+        geo_altitude_ft=2050,
+        ground_speed_kts=140.0,
+        true_track=90.0,
+        vertical_rate_fpm=-500,
+        on_ground=False,
+        squawk=None,
+        last_contact=0,
+        position_source="ADS-B",
+        is_climbing=False,
+        is_descending=True,
+        is_approaching_lhr=False,
+    )
+    assert check_lhr_approach(aircraft) is False
+
+
+# --- 22. parse_aircraft: non-numeric gs/track are safely ignored ---
+def test_parse_aircraft_non_numeric_gs_track():
+    """Non-numeric gs/track should result in None, not crash the parser."""
+    ac = {
+        "hex": "400a5b",
+        "lat": 51.47,
+        "lon": -0.45,
+        "alt_baro": 5000,
+        "gs": "invalid",
+        "track": "bad_data",
+        "type": "adsb_icao",
+    }
+    aircraft = parse_aircraft(ac)
+    assert aircraft is not None
+    assert aircraft.ground_speed_kts is None
+    assert aircraft.true_track is None
+
+
+# --- 23. parse_aircraft: alt_baro=None passes through ---
+def test_parse_aircraft_alt_baro_none():
+    """When alt_baro key exists but value is None, aircraft is still parsed."""
+    ac = {
+        "hex": "400a5b",
+        "lat": 51.47,
+        "lon": -0.45,
+        "alt_baro": None,
+        "type": "adsb_icao",
+    }
+    aircraft = parse_aircraft(ac)
+    assert aircraft is not None
+    assert aircraft.baro_altitude_ft is None
+
+
+# --- 24. parse_aircraft: non-numeric seen defaults safely ---
+def test_parse_aircraft_non_numeric_seen():
+    """Non-numeric 'seen' field should default to 0 offset."""
+    now = int(time.time())
+    ac = {
+        "hex": "400a5b",
+        "lat": 51.47,
+        "lon": -0.45,
+        "alt_baro": 5000,
+        "seen": "invalid",
+    }
+    aircraft = parse_aircraft(ac)
+    assert aircraft is not None
+    # With "invalid" seen, offset is 0, so last_contact ≈ now
+    assert abs(aircraft.last_contact - now) <= 1
+
+
+# --- 25. parse_aircraft: missing hex defaults to "unknown" ---
+def test_parse_aircraft_missing_hex():
+    ac = {
+        "lat": 51.47,
+        "lon": -0.45,
+        "alt_baro": 5000,
+    }
+    aircraft = parse_aircraft(ac)
+    assert aircraft is not None
+    assert aircraft.icao24 == "unknown"

@@ -17,9 +17,6 @@ logger = logging.getLogger(__name__)
 
 _MOCK_MODE = os.getenv("MOCK_DATA", "").lower() in ("true", "1", "yes")
 
-# Climbing/descending threshold: ~200 fpm (approx 1 m/s)
-_VERTICAL_RATE_THRESHOLD_FPM = 200.0
-
 
 def get_effective_ttl() -> float:
     """Return the cache TTL in seconds. Defaults to 10.0."""
@@ -33,9 +30,9 @@ class AirspaceCache:
         self.cached_response: AircraftResponse | None = None
         self.last_update: float = 0.0
 
-        # Throughput tracking
-        self.arrival_times = deque()
-        self.seen_arrivals = set()
+        # Throughput tracking: deque of (timestamp, icao24) tuples
+        self.arrival_times: deque[tuple[float, str]] = deque()
+        self.seen_arrivals: set[str] = set()
 
         # Initialize as None! We will create the lock lazily
         self._lock: asyncio.Lock | None = None
@@ -76,12 +73,17 @@ class AirspaceCache:
             except Exception as e:
                 logger.warning("Airplanes.live fetch failed: %r", e)
 
+                # Preserve real data age before circuit breaker overwrites it
+                stale_since = self.last_update
+
                 # CIRCUIT BREAKER: Update the timestamp ANYWAY so we don't spam 429s
                 self.last_update = time.time()
 
                 # Serve stale cache instead of losing data
                 if self.cached_response:
-                    self.cached_response.cache_age_seconds = round(time.time() - now, 1)
+                    self.cached_response.cache_age_seconds = round(
+                        time.time() - stale_since, 1
+                    )
                     self.cached_response.kpis.api_health = "stale"
                     return self.cached_response
                 aircraft_list = []
@@ -113,11 +115,12 @@ class AirspaceCache:
                     inbound_count += 1
                     if ac.icao24 not in self.seen_arrivals:
                         self.seen_arrivals.add(ac.icao24)
-                        self.arrival_times.append(fetch_time)
+                        self.arrival_times.append((fetch_time, ac.icao24))
 
-            # 4. Prune the Throughput Queue
-            while self.arrival_times and self.arrival_times[0] < (fetch_time - 3600):
-                self.arrival_times.popleft()
+            # 4. Prune the Throughput Queue (and matching seen_arrivals entries)
+            while self.arrival_times and self.arrival_times[0][0] < (fetch_time - 3600):
+                _, expired_icao = self.arrival_times.popleft()
+                self.seen_arrivals.discard(expired_icao)
 
             avg_alt = (
                 round(altitude_sum / altitude_count / 100) * 100

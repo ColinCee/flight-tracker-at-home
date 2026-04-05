@@ -47,7 +47,7 @@ async def get_aircraft() -> AircraftResponse:
     Main polling endpoint.
     Fetches the lazy-cached state, abstracting the Airplanes.live API rate limits.
     """
-    # This single call handles the 10s TTL, OpenSky fetching, and KPI math.
+    # This single call handles the 10s TTL, Airplanes.live fetching, and KPI math.
     state = await airspace_cache.get_state()
     return state
 

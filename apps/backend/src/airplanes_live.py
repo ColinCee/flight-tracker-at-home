@@ -144,6 +144,12 @@ def parse_aircraft(ac: dict) -> AircraftState | None:
             int(raw_baro_rate) if isinstance(raw_baro_rate, (int, float)) else None
         )
 
+        raw_gs = ac.get("gs")
+        gs = float(raw_gs) if isinstance(raw_gs, (int, float)) else None
+
+        raw_track = ac.get("track")
+        track = float(raw_track) if isinstance(raw_track, (int, float)) else None
+
         return AircraftState(
             icao24=ac.get("hex", "unknown"),
             callsign=clean_callsign,
@@ -153,8 +159,8 @@ def parse_aircraft(ac: dict) -> AircraftState | None:
             latitude=lat,
             baro_altitude_ft=int(baro_alt) if baro_alt is not None else None,
             geo_altitude_ft=geo_alt,
-            ground_speed_kts=ac.get("gs"),
-            true_track=ac.get("track"),
+            ground_speed_kts=gs,
+            true_track=track,
             vertical_rate_fpm=vert_rate,
             on_ground=False,  # Ground aircraft filtered above
             squawk=ac.get("squawk"),

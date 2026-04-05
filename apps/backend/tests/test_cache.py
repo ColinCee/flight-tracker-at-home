@@ -101,3 +101,70 @@ async def test_cache_serves_stale_data_on_error(mock_get_state):
     assert response_2.kpis.api_health == "stale"
     # Original aircraft data preserved
     assert response_2.kpis.tracked_aircraft == 1
+
+
+@pytest.mark.asyncio
+@patch("src.cache.get_current_airspace_state")
+async def test_cache_climbing_descending_kpis(mock_get_state):
+    """Tests that climbing and descending KPIs are counted correctly."""
+    climbing = create_mock_aircraft("C111", approaching=False)
+    climbing.is_climbing = True
+    climbing.vertical_rate_fpm = 1500
+
+    descending = create_mock_aircraft("D222", approaching=False)
+    descending.is_descending = True
+    descending.vertical_rate_fpm = -1200
+
+    level = create_mock_aircraft("L333", approaching=False)
+
+    mock_get_state.return_value = [climbing, descending, level]
+
+    cache = AirspaceCache()
+    response = await cache.get_state()
+
+    assert response.kpis.climbing_aircraft == 1
+    assert response.kpis.descending_aircraft == 1
+    assert response.kpis.airborne_aircraft == 3
+
+
+@pytest.mark.asyncio
+@patch("src.cache.get_current_airspace_state")
+async def test_cache_empty_aircraft_offline(mock_get_state):
+    """Empty aircraft list should report api_health as 'offline'."""
+    mock_get_state.return_value = []
+
+    cache = AirspaceCache()
+    response = await cache.get_state()
+
+    assert response.kpis.api_health == "offline"
+    assert response.kpis.tracked_aircraft == 0
+    assert response.kpis.airborne_aircraft == 0
+    assert response.kpis.avg_altitude_ft is None
+
+
+@pytest.mark.asyncio
+@patch("src.cache.get_current_airspace_state")
+async def test_cache_throughput_pruning(mock_get_state):
+    """Arrival entries older than 60 minutes should be pruned."""
+    mock_get_state.return_value = [create_mock_aircraft("A111", approaching=True)]
+
+    cache = AirspaceCache()
+
+    # Populate with an arrival
+    await cache.get_state()
+    assert cache.arrival_times
+    assert len(cache.seen_arrivals) == 1
+
+    # Simulate: the arrival happened >60 min ago
+    old_time = time.time() - 3700
+    cache.arrival_times[0] = (old_time, "A111")
+    cache.last_update = 0.0  # Force re-fetch
+
+    # New fetch with a different aircraft
+    mock_get_state.return_value = [create_mock_aircraft("B222", approaching=True)]
+    response = await cache.get_state()
+
+    # Old entry pruned, new one added
+    assert response.kpis.throughput_last_60min == 1
+    assert "A111" not in cache.seen_arrivals
+    assert "B222" in cache.seen_arrivals

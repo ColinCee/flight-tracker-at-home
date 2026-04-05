@@ -146,10 +146,8 @@ MOCK_AIRCRAFT: list[AircraftState] = [
 
 
 def get_mock_aircraft() -> list[AircraftState]:
-    """Return mock aircraft with current timestamps."""
+    """Return mock aircraft with current timestamps (immutable copies)."""
     import time
 
     now = int(time.time())
-    for ac in MOCK_AIRCRAFT:
-        ac.last_contact = now
-    return MOCK_AIRCRAFT.copy()
+    return [ac.model_copy(update={"last_contact": now}) for ac in MOCK_AIRCRAFT]
