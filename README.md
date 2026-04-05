@@ -82,7 +82,7 @@ docs/
 ## Docs
 
 - **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — Technical decisions, data contract, and stack
-- **[docs/MVP.md](./docs/MVP.md)** — Product spec and scope
+- **[docs/MVP.md](docs/PRODUCT-FEATURES.md)** — Product spec and scope
 - **[docs/SELF-HOST.md](./docs/SELF-HOST.md)** — Self-hosting the backend with Docker + Cloudflare Tunnel
 
 ## Deployment

@@ -1,4 +1,4 @@
-# Aviation Dashboard — MVP Spec
+# Aviation Dashboard — Product Features Spec
 
 **Authors:** Colin & Calvin Cheung
 
@@ -12,17 +12,20 @@ useful as a portfolio piece and learning project.
 
 A live 2D map of aircraft over London with callsign / altitude / speed
 datablocks, plus a KPI strip showing inbound arrivals and runway throughput for
-Heathrow. Deployed and shareable via a public URL.
+Heathrow. Deployed and shareable via a public URL. The map should also display 
+major London airports with clickable popups containing real-time METAR weather
+conditions.
 
 ## User Flow
 
 1. User opens the dashboard
 2. Sees a dark-themed radar map of London airspace with aircraft icons moving in
-   near-real-time (~10s refresh)
+   near-real-time (~10s refresh) and static airport markers
 3. Glances at KPI strip — Heathrow arrivals count, estimated throughput, data
    freshness, tracked aircraft count, API health indicator
 4. Can zoom / pan the map
 5. Clicks an aircraft to see its datablock (callsign, altitude, speed, heading)
+6. Clicks an airport to see its live weather datablock (condition, temp, wind)
 
 ## Stack
 
@@ -33,7 +36,7 @@ Heathrow. Deployed and shareable via a public URL.
 | Map tiles   | OpenFreeMap (dark style)                |
 | State mgmt  | TanStack Query (React Query)            |
 | Backend     | Python / FastAPI                        |
-| Data source | airplanes.live REST API                 |
+| Data source | airplanes.live REST API + MET Norway    |
 | Monorepo    | Nx + Bun + mise                         |
 | Deploy (FE) | Cloudflare Pages                        |
 | Deploy (BE) | Self-hosted (Docker + Cloudflare Tunnel)|
@@ -47,15 +50,15 @@ Heathrow. Deployed and shareable via a public URL.
 - Airspace Pressure Index — future feature
 - Stack debt / holding pattern detection — complex, future
 - Historical persistence / database — in-memory only for MVP
-- Weather overlays, weight-based spacing, carbon estimation
+- Weight-based spacing, carbon estimation
 - Multi-airport tracking (Gatwick, Stansted, etc.) — LHR only for MVP
 - Authentication / user accounts
-- E2E tests (Playwright) — add after core features work
 
 ## Risks & Mitigations
 
 | Risk                                    | Impact | Mitigation                                                    |
 | --------------------------------------- | ------ | ------------------------------------------------------------- |
 | airplanes.live rate limits (~1 req/10s) | Low    | Lazy caching (zero calls when idle), 10s TTL, single instance |
+| MET Norway user-agent restrictions      | High   | Send custom User-Agent in headers, aggressive 30m caching     |
 | airplanes.live data gaps                | Medium | Show "stale data" warning, degrade gracefully                 |
 | Arrival heuristic false positives       | Low    | LHR controlled airspace limits low-altitude traffic           |
