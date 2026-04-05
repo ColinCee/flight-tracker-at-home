@@ -23,21 +23,36 @@ Browser → flight-tracker-at-home.pages.dev (Cloudflare Pages)
 
 ## Setup
 
-### 1. Create a Cloudflare Tunnel
+### 1. Make the GHCR package public
+
+The backend Docker image is pushed to GitHub Container Registry by CI. Make it publicly pullable:
+
+1. Go to GitHub → Your profile → Packages → `flight-tracker-at-home/backend`
+2. Package settings → Danger Zone → Change visibility → **Public**
+
+This lets your server (and Tugtainer) pull images without authentication.
+
+### 2. Create a Cloudflare Tunnel
 
 1. Go to [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → Networks → Tunnels
 2. Create a new tunnel, name it `flight-tracker`
-3. Copy the **tunnel token** (you'll only see it once)
-4. Add a **public hostname**:
+3. Choose **Docker** as the environment — it will show you a token and a `docker run` command
+4. **Run the `docker run` command** on your server to connect the tunnel and satisfy the wizard
+5. Add a **public hostname**:
    - Subdomain: `api`
    - Domain: `colincheung.dev`
-   - Service: `http://backend:8000`
+   - Type: `HTTP`
+   - URL: `backend:8000`
+6. Save, then stop the temporary container (`Ctrl+C`)
 
-### 2. Create the `.env` file
+The token encodes your tunnel config. Save it for the next step.
 
-On your machine, in the directory where you'll run the stack:
+### 3. Clone the repo and create `.env`
 
 ```bash
+git clone https://github.com/ColinCee/flight-tracker-at-home.git
+cd flight-tracker-at-home
+
 cat > .env << 'EOF'
 # OpenSky Network OAuth2 credentials
 OPENSKY_CLIENT_ID=your-client-id
@@ -54,24 +69,15 @@ TUNNEL_TOKEN=your-tunnel-token-here
 EOF
 ```
 
-### 3. Authenticate with GHCR
-
-Create a GitHub Personal Access Token (PAT) with `read:packages` scope, then:
-
-```bash
-docker login ghcr.io -u YOUR_GITHUB_USERNAME
-# Paste your PAT as the password
-```
+The `.env` file is gitignored — credentials stay local.
 
 ### 4. Start the stack
-
-Copy `docker-compose.prod.yml` to your machine and run:
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-Or create a new stack in **Dockge** using the compose file contents.
+Or point **Dockge** at this directory to manage it via the UI.
 
 ### 5. Verify
 
@@ -92,6 +98,8 @@ In your repo: Settings → Secrets and variables → Actions → Variables:
 
 Set `VITE_API_BASE_URL` = `https://api.colincheung.dev`
 
+This tells the frontend build where the API lives.
+
 ## Auto-deployment
 
 When you merge to `main`:
@@ -101,6 +109,16 @@ When you merge to `main`:
 3. **CI** also deploys the frontend to Cloudflare Pages
 
 No SSH keys, no webhooks, no manual steps after initial setup.
+
+## Updating the compose config
+
+If `docker-compose.prod.yml` changes:
+
+```bash
+cd flight-tracker-at-home
+git pull
+docker compose -f docker-compose.prod.yml up -d
+```
 
 ## Troubleshooting
 
@@ -114,4 +132,4 @@ No SSH keys, no webhooks, no manual steps after initial setup.
 
 **Tugtainer not updating:**
 - Check `docker logs tugtainer`
-- Ensure GHCR package visibility is set to **Public** (or that Docker is logged in to GHCR)
+- Ensure GHCR package visibility is set to **Public**
