@@ -104,37 +104,46 @@ If you are new to the repo, start with **mise**, then **bun/uv**, then **Nx**.
 ## Deployment
 
 Everything runs on **Cloudflare** for free: Pages (frontend) + Python Worker (backend API).
+Both deploy automatically via GitHub Actions on push to `main` — see `.github/workflows/deploy.yml`.
 
-### Backend → Cloudflare Worker
+### Required GitHub repo settings
 
-The backend runs as a [Cloudflare Python Worker](https://developers.cloudflare.com/workers/languages/python/) in `apps/worker/`.
+Add these in **Settings → Secrets and variables → Actions**:
+
+| Type | Name | Description |
+|------|------|-------------|
+| Secret | `CLOUDFLARE_API_TOKEN` | API token with Workers + Pages edit permissions |
+| Secret | `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+| Variable | `VITE_API_BASE_URL` | Worker URL (e.g. `https://flight-tracker-api.<account>.workers.dev`) |
+
+### First-time setup (one-off, via CLI)
 
 ```sh
-# One-time: authenticate wrangler
+# Authenticate wrangler
 npx wrangler login
 
-# Deploy the worker
-cd apps/worker
-uv sync
-uv run pywrangler deploy
+# Create and deploy the worker
+cd apps/worker && uv sync && uv run pywrangler deploy
 
 # Set OpenSky secrets (optional, for higher rate limits)
 npx wrangler secret put OPENSKY_CLIENT_ID
 npx wrangler secret put OPENSKY_CLIENT_SECRET
+
+# Create the Pages project (if not already created)
+cd ../.. && npx wrangler pages project create flight-tracker-at-home
 ```
 
-The worker URL will be `https://flight-tracker-api.<account>.workers.dev`.
+After this, all subsequent deploys happen automatically via CI.
 
-### Frontend → Cloudflare Pages
+### Local development
 
-1. Go to [pages.cloudflare.com](https://pages.cloudflare.com) → **Create a project** → connect this repo
-2. Configure build settings:
-   - **Build command:** `npm install -g bun && bun install && bunx nx build frontend`
-   - **Build output directory:** `apps/frontend/dist`
-   - **Root directory:** `/` (repo root)
-3. Add environment variable:
-   - `VITE_API_BASE_URL` = your Worker URL (e.g. `https://flight-tracker-api.<account>.workers.dev`)
-4. Deploy — Cloudflare will auto-deploy on every push to `main`
+```sh
+# Worker (backend)
+cd apps/worker && uv sync && uv run pywrangler dev
+
+# Or use the original uvicorn backend
+mise run dev
+```
 
 ### Environment variables reference
 
