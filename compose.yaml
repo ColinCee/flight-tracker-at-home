@@ -1,13 +1,16 @@
-# Production Docker Compose — runs on the self-hosted Linux machine.
+# Flight Tracker Docker Compose
 #
-# Services:
-#   backend     — Flight Tracker API (pulled from GHCR)
-#   cloudflared — Cloudflare Tunnel (exposes backend as api.colincheung.dev)
-#   tugtainer   — Auto-pulls new backend images from GHCR
+# Production (self-hosted server):
+#   docker compose up -d
+#   Runs backend (from GHCR) + Cloudflare Tunnel + Tugtainer auto-updater
+#   Setup: see docs/SELF-HOST.md
 #
-# Setup: see docs/SELF-HOST.md
+# Local development:
+#   docker compose --profile dev up
+#   Builds and runs the backend locally on port 8000
 
 services:
+  # --- Production services ---
   backend:
     image: ghcr.io/colincee/flight-tracker-at-home/backend:latest
     restart: unless-stopped
@@ -17,6 +20,7 @@ services:
       - .env
     labels:
       - "tugtainer.enable=true"
+    profiles: [prod]
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -24,6 +28,7 @@ services:
     command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
     depends_on:
       - backend
+    profiles: [prod]
 
   tugtainer:
     image: ghcr.io/tugtainer/tugtainer:latest
@@ -32,3 +37,14 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - TZ=Europe/London
+    profiles: [prod]
+
+  # --- Local development ---
+  backend-dev:
+    build:
+      context: apps/backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - apps/backend/.env
+    profiles: [dev]

@@ -74,7 +74,7 @@ The `.env` file is gitignored — credentials stay local.
 ### 4. Start the stack
 
 ```bash
-docker compose -f compose.yaml up -d
+docker compose --profile prod up -d
 ```
 
 Or point **Dockge** at this directory to manage it via the UI.
@@ -83,7 +83,7 @@ Or point **Dockge** at this directory to manage it via the UI.
 
 ```bash
 # Check containers are running
-docker compose -f compose.yaml ps
+docker compose --profile prod ps
 
 # Test the API
 curl https://api.colincheung.dev/health
@@ -117,7 +117,7 @@ If `compose.yaml` changes:
 ```bash
 cd flight-tracker-at-home
 git pull
-docker compose -f compose.yaml up -d
+docker compose --profile prod up -d
 ```
 
 ## Troubleshooting
