@@ -70,6 +70,27 @@ export interface AircraftResponse {
 }
 
 /**
+ * Weather data for a specific airport via MET Norway.
+ */
+export interface AirportWeather {
+  icao: string;
+  name: string;
+  condition: string;
+  temperatureC: number | null;
+  windSpeedKts: number | null;
+  windDirectionDeg: number | null;
+}
+
+/**
+ * Single response for the weather polling endpoint.
+ */
+export interface WeatherResponse {
+  timestamp: number;
+  cacheAgeSeconds: number;
+  weather: AirportWeather[];
+}
+
+/**
  * Simple health check.
  * @summary Health Check
  */
@@ -324,6 +345,95 @@ export function useDebugOpensky<TData = Awaited<ReturnType<typeof debugOpensky>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getDebugOpenskyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+/**
+ * Fetches METAR weather for London airports.
+Cached for 30 minutes to respect upstream rate limits.
+ * @summary Get London Airport Weather
+ */
+export type getWeatherResponse200 = {
+  data: WeatherResponse
+  status: 200
+}
+
+export type getWeatherResponseSuccess = (getWeatherResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getWeatherResponse = (getWeatherResponseSuccess)
+
+export const getGetWeatherUrl = () => {
+
+
+
+
+  return `/weather`
+}
+
+export const getWeather = async ( options?: RequestInit): Promise<getWeatherResponse> => {
+
+  return fetchClient<getWeatherResponse>(getGetWeatherUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWeatherQueryKey = () => {
+    return [
+    `/weather`
+    ] as const;
+    }
+
+
+export const getGetWeatherQueryOptions = <TData = Awaited<ReturnType<typeof getWeather>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeather>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWeatherQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWeather>>> = ({ signal }) => getWeather({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWeather>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWeatherQueryResult = NonNullable<Awaited<ReturnType<typeof getWeather>>>
+export type GetWeatherQueryError = unknown
+
+
+/**
+ * @summary Get London Airport Weather
+ */
+
+export function useGetWeather<TData = Awaited<ReturnType<typeof getWeather>>, TError = unknown>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeather>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWeatherQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

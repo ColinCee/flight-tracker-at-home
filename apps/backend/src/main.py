@@ -8,8 +8,9 @@ import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.cache import airspace_cache
-from src.models import AircraftResponse
+from src.models import AircraftResponse, WeatherResponse
 from src.opensky import _token_manager
+from src.weather import weather_cache
 
 logger = logging.getLogger(__name__)
 
@@ -110,3 +111,17 @@ async def debug_opensky():
             results["tests"]["token"] = {"error": repr(e), "ok": False}
 
     return results
+
+
+@app.get(
+    "/weather",
+    response_model=WeatherResponse,
+    operation_id="getWeather",
+    summary="Get London Airport Weather",
+)
+async def get_weather() -> WeatherResponse:
+    """
+    Fetches METAR weather for London airports.
+    Cached for 30 minutes to respect upstream rate limits.
+    """
+    return await weather_cache.get_weather()

@@ -57,6 +57,25 @@
           }
         }
       }
+    },
+    "/weather": {
+      "get": {
+        "summary": "Get London Airport Weather",
+        "description": "Fetches METAR weather for London airports.\nCached for 30 minutes to respect upstream rate limits.",
+        "operationId": "getWeather",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeatherResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -235,6 +254,66 @@
         "title": "AircraftState",
         "description": "One aircraft's state, transformed from OpenSky's positional array."
       },
+      "AirportWeather": {
+        "properties": {
+          "icao": {
+            "type": "string",
+            "title": "Icao"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "condition": {
+            "type": "string",
+            "title": "Condition"
+          },
+          "temperatureC": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperaturec"
+          },
+          "windSpeedKts": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Windspeedkts"
+          },
+          "windDirectionDeg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winddirectiondeg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "icao",
+          "name",
+          "condition",
+          "temperatureC",
+          "windSpeedKts",
+          "windDirectionDeg"
+        ],
+        "title": "AirportWeather",
+        "description": "Weather data for a specific airport via MET Norway."
+      },
       "KPIs": {
         "properties": {
           "trackedAircraft": {
@@ -306,6 +385,33 @@
           "apiCreditsRemaining"
         ],
         "title": "KPIs"
+      },
+      "WeatherResponse": {
+        "properties": {
+          "timestamp": {
+            "type": "integer",
+            "title": "Timestamp"
+          },
+          "cacheAgeSeconds": {
+            "type": "number",
+            "title": "Cacheageseconds"
+          },
+          "weather": {
+            "items": {
+              "$ref": "#/components/schemas/AirportWeather"
+            },
+            "type": "array",
+            "title": "Weather"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp",
+          "cacheAgeSeconds",
+          "weather"
+        ],
+        "title": "WeatherResponse",
+        "description": "Single response for the weather polling endpoint."
       }
     }
   }
