@@ -3,28 +3,30 @@ import time
 from unittest.mock import patch
 
 import pytest
-from src.cache import AirspaceCache, get_effective_ttl
+from src.cache import AirspaceCache
 from src.models import AircraftState
 
 
-# Helper to generate mock aircraft
 def create_mock_aircraft(icao: str, approaching: bool) -> AircraftState:
     return AircraftState(
         icao24=icao,
         callsign="TEST",
-        origin_country="UK",
+        registration="G-TEST",
+        aircraft_type="A320",
+        category="Heavy",
         last_contact=int(time.time()),
         latitude=51.0,
         longitude=0.0,
-        baro_altitude=1000.0,
-        on_ground=False,
-        velocity=100.0,
+        baro_altitude_ft=1000,
+        geo_altitude_ft=1000,
+        ground_speed_kts=100.0,
         true_track=90.0,
-        vertical_rate=0.0,
-        geo_altitude=1000.0,
+        vertical_rate_fpm=0,
+        on_ground=False,
         squawk=None,
         position_source="ADS-B",
-        category="Light",
+        is_climbing=False,
+        is_descending=False,
         is_approaching_lhr=approaching,
     )
 
@@ -53,8 +55,8 @@ async def test_cache_kpi_calculation(mock_get_state):
     assert response.kpis.airborne_aircraft == 2
     assert response.kpis.climbing_aircraft == 0
     assert response.kpis.descending_aircraft == 0
-    assert response.kpis.avg_altitude_ft == 3300  # 1000m ≈ 3281ft → rounds to 3300
-    assert response.refresh_interval_ms == 10_000  # Anonymous = 10s
+    assert response.kpis.avg_altitude_ft == 1000  # No more metric
+    assert response.refresh_interval_ms == 10_000  # Default = 10s
 
 
 @pytest.mark.asyncio
@@ -101,48 +103,68 @@ async def test_cache_serves_stale_data_on_error(mock_get_state):
     assert response_2.kpis.tracked_aircraft == 1
 
 
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_defaults_to_anonymous(mock_credits):
-    """Without env vars or auth, TTL defaults to 10s (anonymous)."""
-    mock_credits.return_value = None
-    assert get_effective_ttl() == 10.0
+@pytest.mark.asyncio
+@patch("src.cache.get_current_airspace_state")
+async def test_cache_climbing_descending_kpis(mock_get_state):
+    """Tests that climbing and descending KPIs are counted correctly."""
+    climbing = create_mock_aircraft("C111", approaching=False)
+    climbing.is_climbing = True
+    climbing.vertical_rate_fpm = 1500
+
+    descending = create_mock_aircraft("D222", approaching=False)
+    descending.is_descending = True
+    descending.vertical_rate_fpm = -1200
+
+    level = create_mock_aircraft("L333", approaching=False)
+
+    mock_get_state.return_value = [climbing, descending, level]
+
+    cache = AirspaceCache()
+    response = await cache.get_state()
+
+    assert response.kpis.climbing_aircraft == 1
+    assert response.kpis.descending_aircraft == 1
+    assert response.kpis.airborne_aircraft == 3
 
 
-@patch.dict("os.environ", {"CACHE_TTL": "20"})
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_uses_env_var(mock_credits):
-    """CACHE_TTL env var overrides the default."""
-    mock_credits.return_value = None
-    assert get_effective_ttl() == 20.0
+@pytest.mark.asyncio
+@patch("src.cache.get_current_airspace_state")
+async def test_cache_empty_aircraft_offline(mock_get_state):
+    """Empty aircraft list should report api_health as 'offline'."""
+    mock_get_state.return_value = []
+
+    cache = AirspaceCache()
+    response = await cache.get_state()
+
+    assert response.kpis.api_health == "offline"
+    assert response.kpis.tracked_aircraft == 0
+    assert response.kpis.airborne_aircraft == 0
+    assert response.kpis.avg_altitude_ft is None
 
 
-@patch.dict("os.environ", {"CACHE_TTL": "20"})
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_throttles_below_1000_credits(mock_credits):
-    """Below 1000 credits, TTL scales up to 30s."""
-    mock_credits.return_value = 800
-    assert get_effective_ttl() == 30.0
+@pytest.mark.asyncio
+@patch("src.cache.get_current_airspace_state")
+async def test_cache_throughput_pruning(mock_get_state):
+    """Arrival entries older than 60 minutes should be pruned."""
+    mock_get_state.return_value = [create_mock_aircraft("A111", approaching=True)]
 
+    cache = AirspaceCache()
 
-@patch.dict("os.environ", {"CACHE_TTL": "20"})
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_throttles_below_500_credits(mock_credits):
-    """Below 500 credits, TTL scales up to 60s."""
-    mock_credits.return_value = 300
-    assert get_effective_ttl() == 60.0
+    # Populate with an arrival
+    await cache.get_state()
+    assert cache.arrival_times
+    assert len(cache.seen_arrivals) == 1
 
+    # Simulate: the arrival happened >60 min ago
+    old_time = time.time() - 3700
+    cache.arrival_times[0] = (old_time, "A111")
+    cache.last_update = 0.0  # Force re-fetch
 
-@patch.dict("os.environ", {"CACHE_TTL": "20"})
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_throttles_below_100_credits(mock_credits):
-    """Below 100 credits, TTL scales up to 120s (conservation mode)."""
-    mock_credits.return_value = 50
-    assert get_effective_ttl() == 120.0
+    # New fetch with a different aircraft
+    mock_get_state.return_value = [create_mock_aircraft("B222", approaching=True)]
+    response = await cache.get_state()
 
-
-@patch.dict("os.environ", {"CACHE_TTL": "20"})
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_no_throttle_above_1000_credits(mock_credits):
-    """Above 1000 credits, no throttling — base TTL applies."""
-    mock_credits.return_value = 2000
-    assert get_effective_ttl() == 20.0
+    # Old entry pruned, new one added
+    assert response.kpis.throughput_last_60min == 1
+    assert "A111" not in cache.seen_arrivals
+    assert "B222" in cache.seen_arrivals

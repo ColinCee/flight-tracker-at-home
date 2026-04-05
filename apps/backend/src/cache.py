@@ -1,74 +1,27 @@
-"""Cache for AircraftResponse — singleton that refreshes on a dynamic TTL.
+"""Cache for AircraftResponse — singleton that refreshes on a stable TTL.
 
-TTL behaviour:
-- Development (no CACHE_TTL env var): 5s authenticated / 10s anonymous,
-  matching OpenSky's data resolution.
-- Production (CACHE_TTL=20): 20s base, scaled up automatically when
-  remaining API credits drop below safety thresholds.
+Airplanes.live allows 1 request per second without authentication.
+A 10-second default TTL gives stable real-time updates within the API's effective rate limit.
 """
 
+import asyncio
 import logging
 import os
 import time
 from collections import deque
 
+from src.airplanes_live import get_current_airspace_state
 from src.models import AircraftResponse, KPIs
-from src.opensky import (
-    _token_manager,
-    get_current_airspace_state,
-    get_remaining_credits,
-)
 
 logger = logging.getLogger(__name__)
 
-_MOCK_MODE = os.getenv("OPENSKY_MOCK", "").lower() in ("true", "1", "yes")
-
-# Dev defaults match OpenSky data resolution
-_TTL_DEV_AUTHENTICATED = 5.0
-_TTL_DEV_ANONYMOUS = 10.0
-
-# Credit-aware throttle thresholds: (credit_floor, minimum_ttl)
-# Ordered lowest-first so the strictest match wins.
-_CREDIT_THRESHOLDS: list[tuple[int, float]] = [
-    (100, 120.0),
-    (500, 60.0),
-    (1000, 30.0),
-]
+_MOCK_MODE = os.getenv("MOCK_DATA", "").lower() in ("true", "1", "yes")
 
 
 def get_effective_ttl() -> float:
-    """Return the cache TTL in seconds, factoring in credit budget.
-
-    1. If CACHE_TTL is set, use it as the base (production).
-       Otherwise fall back to 5s/10s dev defaults.
-    2. If remaining credits are known and low, scale up to conserve them.
-    """
+    """Return the cache TTL in seconds. Defaults to 10.0."""
     env_ttl = os.getenv("CACHE_TTL")
-    if env_ttl:
-        base = float(env_ttl)
-    else:
-        base = (
-            _TTL_DEV_AUTHENTICATED
-            if _token_manager.is_authenticated
-            else _TTL_DEV_ANONYMOUS
-        )
-
-    credits = get_remaining_credits()
-    if credits is None:
-        return base
-
-    for floor, minimum in _CREDIT_THRESHOLDS:
-        if credits < floor:
-            if minimum > base:
-                logger.info(
-                    "Credit-aware throttle: %d credits remaining, TTL %gs → %gs",
-                    credits,
-                    base,
-                    minimum,
-                )
-            return max(base, minimum)
-
-    return base
+    return float(env_ttl) if env_ttl else 10.0
 
 
 class AirspaceCache:
@@ -77,12 +30,20 @@ class AirspaceCache:
         self.cached_response: AircraftResponse | None = None
         self.last_update: float = 0.0
 
-        # Throughput tracking (The "Rolling 60 Min" window)
-        self.arrival_times = deque()
-        self.seen_arrivals = set()
+        # Throughput tracking: deque of (timestamp, icao24) tuples
+        self.arrival_times: deque[tuple[float, str]] = deque()
+        self.seen_arrivals: set[str] = set()
+
+        # Initialize as None! We will create the lock lazily
+        self._lock: asyncio.Lock | None = None
 
     async def get_state(self) -> AircraftResponse:
         """The main entry point for the API route."""
+
+        # Ensure the lock is created strictly inside the active Event Loop
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+
         now = time.time()
         cache_age = now - self.last_update
         ttl = get_effective_ttl()
@@ -92,90 +53,105 @@ class AirspaceCache:
             self.cached_response.cache_age_seconds = round(cache_age, 1)
             return self.cached_response
 
-        # 2. Cache is stale: Fetch fresh data (Phases 1-3)
-        try:
-            if _MOCK_MODE:
-                from src.mock_data import get_mock_aircraft
-
-                aircraft_list = get_mock_aircraft()
-            else:
-                aircraft_list = await get_current_airspace_state()
-        except Exception as e:
-            logger.warning("OpenSky fetch failed: %r", e)
-            # Serve stale cache instead of losing data
-            if self.cached_response:
+        # 2. Cache is stale: Acquire the lock to fetch safely
+        async with self._lock:
+            # Re-evaluate cache age inside the lock!
+            # Another request might have updated it while we were waiting in line.
+            now = time.time()
+            cache_age = now - self.last_update
+            if self.cached_response and cache_age < ttl:
                 self.cached_response.cache_age_seconds = round(cache_age, 1)
-                self.cached_response.kpis.api_health = "stale"
                 return self.cached_response
-            aircraft_list = []
 
-        # 3. Process KPIs
-        now = time.time()  # Update 'now' after the async await finishes
-        inbound_count = 0
-        airborne_count = 0
-        climbing_count = 0
-        descending_count = 0
-        altitude_sum = 0.0
-        altitude_count = 0
+            try:
+                if _MOCK_MODE:
+                    from src.mock_data import get_mock_aircraft
 
-        for ac in aircraft_list:
-            if ac.on_ground:
-                pass
-            else:
-                airborne_count += 1
-                if ac.baro_altitude is not None:
-                    altitude_sum += ac.baro_altitude
-                    altitude_count += 1
+                    aircraft_list = get_mock_aircraft()
+                else:
+                    aircraft_list = await get_current_airspace_state()
+            except Exception as e:
+                logger.warning("Airplanes.live fetch failed: %r", e)
 
-            vr = ac.vertical_rate or 0.0
-            if vr > 1.0:
-                climbing_count += 1
-            elif vr < -1.0:
-                descending_count += 1
+                # Preserve real data age before circuit breaker overwrites it
+                stale_since = self.last_update
 
-            if ac.is_approaching_lhr:
-                inbound_count += 1
-                # If we haven't seen this plane approaching before,
-                # log it as a new throughput event
-                if ac.icao24 not in self.seen_arrivals:
-                    self.seen_arrivals.add(ac.icao24)
-                    self.arrival_times.append(now)
+                # CIRCUIT BREAKER: Update the timestamp ANYWAY so we don't spam 429s
+                self.last_update = time.time()
 
-        # 4. Prune the Throughput Queue
-        # (Remove events older than 60 mins / 3600 seconds)
-        while self.arrival_times and self.arrival_times[0] < (now - 3600):
-            self.arrival_times.popleft()
+                # Serve stale cache instead of losing data
+                if self.cached_response:
+                    self.cached_response.cache_age_seconds = round(
+                        time.time() - stale_since, 1
+                    )
+                    self.cached_response.kpis.api_health = "stale"
+                    return self.cached_response
+                aircraft_list = []
 
-        metres_to_feet = 3.28084
-        avg_alt = (
-            round(altitude_sum / altitude_count * metres_to_feet / 100) * 100
-            if altitude_count > 0
-            else None
-        )
+            # 3. Process KPIs
+            fetch_time = time.time()
+            inbound_count = 0
+            airborne_count = 0
+            climbing_count = 0
+            descending_count = 0
+            altitude_sum = 0.0
+            altitude_count = 0
 
-        # 5. Build the Data Contract
-        kpis = KPIs(
-            tracked_aircraft=len(aircraft_list),
-            airborne_aircraft=airborne_count,
-            inbound_lhr_aircraft=inbound_count,
-            climbing_aircraft=climbing_count,
-            descending_aircraft=descending_count,
-            throughput_last_60min=len(self.arrival_times),
-            avg_altitude_ft=avg_alt,
-            api_health="live" if aircraft_list else "offline",
-            api_credits_remaining=get_remaining_credits(),
-        )
+            for ac in aircraft_list:
+                if ac.on_ground:
+                    pass
+                else:
+                    airborne_count += 1
+                    if ac.baro_altitude_ft is not None:
+                        altitude_sum += ac.baro_altitude_ft
+                        altitude_count += 1
 
-        self.cached_response = AircraftResponse(
-            timestamp=int(now),
-            cache_age_seconds=0.0,
-            refresh_interval_ms=int(ttl * 1000),
-            aircraft=aircraft_list,
-            kpis=kpis,
-        )
-        self.last_update = now
+                if ac.is_climbing:
+                    climbing_count += 1
+                elif ac.is_descending:
+                    descending_count += 1
 
-        return self.cached_response
+                if ac.is_approaching_lhr:
+                    inbound_count += 1
+                    if ac.icao24 not in self.seen_arrivals:
+                        self.seen_arrivals.add(ac.icao24)
+                        self.arrival_times.append((fetch_time, ac.icao24))
+
+            # 4. Prune the Throughput Queue (and matching seen_arrivals entries)
+            while self.arrival_times and self.arrival_times[0][0] < (fetch_time - 3600):
+                _, expired_icao = self.arrival_times.popleft()
+                self.seen_arrivals.discard(expired_icao)
+
+            avg_alt = (
+                round(altitude_sum / altitude_count / 100) * 100
+                if altitude_count > 0
+                else None
+            )
+
+            # 5. Build the Data Contract
+            kpis = KPIs(
+                tracked_aircraft=len(aircraft_list),
+                airborne_aircraft=airborne_count,
+                inbound_lhr_aircraft=inbound_count,
+                climbing_aircraft=climbing_count,
+                descending_aircraft=descending_count,
+                throughput_last_60min=len(self.arrival_times),
+                avg_altitude_ft=avg_alt,
+                api_health="live" if aircraft_list else "offline",
+            )
+
+            self.cached_response = AircraftResponse(
+                timestamp=int(fetch_time),
+                cache_age_seconds=0.0,
+                refresh_interval_ms=int(ttl * 1000),
+                aircraft=aircraft_list,
+                kpis=kpis,
+            )
+
+            # Reset the timer only after a successful execution
+            self.last_update = fetch_time
+
+            return self.cached_response
 
 
 # Instantiate the singleton so main.py can import it

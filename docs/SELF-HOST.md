@@ -7,7 +7,7 @@ Run the Flight Tracker backend on your own Linux machine, exposed via Cloudflare
 - Linux machine (always-on, residential IP)
 - Docker & Docker Compose installed
 - A domain managed by Cloudflare (e.g. `colincheung.dev`)
-- OpenSky Network account with API client credentials
+- Internet access (airplanes.live API — no account needed)
 
 ## Architecture
 
@@ -18,7 +18,7 @@ Browser → flight-tracker-at-home.pages.dev (Cloudflare Pages)
               ↓ (encrypted, no open ports)
           Your machine (Docker: backend + cloudflared + tugtainer)
               ↓
-          OpenSky API (residential IP — not blocked)
+          airplanes.live API (free, no auth needed)
 ```
 
 ## Setup
@@ -57,12 +57,8 @@ cat > .env << 'EOF'
 # Activate production services (needed for Dockge / plain docker compose up)
 COMPOSE_PROFILES=prod
 
-# OpenSky Network OAuth2 credentials
-OPENSKY_CLIENT_ID=your-client-id
-OPENSKY_CLIENT_SECRET=your-client-secret
-
 # Cache TTL (seconds)
-CACHE_TTL=20
+CACHE_TTL=10
 
 # CORS — allow the frontend origin
 CORS_ORIGINS=https://flight-tracker-at-home.pages.dev
@@ -72,7 +68,7 @@ TUNNEL_TOKEN=your-tunnel-token-here
 EOF
 ```
 
-The `.env` file is gitignored — credentials stay local.
+The `.env` file is gitignored — config stays local.
 
 ### 4. Start the stack
 
@@ -91,8 +87,8 @@ docker compose ps
 # Test the API
 curl https://api.colincheung.dev/health
 
-# Test OpenSky connectivity
-curl https://api.colincheung.dev/debug/opensky
+# Test airplanes.live connectivity
+curl https://api.colincheung.dev/debug/airplanes_live
 ```
 
 ### 6. Update GitHub Actions variable
@@ -129,9 +125,10 @@ docker compose up -d
 - Check `docker logs cloudflared` — tunnel should show "Connected"
 - Verify the tunnel hostname routes to `http://backend:8000` in Cloudflare dashboard
 
-**OpenSky returning 429:**
-- You're rate-limited. The credit-aware throttling will automatically back off.
-- Check `/debug/opensky` to see current status.
+**airplanes.live rate limiting:**
+- The API allows ~1 request per 10 seconds sustained. The backend's 10s cache TTL respects this.
+- If you see empty responses or errors, check `/debug/airplanes_live` to see current status.
+- No authentication or API keys are needed.
 
 **Tugtainer not updating:**
 - Check `docker logs tugtainer`

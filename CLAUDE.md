@@ -12,12 +12,12 @@ flight-tracker-at-home/
 │   │   ├── src/
 │   │   │   ├── api/           # API layer: Orval-generated hooks + fetch client
 │   │   │   ├── features/      # Feature modules (map/, kpi/) with colocated tests
-│   │   │   └── shared/        # Cross-feature: ui/, filters, units, utils
+│   │   │   └── shared/        # Cross-feature: ui/, filters
 │   │   └── openapi.json       # Exported OpenAPI spec from backend
 │   ├── backend/               # Python FastAPI + Pydantic
 │   │   ├── src/main.py        # FastAPI app + endpoints (/health, /aircraft)
 │   │   ├── src/models.py      # Data contract — source of truth for API schema
-│   │   ├── src/opensky.py     # OpenSky API client (fetch, parse, enrich)
+│   │   ├── src/airplanes_live.py # airplanes.live API client (fetch, parse, enrich)
 │   │   ├── src/cache.py       # 10s TTL cache + KPI computation
 │   │   └── tests/             # Pytest tests
 │   └── e2e/                   # Playwright end-to-end tests
@@ -43,42 +43,33 @@ flight-tracker-at-home/
 ### Frontend (apps/frontend)
 
 - **MapView.tsx** — MapLibre GL map with OpenFreeMap dark tiles, centered on London
-- **AircraftLayer.tsx** — Deck.gl IconLayer rendering aircraft with heading rotation; orange for Heathrow approach, white otherwise
+- **AircraftLayer.tsx** — Deck.gl IconLayer rendering aircraft with heading rotation; 4 SVG icons (jet, prop, helicopter, glider) selected by category, category-based coloring, emergency squawk highlighting (red pulsing ring)
 - **useAircraftData.ts** — React Query hook wrapping Orval-generated `useGetAircraft`, auto-polls every 10s
-- **aircraft.svg** — A320 top-down silhouette, used as IconLayer atlas with `mask: true` for dynamic coloring
+- **icons/jet.svg** — Aircraft silhouette SVGs (plus prop.svg, helicopter.svg, glider.svg), used as IconLayer atlas with `mask: true` for dynamic coloring
 
 ### Backend (apps/backend)
 
-- **opensky.py** — 3-phase ETL: fetch London airspace from OpenSky API → parse state vectors into `AircraftState` → enrich with `is_approaching_lhr` heuristic (haversine distance, altitude, heading, descent rate). Authenticates via OAuth2 client credentials flow (tokens auto-cached and refreshed). Falls back to anonymous if no credentials.
-- **cache.py** — `AirspaceCache` singleton with dynamic TTL lazy refresh; tracks rolling 60-min throughput for KPIs. On upstream failure (rate limit, timeout), serves stale cached data instead of losing aircraft. Credit-aware throttling scales TTL up (20s → 30s → 60s → 120s) as remaining API credits deplete.
+- **airplanes_live.py** — 3-phase ETL: fetch London airspace from airplanes.live point endpoint (30nm radius) → parse JSON aircraft objects into `AircraftState` → enrich with `is_approaching_lhr` heuristic (haversine distance, altitude, heading, descent rate), `is_climbing`, and `is_descending`. No authentication needed — free public API.
+- **cache.py** — `AirspaceCache` singleton with 10s TTL lazy refresh; tracks rolling 60-min throughput for KPIs. On upstream failure (rate limit, timeout), serves stale cached data instead of losing aircraft.
 - **models.py** — Pydantic models (`AircraftState`, `KPIs`, `AircraftResponse`) with `alias_generator=to_camel`
-
-### OpenSky API credentials
-
-The backend works without credentials (anonymous: 400 calls/day, 10s resolution) but rate limits are tight. For authenticated access (4000+ calls/day, 5s resolution):
-
-1. Create a free account at https://opensky-network.org
-2. Go to Account → API Clients → Create and download your credentials
-3. `cp apps/backend/.env.example apps/backend/.env` and fill in `OPENSKY_CLIENT_ID` and `OPENSKY_CLIENT_SECRET`
-
-The `.env` file is gitignored. See `.env.example` for the template.
 
 ### Production environment variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OPENSKY_CLIENT_ID` | No | — | OAuth2 client ID (4000+ credits/day) |
-| `OPENSKY_CLIENT_SECRET` | No | — | OAuth2 client secret |
-| `CACHE_TTL` | No | `5`/`10` | Base cache TTL in seconds (production: `20`) |
+| `CACHE_TTL` | No | `10` | Cache TTL in seconds |
 | `CORS_ORIGINS` | No | `http://localhost:4200` | Comma-separated allowed origins |
+| `MOCK_DATA` | No | — | Set to `true` for E2E fixture mode |
 | `VITE_API_BASE_URL` | No | `http://localhost:8000` | Backend URL (set at frontend build time) |
+| `TUNNEL_TOKEN` | Yes (prod) | — | Cloudflare Tunnel token |
+| `COMPOSE_PROFILES` | No | — | Set to `prod` for production |
 
 ### Data Flow
 
 ```
-OpenSky API (dynamic TTL, credit-aware)
-  → opensky.py (fetch + parse + enrich)
-  → cache.py (adaptive TTL + KPIs + stale fallback)
+airplanes.live API (10s cache TTL)
+  → airplanes_live.py (fetch + parse + enrich)
+  → cache.py (TTL + KPIs + stale fallback)
   → GET /aircraft (AircraftResponse JSON)
   → useAircraftData (React Query, adaptive refetch)
   → AircraftLayer (Deck.gl IconLayer)
@@ -145,7 +136,7 @@ mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
 | Map       | MapLibre GL JS + react-map-gl + Deck.gl |
 | State     | TanStack Query (auto-polling 10s)       |
 | Backend   | Python 3.12 / FastAPI                   |
-| Data      | OpenSky Network REST API                |
+| Data      | airplanes.live REST API                 |
 | E2E Tests | Playwright (Chromium)                   |
 | Profiling | ps RSS sampling + CDP JS heap           |
 | Monorepo  | Nx + Bun + mise                         |

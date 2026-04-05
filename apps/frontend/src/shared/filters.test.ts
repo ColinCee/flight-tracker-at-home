@@ -6,17 +6,22 @@ function makeAircraft(overrides: Partial<AircraftState> = {}): AircraftState {
   return {
     icao24: 'abc123',
     callsign: 'TEST01',
-    originCountry: 'United Kingdom',
+    registration: null,
+    aircraftType: 'A320',
+    category: 'Large',
     latitude: 51.5,
     longitude: -0.1,
-    baroAltitude: 10000,
-    geoAltitude: 10000,
-    velocity: 200,
+    baroAltitudeFt: 10000,
+    geoAltitudeFt: 10000,
+    groundSpeedKts: 200,
     trueTrack: 90,
-    verticalRate: 0,
+    verticalRateFpm: 0,
     onGround: false,
     squawk: null,
     lastContact: 1700000000,
+    positionSource: 'ADS-B',
+    isClimbing: false,
+    isDescending: false,
     isApproachingLhr: false,
     ...overrides,
   };
@@ -38,20 +43,22 @@ describe('matchesFilter', () => {
     expect(matchesFilter(makeAircraft({ isApproachingLhr: false }), 'inbound-lhr')).toBe(false);
   });
 
-  it('climbing filter matches positive vertical rate above threshold', () => {
-    expect(matchesFilter(makeAircraft({ verticalRate: 5 }), 'climbing')).toBe(true);
-    expect(matchesFilter(makeAircraft({ verticalRate: 0.5 }), 'climbing')).toBe(false);
-    expect(matchesFilter(makeAircraft({ verticalRate: -3 }), 'climbing')).toBe(false);
+  it('climbing filter uses backend-computed isClimbing boolean', () => {
+    expect(matchesFilter(makeAircraft({ isClimbing: true }), 'climbing')).toBe(true);
+    expect(matchesFilter(makeAircraft({ isClimbing: false }), 'climbing')).toBe(false);
   });
 
-  it('descending filter matches negative vertical rate below threshold', () => {
-    expect(matchesFilter(makeAircraft({ verticalRate: -5 }), 'descending')).toBe(true);
-    expect(matchesFilter(makeAircraft({ verticalRate: -0.5 }), 'descending')).toBe(false);
-    expect(matchesFilter(makeAircraft({ verticalRate: 3 }), 'descending')).toBe(false);
+  it('descending filter uses backend-computed isDescending boolean', () => {
+    expect(matchesFilter(makeAircraft({ isDescending: true }), 'descending')).toBe(true);
+    expect(matchesFilter(makeAircraft({ isDescending: false }), 'descending')).toBe(false);
   });
 
-  it('handles null verticalRate as zero', () => {
-    expect(matchesFilter(makeAircraft({ verticalRate: null }), 'climbing')).toBe(false);
-    expect(matchesFilter(makeAircraft({ verticalRate: null }), 'descending')).toBe(false);
+  it('non-climbing non-descending aircraft does not match either filter', () => {
+    expect(
+      matchesFilter(makeAircraft({ isClimbing: false, isDescending: false }), 'climbing'),
+    ).toBe(false);
+    expect(
+      matchesFilter(makeAircraft({ isClimbing: false, isDescending: false }), 'descending'),
+    ).toBe(false);
   });
 });

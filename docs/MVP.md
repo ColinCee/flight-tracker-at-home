@@ -33,17 +33,17 @@ Heathrow. Deployed and shareable via a public URL.
 | Map tiles   | OpenFreeMap (dark style)                |
 | State mgmt  | TanStack Query (React Query)            |
 | Backend     | Python / FastAPI                        |
-| Data source | OpenSky Network REST API                |
+| Data source | airplanes.live REST API                 |
 | Monorepo    | Nx + Bun + mise                         |
 | Deploy (FE) | Cloudflare Pages                        |
-| Deploy (BE) | Render                                  |
+| Deploy (BE) | Self-hosted (Docker + Cloudflare Tunnel)|
 
 > See [ARCHITECTURE.md](./ARCHITECTURE.md) for technical details, data contract,
 > and implementation guidance. Both files live in `docs/`.
 
 ## Not Building (Yet)
 
-- WebSockets / SSE — REST polling matches OpenSky's 10s cadence perfectly
+- WebSockets / SSE — REST polling matches airplanes.live's ~10s rate limit perfectly
 - Airspace Pressure Index — future feature
 - Stack debt / holding pattern detection — complex, future
 - Historical persistence / database — in-memory only for MVP
@@ -56,8 +56,6 @@ Heathrow. Deployed and shareable via a public URL.
 
 | Risk                                    | Impact | Mitigation                                                    |
 | --------------------------------------- | ------ | ------------------------------------------------------------- |
-| OpenSky rate limits (4,000 credits/day) | Medium | Lazy caching (zero burn when idle), 10s TTL, single instance  |
-| OpenSky data gaps during high load      | Medium | Show "stale data" warning, degrade gracefully                 |
-| Render free tier cold starts (~30-60s)  | Low    | Acceptable for portfolio demo, show loading state             |
+| airplanes.live rate limits (~1 req/10s) | Low    | Lazy caching (zero calls when idle), 10s TTL, single instance |
+| airplanes.live data gaps                | Medium | Show "stale data" warning, degrade gracefully                 |
 | Arrival heuristic false positives       | Low    | LHR controlled airspace limits low-altitude traffic           |
-| OpenSky auth changes (OAuth2 only)      | Low    | Use OAuth2 client credentials — token auto-refresh in backend |

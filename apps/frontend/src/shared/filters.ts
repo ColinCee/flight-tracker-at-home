@@ -2,8 +2,6 @@ import type { AircraftState } from '@/api/generated';
 
 export type AircraftFilter = 'airborne' | 'inbound-lhr' | 'climbing' | 'descending' | null;
 
-const VERTICAL_RATE_THRESHOLD = 1; // m/s
-
 export function matchesFilter(ac: AircraftState, filter: AircraftFilter): boolean {
   switch (filter) {
     case null:
@@ -13,8 +11,8 @@ export function matchesFilter(ac: AircraftState, filter: AircraftFilter): boolea
     case 'inbound-lhr':
       return ac.isApproachingLhr;
     case 'climbing':
-      return (ac.verticalRate ?? 0) > VERTICAL_RATE_THRESHOLD;
+      return ac.isClimbing;
     case 'descending':
-      return (ac.verticalRate ?? 0) < -VERTICAL_RATE_THRESHOLD;
+      return ac.isDescending;
   }
 }

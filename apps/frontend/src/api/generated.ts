@@ -15,25 +15,40 @@ import type {
 } from '@tanstack/react-query';
 
 import { fetchClient } from './fetch-client';
+export type AircraftStatePositionSource = typeof AircraftStatePositionSource[keyof typeof AircraftStatePositionSource];
+
+
+export const AircraftStatePositionSource = {
+  'ADS-B': 'ADS-B',
+  MLAT: 'MLAT',
+  'TIS-B': 'TIS-B',
+  'ADS-C': 'ADS-C',
+  Mode_S: 'Mode S',
+  Unknown: 'Unknown',
+} as const;
+
 /**
- * One aircraft's state, transformed from OpenSky's positional array.
+ * One aircraft's state from the airplanes.live API.
  */
 export interface AircraftState {
   icao24: string;
   callsign: string | null;
-  originCountry: string;
+  registration: string | null;
+  aircraftType: string | null;
+  category: string;
   latitude: number;
   longitude: number;
-  baroAltitude: number | null;
-  geoAltitude: number | null;
-  velocity: number | null;
+  baroAltitudeFt: number | null;
+  geoAltitudeFt: number | null;
+  groundSpeedKts: number | null;
   trueTrack: number | null;
-  verticalRate: number | null;
+  verticalRateFpm: number | null;
   onGround: boolean;
   squawk: string | null;
   lastContact: number;
-  positionSource: string;
-  category: string;
+  positionSource: AircraftStatePositionSource;
+  isClimbing: boolean;
+  isDescending: boolean;
   isApproachingLhr: boolean;
 }
 
@@ -55,7 +70,6 @@ export interface KPIs {
   throughputLast60Min: number;
   avgAltitudeFt: number | null;
   apiHealth: KPIsApiHealth;
-  apiCreditsRemaining: number | null;
 }
 
 /**
@@ -159,7 +173,7 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
 
 /**
  * Main polling endpoint.
-Fetches the lazy-cached state, abstracting the OpenSky API rate limits.
+Fetches the lazy-cached state, abstracting the Airplanes.live API rate limits.
  * @summary Get Aircraft State
  */
 export type getAircraftResponse200 = {
@@ -247,32 +261,32 @@ export function useGetAircraft<TData = Awaited<ReturnType<typeof getAircraft>>, 
 
 
 /**
- * Diagnose OpenSky API connectivity from this server.
- * @summary OpenSky Connectivity Test
+ * Diagnose Airplanes.live API connectivity from this server.
+ * @summary Airplanes.live Connectivity Test
  */
-export type debugOpenskyResponse200 = {
+export type debugAirplanesLiveResponse200 = {
   data: unknown
   status: 200
 }
 
-export type debugOpenskyResponseSuccess = (debugOpenskyResponse200) & {
+export type debugAirplanesLiveResponseSuccess = (debugAirplanesLiveResponse200) & {
   headers: Headers;
 };
 ;
 
-export type debugOpenskyResponse = (debugOpenskyResponseSuccess)
+export type debugAirplanesLiveResponse = (debugAirplanesLiveResponseSuccess)
 
-export const getDebugOpenskyUrl = () => {
-
-
+export const getDebugAirplanesLiveUrl = () => {
 
 
-  return `/debug/opensky`
+
+
+  return `/debug/airplanes_live`
 }
 
-export const debugOpensky = async ( options?: RequestInit): Promise<debugOpenskyResponse> => {
+export const debugAirplanesLive = async ( options?: RequestInit): Promise<debugAirplanesLiveResponse> => {
 
-  return fetchClient<debugOpenskyResponse>(getDebugOpenskyUrl(),
+  return fetchClient<debugAirplanesLiveResponse>(getDebugAirplanesLiveUrl(),
   {
     ...options,
     method: 'GET'
@@ -285,45 +299,45 @@ export const debugOpensky = async ( options?: RequestInit): Promise<debugOpensky
 
 
 
-export const getDebugOpenskyQueryKey = () => {
+export const getDebugAirplanesLiveQueryKey = () => {
     return [
-    `/debug/opensky`
+    `/debug/airplanes_live`
     ] as const;
     }
 
 
-export const getDebugOpenskyQueryOptions = <TData = Awaited<ReturnType<typeof debugOpensky>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof debugOpensky>>, TError, TData>, }
+export const getDebugAirplanesLiveQueryOptions = <TData = Awaited<ReturnType<typeof debugAirplanesLive>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof debugAirplanesLive>>, TError, TData>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getDebugOpenskyQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getDebugAirplanesLiveQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof debugOpensky>>> = ({ signal }) => debugOpensky({ signal });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof debugAirplanesLive>>> = ({ signal }) => debugAirplanesLive({ signal });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof debugOpensky>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof debugAirplanesLive>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type DebugOpenskyQueryResult = NonNullable<Awaited<ReturnType<typeof debugOpensky>>>
-export type DebugOpenskyQueryError = unknown
+export type DebugAirplanesLiveQueryResult = NonNullable<Awaited<ReturnType<typeof debugAirplanesLive>>>
+export type DebugAirplanesLiveQueryError = unknown
 
 
 /**
- * @summary OpenSky Connectivity Test
+ * @summary Airplanes.live Connectivity Test
  */
 
-export function useDebugOpensky<TData = Awaited<ReturnType<typeof debugOpensky>>, TError = unknown>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof debugOpensky>>, TError, TData>, }
+export function useDebugAirplanesLive<TData = Awaited<ReturnType<typeof debugAirplanesLive>>, TError = unknown>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof debugAirplanesLive>>, TError, TData>, }
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getDebugOpenskyQueryOptions(options)
+  const queryOptions = getDebugAirplanesLiveQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
