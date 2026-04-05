@@ -31,10 +31,11 @@ services:
     profiles: [prod]
 
   tugtainer:
-    image: ghcr.io/tugtainer/tugtainer:latest
+    image: ghcr.io/quenary/tugtainer:1
     restart: unless-stopped
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - tugtainer_data:/tugtainer
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - TZ=Europe/London
     profiles: [prod]
@@ -60,3 +61,6 @@ services:
     depends_on:
       - backend-dev
     profiles: [dev]
+
+volumes:
+  tugtainer_data:
