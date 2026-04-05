@@ -1,5 +1,6 @@
 """Flight Tracker at Home API"""
 
+import logging
 import os
 import time
 
@@ -10,7 +11,12 @@ from src.cache import airspace_cache
 from src.models import AircraftResponse
 from src.opensky import _token_manager
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="Flight Tracker at Home API")
+
+if os.getenv("OPENSKY_MOCK", "").lower() in ("true", "1", "yes"):
+    logger.warning("OPENSKY_MOCK is enabled — serving fixture data")
 
 # Setup CORS so the React frontend can talk to this backend
 # Comma-separated for multiple origins (e.g., "https://app.pages.dev,https://custom.com")
