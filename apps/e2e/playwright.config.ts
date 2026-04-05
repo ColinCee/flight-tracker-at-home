@@ -14,7 +14,8 @@ export default defineConfig({
     : {
         webServer: [
           {
-            command: 'cd ../backend && OPENSKY_MOCK=true uv run uvicorn src.main:app --host 0.0.0.0 --port 8000',
+            command:
+              'cd ../backend && OPENSKY_MOCK=true uv run uvicorn src.main:app --host 0.0.0.0 --port 8000',
             port: 8000,
             reuseExistingServer: !process.env.CI,
           },
