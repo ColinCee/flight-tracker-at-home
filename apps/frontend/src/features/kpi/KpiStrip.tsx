@@ -31,7 +31,7 @@ function KpiItem({ label, value, tooltip, isActive, onClick }: KpiItemProps) {
     <button
       type="button"
       onClick={onClick}
-      className={`group relative flex flex-col items-center gap-0.5 rounded-md px-3 py-1 transition-colors ${
+      className={`group relative flex shrink-0 flex-col items-center gap-0.5 rounded-md px-3 py-1 transition-colors ${
         isClickable ? 'cursor-pointer hover:bg-zinc-700/50' : 'cursor-default'
       } ${isActive ? 'bg-zinc-700/70 ring-1 ring-zinc-500' : ''}`}
     >
@@ -52,7 +52,7 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
   const health = HEALTH_LABELS[kpis.apiHealth] ?? FALLBACK_HEALTH;
 
   return (
-    <div className="pointer-events-auto absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-zinc-600 bg-background/95 px-3 py-1.5 shadow-lg">
+    <div className="no-scrollbar pointer-events-auto absolute bottom-4 left-1/2 z-10 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-lg border border-zinc-600 bg-background/95 px-3 py-1.5 shadow-lg">
       <KpiItem
         label="Tracked"
         value={kpis.trackedAircraft}
