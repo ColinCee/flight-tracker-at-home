@@ -25,6 +25,18 @@ test.describe('frontend app', () => {
     expect(data.aircraft.length).toBeGreaterThanOrEqual(0);
   });
 
+  test('fetches weather data from API', async ({ page }) => {
+    const weatherRequest = page.waitForResponse(
+      (res) => new URL(res.url()).pathname === '/weather' && res.status() === 200,
+    );
+
+    await page.goto('/');
+    const res = await weatherRequest;
+    const data = await res.json();
+
+    expect(data.weather.length).toBeGreaterThanOrEqual(0);
+  });
+
   test('displays KPI strip with tracked aircraft count', async ({ page }) => {
     await page.goto('/');
 
