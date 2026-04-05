@@ -69,8 +69,6 @@ jobs:
       - run: mise run setup
       - run: bunx playwright install chromium --with-deps
       - run: mise run test:e2e
-        env:
-          VITE_API_BASE_URL: http://localhost:8000
 
   memory-profile:
     name: Memory Profile
@@ -89,7 +87,6 @@ jobs:
         env:
           MEMORY_REPORT_FILE: memory-report.md
           MEMORY_SOAK_SECONDS: 120
-          VITE_API_BASE_URL: http://localhost:8000
       - name: Comment memory report on PR
         if: always()
         run: |
