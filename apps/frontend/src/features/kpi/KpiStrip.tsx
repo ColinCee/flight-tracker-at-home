@@ -19,27 +19,23 @@ interface KpiStripProps {
 interface KpiItemProps {
   label: string;
   value: string | number;
-  tooltip: string;
   isActive?: boolean;
   onClick?: () => void;
 }
 
-function KpiItem({ label, value, tooltip, isActive, onClick }: KpiItemProps) {
+function KpiItem({ label, value, isActive, onClick }: KpiItemProps) {
   const isClickable = onClick != null;
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`group relative flex shrink-0 flex-col items-center gap-0.5 rounded-md px-3 py-1 transition-colors ${
+      className={`flex shrink-0 flex-col items-center gap-0.5 rounded-md px-3 py-1 transition-colors ${
         isClickable ? 'cursor-pointer hover:bg-zinc-700/50' : 'cursor-default'
       } ${isActive ? 'bg-zinc-700/70 ring-1 ring-zinc-500' : ''}`}
     >
       <span className="font-mono text-base font-semibold text-foreground">{value}</span>
       <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className="pointer-events-none absolute -top-9 left-1/2 z-20 hidden -translate-x-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-[11px] text-zinc-300 shadow-lg group-hover:block">
-        {tooltip}
-      </span>
     </button>
   );
 }
@@ -56,7 +52,6 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
       <KpiItem
         label="Tracked"
         value={kpis.trackedAircraft}
-        tooltip="Total aircraft tracked — click to show all"
         isActive={activeFilter === null}
         onClick={() => onFilterChange(null)}
       />
@@ -64,7 +59,6 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
       <KpiItem
         label="Airborne"
         value={kpis.airborneAircraft}
-        tooltip="Aircraft currently in flight — click to highlight"
         isActive={activeFilter === 'airborne'}
         onClick={toggle('airborne')}
       />
@@ -72,7 +66,6 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
       <KpiItem
         label="Inbound LHR"
         value={kpis.inboundLhrAircraft}
-        tooltip="Aircraft approaching Heathrow — click to highlight"
         isActive={activeFilter === 'inbound-lhr'}
         onClick={toggle('inbound-lhr')}
       />
@@ -80,7 +73,6 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
       <KpiItem
         label="Climbing"
         value={kpis.climbingAircraft}
-        tooltip="Aircraft gaining altitude — click to highlight"
         isActive={activeFilter === 'climbing'}
         onClick={toggle('climbing')}
       />
@@ -88,7 +80,6 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
       <KpiItem
         label="Descending"
         value={kpis.descendingAircraft}
-        tooltip="Aircraft losing altitude — click to highlight"
         isActive={activeFilter === 'descending'}
         onClick={toggle('descending')}
       />
@@ -96,24 +87,20 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
       <KpiItem
         label="Avg Alt"
         value={kpis.avgAltitudeFt != null ? `${kpis.avgAltitudeFt.toLocaleString()} ft` : '—'}
-        tooltip="Average barometric altitude of airborne aircraft"
       />
       <Separator />
-      <div className="group relative flex items-center gap-1.5 px-3">
-        <span className={`inline-block h-2.5 w-2.5 rounded-full ${health.color}`} />
-        <Badge variant="outline" className="text-[11px] uppercase">
-          {health.label}
-        </Badge>
+      <div className="flex shrink-0 flex-col items-center gap-0.5 px-3 py-1">
+        <div className="flex items-center gap-1.5">
+          <span className={`inline-block h-2.5 w-2.5 rounded-full ${health.color}`} />
+          <Badge variant="outline" className="text-[11px] uppercase">
+            {health.label}
+          </Badge>
+        </div>
         {kpis.apiCreditsRemaining != null && (
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {kpis.apiCreditsRemaining.toLocaleString()}
+          <span className="font-mono text-[10px] text-muted-foreground">
+            {kpis.apiCreditsRemaining.toLocaleString()} credits
           </span>
         )}
-        <span className="pointer-events-none absolute -top-9 left-1/2 z-20 hidden -translate-x-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-[11px] text-zinc-300 shadow-lg group-hover:block">
-          {kpis.apiCreditsRemaining != null
-            ? `${kpis.apiCreditsRemaining.toLocaleString()} API credits remaining today`
-            : 'Data source status'}
-        </span>
       </div>
     </div>
   );
