@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import type { AircraftState } from '@/api/generated';
 import { Badge } from '@/shared/ui/badge';
-import { formatHeading, metresToFeet, msToKnots } from '@/shared/units';
+import { formatHeading } from '@/shared/units';
 
 interface AircraftInspectorProps {
   aircraft: AircraftState;
@@ -39,11 +39,12 @@ function Field({
   );
 }
 
-function VerticalRateIndicator({ rate }: { rate: number | null }) {
-  if (rate == null || Math.abs(rate) < 0.5) return null;
+function VerticalRateIndicator({ rateFps }: { rateFps: number | null }) {
+  // 1.5 fps is roughly equal to the old 0.5 m/s threshold
+  if (rateFps == null || Math.abs(rateFps) < 1.5) return null;
 
-  const isClimbing = rate > 0;
-  const fpm = Math.round(rate * 196.85); // m/s → ft/min
+  const isClimbing = rateFps > 0;
+  const fpm = Math.round(rateFps * 60); // fps → ft/min
   const Icon = isClimbing ? ArrowUp : ArrowDown;
   const color = isClimbing ? 'text-emerald-400' : 'text-amber-400';
 
@@ -104,7 +105,7 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
             On Ground
           </Badge>
         ) : (
-          <VerticalRateIndicator rate={aircraft.verticalRate} />
+          <VerticalRateIndicator rateFps={aircraft.verticalSpeedFps} />
         )}
       </div>
 
@@ -113,12 +114,18 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
         <Field
           icon={Mountain}
           label="Alt"
-          value={aircraft.baroAltitude != null ? `${metresToFeet(aircraft.baroAltitude)} ft` : '—'}
+          value={
+            aircraft.baroAltitudeFeet != null ? `${Math.round(aircraft.baroAltitudeFeet)} ft` : '—'
+          }
         />
         <Field
+          //TODO: We need to separate speed in the future, to use IAS for aircraft speed instead of GS.
+          //TODO: Preferably display both.
           icon={Gauge}
           label="Speed"
-          value={aircraft.velocity != null ? `${msToKnots(aircraft.velocity)} kts` : '—'}
+          value={
+            aircraft.velocityGsKnots != null ? `${Math.round(aircraft.velocityGsKnots)} kts` : '—'
+          }
         />
         <Field
           icon={Compass}

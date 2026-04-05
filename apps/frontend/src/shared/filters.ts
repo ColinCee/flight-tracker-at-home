@@ -2,7 +2,8 @@ import type { AircraftState } from '@/api/generated';
 
 export type AircraftFilter = 'airborne' | 'inbound-lhr' | 'climbing' | 'descending' | null;
 
-const VERTICAL_RATE_THRESHOLD = 1; // m/s
+// 1 m/s is approximately 3.28 feet per second
+const VERTICAL_RATE_THRESHOLD_FPS = 3.28;
 
 export function matchesFilter(ac: AircraftState, filter: AircraftFilter): boolean {
   switch (filter) {
@@ -13,8 +14,8 @@ export function matchesFilter(ac: AircraftState, filter: AircraftFilter): boolea
     case 'inbound-lhr':
       return ac.isApproachingLhr;
     case 'climbing':
-      return (ac.verticalRate ?? 0) > VERTICAL_RATE_THRESHOLD;
+      return (ac.verticalSpeedFps ?? 0) > VERTICAL_RATE_THRESHOLD_FPS;
     case 'descending':
-      return (ac.verticalRate ?? 0) < -VERTICAL_RATE_THRESHOLD;
+      return (ac.verticalSpeedFps ?? 0) < -VERTICAL_RATE_THRESHOLD_FPS;
   }
 }
