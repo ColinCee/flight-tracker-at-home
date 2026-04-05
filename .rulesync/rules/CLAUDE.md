@@ -29,9 +29,6 @@ flight-tracker-at-home/
 │   │   ├── src/opensky.py     # OpenSky API client (fetch, parse, enrich)
 │   │   ├── src/cache.py       # 10s TTL cache + KPI computation
 │   │   └── tests/             # Pytest tests
-│   ├── proxy/                 # Cloudflare Worker — OpenSky API proxy
-│   │   ├── src/index.ts       # ~85-line TS proxy: OAuth2 + request forwarding
-│   │   └── wrangler.jsonc     # Worker config
 │   └── e2e/                   # Playwright end-to-end tests
 │       ├── tests/             # Functional specs (health, aircraft, app)
 │       └── profiling/         # Memory profiling spec (separate config)
@@ -61,24 +58,13 @@ flight-tracker-at-home/
 
 ### Backend (apps/backend)
 
-- **opensky.py** — 3-phase ETL: fetch London airspace from OpenSky API → parse state vectors into `AircraftState` → enrich with `is_approaching_lhr` heuristic (haversine distance, altitude, heading, descent rate). Supports two modes: proxy mode (production — routes through Cloudflare Worker) and direct mode (local dev — OAuth2 client credentials). Falls back to anonymous if no credentials.
+- **opensky.py** — 3-phase ETL: fetch London airspace from OpenSky API → parse state vectors into `AircraftState` → enrich with `is_approaching_lhr` heuristic (haversine distance, altitude, heading, descent rate). Authenticates via OAuth2 client credentials flow (tokens auto-cached and refreshed). Falls back to anonymous if no credentials.
 - **cache.py** — `AirspaceCache` singleton with dynamic TTL lazy refresh; tracks rolling 60-min throughput for KPIs. On upstream failure (rate limit, timeout), serves stale cached data instead of losing aircraft. Credit-aware throttling scales TTL up (20s → 30s → 60s → 120s) as remaining API credits deplete.
 - **models.py** — Pydantic models (`AircraftState`, `KPIs`, `AircraftResponse`) with `alias_generator=to_camel`
 
-### Proxy (apps/proxy)
+### OpenSky API credentials
 
-Tiny TypeScript Cloudflare Worker (~85 lines) that proxies OpenSky API requests. Exists because OpenSky blocks hyperscaler IPs (Render runs on GCP). The proxy runs on Cloudflare edge IPs which OpenSky allows.
-
-- Owns OAuth2 credentials (OPENSKY_CLIENT_ID, OPENSKY_CLIENT_SECRET as Worker secrets)
-- Validates requests via `X-Proxy-Key` header (shared secret with backend)
-- Caches OAuth2 tokens in module scope (survives across warm requests)
-- Relays `X-Rate-Limit-Remaining` headers so backend credit tracking works
-
-### OpenSky API access
-
-**Production (proxy mode):** Backend calls the Cloudflare Worker proxy instead of OpenSky directly. The proxy handles OAuth2 auth. Set `OPENSKY_PROXY_URL` and `OPENSKY_PROXY_KEY` on the backend.
-
-**Local development (direct mode):** Backend calls OpenSky directly. For authenticated access (4000+ calls/day, 5s resolution):
+The backend works without credentials (anonymous: 400 calls/day, 10s resolution) but rate limits are tight. For authenticated access (4000+ calls/day, 5s resolution):
 
 1. Create a free account at https://opensky-network.org
 2. Go to Account → API Clients → Create and download your credentials
@@ -88,37 +74,19 @@ The `.env` file is gitignored. See `.env.example` for the template.
 
 ### Production environment variables
 
-**Backend (Render):**
-
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OPENSKY_PROXY_URL` | Yes (prod) | — | Cloudflare Worker proxy URL |
-| `OPENSKY_PROXY_KEY` | Yes (prod) | — | Shared secret for proxy auth |
+| `OPENSKY_CLIENT_ID` | No | — | OAuth2 client ID (4000+ credits/day) |
+| `OPENSKY_CLIENT_SECRET` | No | — | OAuth2 client secret |
 | `CACHE_TTL` | No | `5`/`10` | Base cache TTL in seconds (production: `20`) |
 | `CORS_ORIGINS` | No | `http://localhost:4200` | Comma-separated allowed origins |
-
-**Proxy Worker (Cloudflare secrets):**
-
-| Secret | Description |
-|--------|-------------|
-| `OPENSKY_CLIENT_ID` | OAuth2 client ID |
-| `OPENSKY_CLIENT_SECRET` | OAuth2 client secret |
-| `PROXY_KEY` | Shared secret (must match backend's `OPENSKY_PROXY_KEY`) |
-
-**Frontend (build-time):**
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE_URL` | Backend URL (set at frontend build time) |
+| `VITE_API_BASE_URL` | No | `http://localhost:8000` | Backend URL (set at frontend build time) |
 
 ### Data Flow
 
 ```
-OpenSky API
-  ↑ (OAuth2 Bearer token)
-  CF Worker proxy (apps/proxy — Cloudflare edge IPs)
-  ↑ (X-Proxy-Key auth)
-  opensky.py (fetch + parse + enrich)
+OpenSky API (dynamic TTL, credit-aware)
+  → opensky.py (fetch + parse + enrich)
   → cache.py (adaptive TTL + KPIs + stale fallback)
   → GET /aircraft (AircraftResponse JSON)
   → useAircraftData (React Query, adaptive refetch)
@@ -153,10 +121,7 @@ mise run codegen            # Regenerate frontend types from backend schema
 mise run codegen:check      # Verify generated types are in sync (CI)
 
 # Deploy
-mise run deploy             # Deploy proxy worker + frontend to Cloudflare
-mise run deploy:proxy       # Deploy proxy worker only
 mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
-mise run dev:proxy          # Run proxy worker locally
 ```
 
 ## CI (GitHub Actions)
@@ -169,8 +134,8 @@ mise run dev:proxy          # Run proxy worker locally
   - Peak RSS for backend (uvicorn) and frontend (vite dev server)
   - JS heap usage from Chromium via CDP `Runtime.getHeapUsage`
   - Soak trend (stable / growing / shrinking) per process
-- **Deploy** — On merge to main: deploys proxy Worker + frontend Pages to Cloudflare; on PRs: creates preview deployments with status checks
-- **Docker** — Builds backend (distroless Python) + frontend (Caddy) images, pushes to GHCR on main
+- **Deploy** — On merge to main: deploys frontend to Cloudflare Pages; on PRs: creates preview deployments with status checks. Backend auto-deploys via Tugtainer (pulls new GHCR images).
+- **Docker** — Builds backend (distroless Python) image, pushes to GHCR on main
 
 ## Key Conventions
 
@@ -189,14 +154,13 @@ mise run dev:proxy          # Run proxy worker locally
 | Map       | MapLibre GL JS + react-map-gl + Deck.gl |
 | State     | TanStack Query (auto-polling 10s)       |
 | Backend   | Python 3.12 / FastAPI                   |
-| Proxy     | Cloudflare Worker (TypeScript)          |
 | Data      | OpenSky Network REST API                |
 | E2E Tests | Playwright (Chromium)                   |
 | Profiling | ps RSS sampling + CDP JS heap           |
 | Monorepo  | Nx + Bun + mise                         |
 | CI        | GitHub Actions                          |
 | Deploy FE | Cloudflare Pages                        |
-| Deploy BE | Render                                  |
+| Deploy BE | Self-hosted (Docker + Cloudflare Tunnel)|
 
 ## Tooling
 

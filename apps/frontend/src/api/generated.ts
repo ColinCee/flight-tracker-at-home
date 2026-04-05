@@ -70,7 +70,7 @@ export interface AircraftResponse {
 }
 
 /**
- * Simple health check for Render deployment.
+ * Simple health check.
  * @summary Health Check
  */
 export type getHealthResponse200 = {
