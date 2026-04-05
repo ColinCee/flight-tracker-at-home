@@ -104,7 +104,7 @@ run = "cd apps/worker && uv run pywrangler deploy"
 description = "Build and deploy the frontend to Cloudflare Pages"
 run = """
 bunx nx build frontend
-npx wrangler pages deploy apps/frontend/dist --project-name=flight-tracker-at-home
+bunx wrangler pages deploy apps/frontend/dist --project-name=flight-tracker-at-home
 """
 
 [tasks."dev:worker"]
