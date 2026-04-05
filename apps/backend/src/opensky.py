@@ -187,6 +187,16 @@ def parse_state_vector(vector: list) -> AircraftState | None:
         if vector[5] is None or vector[6] is None:
             return None
 
+        # Drop planes on the ground or below 100ft (~30.5 meters)
+        is_on_ground = vector[8]
+        baro_altitude = vector[7]
+
+        if is_on_ground:
+            return None
+
+        if baro_altitude is not None and baro_altitude < 30.5:
+            return None
+
         # Clean the callsign (OpenSky pads it with spaces)
         raw_callsign = vector[1]
         clean_callsign = raw_callsign.strip() if raw_callsign else None
