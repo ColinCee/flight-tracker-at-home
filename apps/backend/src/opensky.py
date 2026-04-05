@@ -38,7 +38,6 @@ TOKEN_REFRESH_MARGIN = 60
 # --- Data Dictionaries (Initialized once at startup) ---
 POSITION_SOURCE_MAP = {0: "ADS-B", 1: "ASTERIX", 2: "MLAT", 3: "FLARM"}
 
-# 13 is reserved (who knows for what?)
 CATEGORY_MAP = {
     0: "Unknown",
     1: "Unknown",
@@ -53,6 +52,7 @@ CATEGORY_MAP = {
     10: "Lighter-than-air",
     11: "Skydiver",
     12: "Ultralight",
+    # 13 is reserved (who knows for what?)
     14: "UAV",
     15: "Space Vehicle",
     16: "Emergency Surface Vehicle",
@@ -174,6 +174,7 @@ def parse_state_vector(vector: list) -> AircraftState | None:
         10: "Lighter-than-air",
         11: "Skydiver",
         12: "Ultralight",
+        # 13 is reserved (who knows for what?)
         14: "UAV",
         15: "Space Vehicle",
         16: "Emergency Surface Vehicle",
