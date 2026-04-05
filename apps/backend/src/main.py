@@ -4,7 +4,6 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from src.cache import airspace_cache
 from src.models import AircraftResponse
 
