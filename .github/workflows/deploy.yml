@@ -22,6 +22,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/proxy
+          wranglerVersion: "4.80.0"
           command: deploy
 
   deploy-frontend:
@@ -42,5 +43,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.80.0"
           command: pages deploy apps/frontend/dist --project-name=flight-tracker-at-home --branch=${{ github.head_ref || 'main' }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
