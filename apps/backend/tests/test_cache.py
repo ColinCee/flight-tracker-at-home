@@ -3,28 +3,31 @@ import time
 from unittest.mock import patch
 
 import pytest
-from src.cache import AirspaceCache, get_effective_ttl
+from src.cache import AirspaceCache
 from src.models import AircraftState
 
 
-# Helper to generate mock aircraft
 def create_mock_aircraft(icao: str, approaching: bool) -> AircraftState:
     return AircraftState(
         icao24=icao,
         callsign="TEST",
+        registration="G-TEST",
+        oat=15.0,
         origin_country="UK",
         last_contact=int(time.time()),
         latitude=51.0,
         longitude=0.0,
-        baro_altitude=1000.0,
-        on_ground=False,
-        velocity=100.0,
+        baro_altitude_feet=1000.0,
+        geo_altitude_feet=1000.0,
+        velocity_gs_knots=100.0,
+        velocity_ias_knots=100.0,
         true_track=90.0,
-        vertical_rate=0.0,
-        geo_altitude=1000.0,
+        vertical_speed_fps=0.0,
+        on_ground=False,
         squawk=None,
         position_source="ADS-B",
-        category="Light",
+        category="A5",
+        aircraft_type="A320",
         is_approaching_lhr=approaching,
     )
 
@@ -53,7 +56,7 @@ async def test_cache_kpi_calculation(mock_get_state):
     assert response.kpis.airborne_aircraft == 2
     assert response.kpis.climbing_aircraft == 0
     assert response.kpis.descending_aircraft == 0
-    assert response.kpis.avg_altitude_ft == 3300  # 1000m ≈ 3281ft → rounds to 3300
+    assert response.kpis.avg_altitude_ft == 1000  # No more metric
     assert response.refresh_interval_ms == 10_000  # Anonymous = 10s
 
 
@@ -99,50 +102,3 @@ async def test_cache_serves_stale_data_on_error(mock_get_state):
     assert response_2.kpis.api_health == "stale"
     # Original aircraft data preserved
     assert response_2.kpis.tracked_aircraft == 1
-
-
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_defaults_to_anonymous(mock_credits):
-    """Without env vars or auth, TTL defaults to 10s (anonymous)."""
-    mock_credits.return_value = None
-    assert get_effective_ttl() == 10.0
-
-
-@patch.dict("os.environ", {"CACHE_TTL": "20"})
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_uses_env_var(mock_credits):
-    """CACHE_TTL env var overrides the default."""
-    mock_credits.return_value = None
-    assert get_effective_ttl() == 20.0
-
-
-@patch.dict("os.environ", {"CACHE_TTL": "20"})
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_throttles_below_1000_credits(mock_credits):
-    """Below 1000 credits, TTL scales up to 30s."""
-    mock_credits.return_value = 800
-    assert get_effective_ttl() == 30.0
-
-
-@patch.dict("os.environ", {"CACHE_TTL": "20"})
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_throttles_below_500_credits(mock_credits):
-    """Below 500 credits, TTL scales up to 60s."""
-    mock_credits.return_value = 300
-    assert get_effective_ttl() == 60.0
-
-
-@patch.dict("os.environ", {"CACHE_TTL": "20"})
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_throttles_below_100_credits(mock_credits):
-    """Below 100 credits, TTL scales up to 120s (conservation mode)."""
-    mock_credits.return_value = 50
-    assert get_effective_ttl() == 120.0
-
-
-@patch.dict("os.environ", {"CACHE_TTL": "20"})
-@patch("src.cache.get_remaining_credits")
-def test_effective_ttl_no_throttle_above_1000_credits(mock_credits):
-    """Above 1000 credits, no throttling — base TTL applies."""
-    mock_credits.return_value = 2000
-    assert get_effective_ttl() == 20.0

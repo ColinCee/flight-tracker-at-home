@@ -41,11 +41,11 @@
         }
       }
     },
-    "/debug/opensky": {
+    "/debug/airplanes_live": {
       "get": {
-        "summary": "OpenSky Connectivity Test",
-        "description": "Diagnose OpenSky API connectivity from this server.",
-        "operationId": "debugOpensky",
+        "summary": "Airplanes.live Connectivity Test",
+        "description": "Diagnose Airplanes.live API connectivity from this server.",
+        "operationId": "debugAirplanesLive",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -114,6 +114,28 @@
             ],
             "title": "Callsign"
           },
+          "registration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration"
+          },
+          "oat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oat"
+          },
           "originCountry": {
             "type": "string",
             "title": "Origincountry"
@@ -126,7 +148,7 @@
             "type": "number",
             "title": "Longitude"
           },
-          "baroAltitude": {
+          "baroAltitudeFeet": {
             "anyOf": [
               {
                 "type": "number"
@@ -135,9 +157,9 @@
                 "type": "null"
               }
             ],
-            "title": "Baroaltitude"
+            "title": "Baroaltitudefeet"
           },
-          "geoAltitude": {
+          "geoAltitudeFeet": {
             "anyOf": [
               {
                 "type": "number"
@@ -146,9 +168,9 @@
                 "type": "null"
               }
             ],
-            "title": "Geoaltitude"
+            "title": "Geoaltitudefeet"
           },
-          "velocity": {
+          "velocityGsKnots": {
             "anyOf": [
               {
                 "type": "number"
@@ -157,7 +179,18 @@
                 "type": "null"
               }
             ],
-            "title": "Velocity"
+            "title": "Velocitygsknots"
+          },
+          "velocityIasKnots": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Velocityiasknots"
           },
           "trueTrack": {
             "anyOf": [
@@ -170,7 +203,7 @@
             ],
             "title": "Truetrack"
           },
-          "verticalRate": {
+          "verticalSpeedFps": {
             "anyOf": [
               {
                 "type": "number"
@@ -179,7 +212,7 @@
                 "type": "null"
               }
             ],
-            "title": "Verticalrate"
+            "title": "Verticalspeedfps"
           },
           "onGround": {
             "type": "boolean",
@@ -208,6 +241,10 @@
             "type": "string",
             "title": "Category"
           },
+          "aircraftType": {
+            "type": "string",
+            "title": "Aircrafttype"
+          },
           "isApproachingLhr": {
             "type": "boolean",
             "title": "Isapproachinglhr"
@@ -217,19 +254,23 @@
         "required": [
           "icao24",
           "callsign",
+          "registration",
+          "oat",
           "originCountry",
           "latitude",
           "longitude",
-          "baroAltitude",
-          "geoAltitude",
-          "velocity",
+          "baroAltitudeFeet",
+          "geoAltitudeFeet",
+          "velocityGsKnots",
+          "velocityIasKnots",
           "trueTrack",
-          "verticalRate",
+          "verticalSpeedFps",
           "onGround",
           "squawk",
           "lastContact",
           "positionSource",
           "category",
+          "aircraftType",
           "isApproachingLhr"
         ],
         "title": "AircraftState",

@@ -72,15 +72,21 @@ test.describe('aircraft endpoint', () => {
         onGround: expect.any(Boolean),
         lastContact: expect.any(Number),
         isApproachingLhr: expect.any(Boolean),
+        positionSource: expect.any(String),
+        category: expect.any(String),
+        aircraftType: expect.any(String),
       });
 
       // Nullable fields should be present (even if null)
       expect(plane).toHaveProperty('callsign');
-      expect(plane).toHaveProperty('baroAltitude');
-      expect(plane).toHaveProperty('geoAltitude');
-      expect(plane).toHaveProperty('velocity');
+      expect(plane).toHaveProperty('registration');
+      expect(plane).toHaveProperty('oat');
+      expect(plane).toHaveProperty('baroAltitudeFeet');
+      expect(plane).toHaveProperty('geoAltitudeFeet');
+      expect(plane).toHaveProperty('velocityGsKnots');
+      expect(plane).toHaveProperty('velocityIasKnots');
       expect(plane).toHaveProperty('trueTrack');
-      expect(plane).toHaveProperty('verticalRate');
+      expect(plane).toHaveProperty('verticalSpeedFps');
       expect(plane).toHaveProperty('squawk');
     }
   });

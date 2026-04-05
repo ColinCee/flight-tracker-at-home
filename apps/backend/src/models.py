@@ -15,21 +15,26 @@ class AircraftState(BaseModel):
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
+    # All measurements are in aviation standard. Imperial for distance and knots for speed.
     icao24: str
     callsign: str | None
+    registration: str | None
+    oat: float | None  #  Outside air temperature
     origin_country: str
     latitude: float
     longitude: float
-    baro_altitude: float | None
-    geo_altitude: float | None
-    velocity: float | None
+    baro_altitude_feet: float | None
+    geo_altitude_feet: float | None
+    velocity_gs_knots: float | None  # Ground speed
+    velocity_ias_knots: float | None  # Indicated Airspeed
     true_track: float | None
-    vertical_rate: float | None
+    vertical_speed_fps: float | None  # Rate of climb
     on_ground: bool
     squawk: str | None
     last_contact: int
     position_source: str
     category: str
+    aircraft_type: str
     is_approaching_lhr: bool
 
 
