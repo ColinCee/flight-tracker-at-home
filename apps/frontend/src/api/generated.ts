@@ -241,3 +241,91 @@ export function useGetAircraft<TData = Awaited<ReturnType<typeof getAircraft>>, 
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+
+
+
+
+/**
+ * Diagnose OpenSky API connectivity from this server.
+ * @summary OpenSky Connectivity Test
+ */
+export type debugOpenskyResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type debugOpenskyResponseSuccess = (debugOpenskyResponse200) & {
+  headers: Headers;
+};
+;
+
+export type debugOpenskyResponse = (debugOpenskyResponseSuccess)
+
+export const getDebugOpenskyUrl = () => {
+
+
+
+
+  return `/debug/opensky`
+}
+
+export const debugOpensky = async ( options?: RequestInit): Promise<debugOpenskyResponse> => {
+
+  return fetchClient<debugOpenskyResponse>(getDebugOpenskyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDebugOpenskyQueryKey = () => {
+    return [
+    `/debug/opensky`
+    ] as const;
+    }
+
+
+export const getDebugOpenskyQueryOptions = <TData = Awaited<ReturnType<typeof debugOpensky>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof debugOpensky>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDebugOpenskyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof debugOpensky>>> = ({ signal }) => debugOpensky({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof debugOpensky>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DebugOpenskyQueryResult = NonNullable<Awaited<ReturnType<typeof debugOpensky>>>
+export type DebugOpenskyQueryError = unknown
+
+
+/**
+ * @summary OpenSky Connectivity Test
+ */
+
+export function useDebugOpensky<TData = Awaited<ReturnType<typeof debugOpensky>>, TError = unknown>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof debugOpensky>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDebugOpenskyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

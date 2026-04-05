@@ -40,6 +40,23 @@
           }
         }
       }
+    },
+    "/debug/opensky": {
+      "get": {
+        "summary": "OpenSky Connectivity Test",
+        "description": "Diagnose OpenSky API connectivity from this server.",
+        "operationId": "debugOpensky",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
