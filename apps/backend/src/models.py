@@ -71,3 +71,26 @@ class AircraftResponse(BaseModel):
     refresh_interval_ms: int
     aircraft: list[AircraftState]
     kpis: KPIs
+
+
+class AirportWeather(BaseModel):
+    """Weather data for a specific airport via MET Norway."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    icao: str
+    name: str
+    condition: str  # e.g., "clearsky_day", "rain", "cloudy"
+    temperature_c: float | None
+    wind_speed_kts: float | None
+    wind_direction_deg: float | None
+
+
+class WeatherResponse(BaseModel):
+    """Single response for the weather polling endpoint."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    timestamp: int
+    cache_age_seconds: float
+    weather: list[AirportWeather]
