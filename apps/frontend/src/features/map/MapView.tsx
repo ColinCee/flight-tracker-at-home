@@ -2,7 +2,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 import type { MapStyleDataEvent } from 'maplibre-gl';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Map as MapGL, Popup } from 'react-map-gl/maplibre';
+import { AttributionControl, Map as MapGL, Popup } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
 import type { AircraftFilter } from '@/shared/filters';
 import { AircraftInspector } from './AircraftInspector';
@@ -77,7 +77,9 @@ export function MapView({
       cursor={isHoveringAircraft ? 'pointer' : 'grab'}
       onClick={handleMapClick}
       onStyleData={handleStyleData}
+      attributionControl={false}
     >
+      <AttributionControl compact position="top-left" />
       <AircraftLayer
         aircraft={aircraft}
         selectedIcao24={selectedAircraft?.icao24}

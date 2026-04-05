@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Light propeller aircraft (Cessna-style top-down). Used for Light category. -->
+  <!-- Fuselage (shorter, wider than jet) -->
+  <path d="M32 6 C30.5 6 29.5 9 29.5 12 L29.5 54 C29.5 57 30.8 59 32 59 C33.2 59 34.5 57 34.5 54 L34.5 12 C34.5 9 33.5 6 32 6Z" fill="white"/>
+  <!-- Left wing (high, straight, no sweep) -->
+  <path d="M29.5 24 L8 27 L8 30 L29.5 29Z" fill="white"/>
+  <!-- Right wing -->
+  <path d="M34.5 24 L56 27 L56 30 L34.5 29Z" fill="white"/>
+  <!-- Left horizontal stabilizer -->
+  <path d="M29.5 50 L20 53 L20 55 L29.5 53Z" fill="white"/>
+  <!-- Right horizontal stabilizer -->
+  <path d="M34.5 50 L44 53 L44 55 L34.5 53Z" fill="white"/>
+  <!-- Vertical stabilizer -->
+  <path d="M31 51 L32 46 L33 51Z" fill="white" opacity="0.45"/>
+  <!-- Propeller disc -->
+  <ellipse cx="32" cy="6" rx="5" ry="1.2" fill="white" opacity="0.6"/>
+</svg>

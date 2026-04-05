@@ -87,7 +87,7 @@ jobs:
         env:
           MEMORY_REPORT_FILE: memory-report.md
           MEMORY_SOAK_SECONDS: 120
-          OPENSKY_MOCK: "true"
+          MOCK_DATA: "true"
       - name: Comment memory report on PR
         if: always()
         run: |

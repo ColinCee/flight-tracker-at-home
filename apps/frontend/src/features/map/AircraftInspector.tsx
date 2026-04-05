@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   Compass,
@@ -12,7 +13,17 @@ import {
 } from 'lucide-react';
 import type { AircraftState } from '@/api/generated';
 import { Badge } from '@/shared/ui/badge';
-import { formatHeading, metresToFeet, msToKnots } from '@/shared/units';
+
+const EMERGENCY_SQUAWKS: Record<string, string> = {
+  '7700': 'Emergency',
+  '7600': 'Radio Failure',
+  '7500': 'Hijack',
+};
+
+function formatVerticalRate(fpm: number | null): string {
+  if (fpm == null) return '—';
+  return `${fpm > 0 ? '+' : ''}${fpm.toLocaleString()} fpm`;
+}
 
 interface AircraftInspectorProps {
   aircraft: AircraftState;
@@ -36,22 +47,6 @@ function Field({
       <span className="text-[11px] text-zinc-400">{label}</span>
       <span className="ml-auto font-mono text-xs text-zinc-200">{value}</span>
     </div>
-  );
-}
-
-function VerticalRateIndicator({ rate }: { rate: number | null }) {
-  if (rate == null || Math.abs(rate) < 0.5) return null;
-
-  const isClimbing = rate > 0;
-  const fpm = Math.round(rate * 196.85); // m/s → ft/min
-  const Icon = isClimbing ? ArrowUp : ArrowDown;
-  const color = isClimbing ? 'text-emerald-400' : 'text-amber-400';
-
-  return (
-    <span className={`inline-flex items-center gap-0.5 text-[11px] font-medium ${color}`}>
-      <Icon className="h-3 w-3" />
-      {Math.abs(fpm).toLocaleString()} ft/min
-    </span>
   );
 }
 
@@ -87,6 +82,15 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
 
       {/* Badges */}
       <div className="flex flex-wrap gap-1.5 pt-2 pb-1.5">
+        {aircraft.squawk && EMERGENCY_SQUAWKS[aircraft.squawk] && (
+          <Badge
+            variant="outline"
+            className="gap-1 border-red-500/50 bg-red-500/15 text-[10px] font-semibold text-red-400"
+          >
+            <AlertTriangle className="h-3 w-3" />
+            {EMERGENCY_SQUAWKS[aircraft.squawk]}
+          </Badge>
+        )}
         {aircraft.isApproachingLhr && (
           <Badge
             variant="outline"
@@ -96,15 +100,31 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
             Inbound LHR
           </Badge>
         )}
-        {aircraft.onGround ? (
+        {aircraft.onGround && (
           <Badge
             variant="outline"
             className="border-zinc-600 bg-zinc-700/30 text-[10px] text-zinc-400"
           >
             On Ground
           </Badge>
-        ) : (
-          <VerticalRateIndicator rate={aircraft.verticalRate} />
+        )}
+        {aircraft.isClimbing && (
+          <Badge
+            variant="outline"
+            className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-[10px] text-emerald-400"
+          >
+            <ArrowUp className="h-3 w-3" />
+            Climbing
+          </Badge>
+        )}
+        {aircraft.isDescending && (
+          <Badge
+            variant="outline"
+            className="gap-1 border-amber-500/40 bg-amber-500/10 text-[10px] text-amber-400"
+          >
+            <ArrowDown className="h-3 w-3" />
+            Descending
+          </Badge>
         )}
       </div>
 
@@ -113,19 +133,36 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
         <Field
           icon={Mountain}
           label="Alt"
-          value={aircraft.baroAltitude != null ? `${metresToFeet(aircraft.baroAltitude)} ft` : '—'}
+          value={
+            aircraft.baroAltitudeFt != null ? `${Math.round(aircraft.baroAltitudeFt)} ft` : '—'
+          }
         />
         <Field
           icon={Gauge}
           label="Speed"
-          value={aircraft.velocity != null ? `${msToKnots(aircraft.velocity)} kts` : '—'}
+          value={
+            aircraft.groundSpeedKts != null ? `${Math.round(aircraft.groundSpeedKts)} kts` : '—'
+          }
+        />
+        <Field
+          icon={aircraft.isClimbing ? ArrowUp : ArrowDown}
+          label="V/S"
+          value={formatVerticalRate(aircraft.verticalRateFpm)}
+          accent={
+            aircraft.isClimbing
+              ? 'text-emerald-400'
+              : aircraft.isDescending
+                ? 'text-amber-400'
+                : undefined
+          }
         />
         <Field
           icon={Compass}
           label="Hdg"
-          value={aircraft.trueTrack != null ? formatHeading(aircraft.trueTrack) : '—'}
+          value={aircraft.trueTrack != null ? `${Math.round(aircraft.trueTrack)}°` : '—'}
         />
-        <Field icon={Globe} label="Origin" value={aircraft.originCountry} />
+        <Field icon={Plane} label="Type" value={aircraft.aircraftType ?? '—'} />
+        <Field icon={Globe} label="Reg" value={aircraft.registration ?? '—'} />
         {aircraft.squawk && (
           <Field icon={Radio} label="Squawk" value={aircraft.squawk} accent="text-zinc-400" />
         )}

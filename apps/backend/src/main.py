@@ -4,20 +4,19 @@ import logging
 import os
 import time
 
-import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from src.airplanes_live import get_client
 from src.cache import airspace_cache
 from src.models import AircraftResponse, WeatherResponse
-from src.opensky import _token_manager
 from src.weather import weather_cache
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Flight Tracker at Home API")
 
-if os.getenv("OPENSKY_MOCK", "").lower() in ("true", "1", "yes"):
-    logger.warning("OPENSKY_MOCK is enabled — serving fixture data")
+if os.getenv("MOCK_DATA", "").lower() in ("true", "1", "yes"):
+    logger.warning("MOCK_DATA is enabled — serving fixture data")
 
 # Setup CORS so the React frontend can talk to this backend
 # Comma-separated for multiple origins (e.g., "https://app.pages.dev,https://custom.com")
@@ -47,29 +46,36 @@ async def health():
 async def get_aircraft() -> AircraftResponse:
     """
     Main polling endpoint.
-    Fetches the lazy-cached state, abstracting the OpenSky API rate limits.
+    Fetches the lazy-cached state, abstracting the Airplanes.live API rate limits.
     """
-    # This single call handles the 10s TTL, OpenSky fetching, and KPI math.
+    # This single call handles the 10s TTL, Airplanes.live fetching, and KPI math.
     state = await airspace_cache.get_state()
     return state
 
 
 @app.get(
-    "/debug/opensky", operation_id="debugOpensky", summary="OpenSky Connectivity Test"
+    "/debug/airplanes_live",
+    operation_id="debugAirplanesLive",
+    summary="Airplanes.live Connectivity Test",
 )
-async def debug_opensky():
-    """Diagnose OpenSky API connectivity from this server."""
-    api_url = "https://opensky-network.org/api/states/all?lamin=51.2&lamax=51.7&lomin=-0.9&lomax=0.25"
+async def debug_airplanes_live():
+    """Diagnose Airplanes.live API connectivity from this server."""
+    # We test the exact bounding box for Heathrow
+    api_url = "https://api.airplanes.live/v2/point/51.47/-0.4543/30"
+
     results = {
-        "authenticated": _token_manager.is_authenticated,
+        "authenticated": False,  # Airplanes.live is public, no auth required
         "tests": {},
     }
 
     # Test 1: API endpoint
     try:
         start = time.time()
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(api_url, timeout=10.0)
+
+        # Grab our persistent HTTP Keep-Alive client so we don't trigger firewalls
+        client = get_client()
+        resp = await client.get(api_url, timeout=10.0)
+
         elapsed = round(time.time() - start, 3)
         results["tests"]["api"] = {
             "status": resp.status_code,
@@ -78,37 +84,6 @@ async def debug_opensky():
         }
     except Exception as e:
         results["tests"]["api"] = {"error": repr(e), "ok": False}
-
-    # Test 2: Auth endpoint
-    try:
-        start = time.time()
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                "https://auth.opensky-network.org/auth/realms/opensky-network",
-                timeout=10.0,
-            )
-        elapsed = round(time.time() - start, 3)
-        results["tests"]["auth"] = {
-            "status": resp.status_code,
-            "elapsed_s": elapsed,
-            "ok": resp.status_code == 200,
-        }
-    except Exception as e:
-        results["tests"]["auth"] = {"error": repr(e), "ok": False}
-
-    # Test 3: Token acquisition (if credentials set)
-    if _token_manager.is_authenticated:
-        try:
-            start = time.time()
-            headers = await _token_manager.get_headers()
-            elapsed = round(time.time() - start, 3)
-            results["tests"]["token"] = {
-                "has_bearer": "Authorization" in headers,
-                "elapsed_s": elapsed,
-                "ok": True,
-            }
-        except Exception as e:
-            results["tests"]["token"] = {"error": repr(e), "ok": False}
 
     return results
 

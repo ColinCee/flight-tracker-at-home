@@ -25,7 +25,7 @@
     "/aircraft": {
       "get": {
         "summary": "Get Aircraft State",
-        "description": "Main polling endpoint.\nFetches the lazy-cached state, abstracting the OpenSky API rate limits.",
+        "description": "Main polling endpoint.\nFetches the lazy-cached state, abstracting the Airplanes.live API rate limits.",
         "operationId": "getAircraft",
         "responses": {
           "200": {
@@ -41,11 +41,11 @@
         }
       }
     },
-    "/debug/opensky": {
+    "/debug/airplanes_live": {
       "get": {
-        "summary": "OpenSky Connectivity Test",
-        "description": "Diagnose OpenSky API connectivity from this server.",
-        "operationId": "debugOpensky",
+        "summary": "Airplanes.live Connectivity Test",
+        "description": "Diagnose Airplanes.live API connectivity from this server.",
+        "operationId": "debugAirplanesLive",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -133,9 +133,31 @@
             ],
             "title": "Callsign"
           },
-          "originCountry": {
+          "registration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration"
+          },
+          "aircraftType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aircrafttype"
+          },
+          "category": {
             "type": "string",
-            "title": "Origincountry"
+            "title": "Category"
           },
           "latitude": {
             "type": "number",
@@ -145,29 +167,29 @@
             "type": "number",
             "title": "Longitude"
           },
-          "baroAltitude": {
+          "baroAltitudeFt": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Baroaltitude"
+            "title": "Baroaltitudeft"
           },
-          "geoAltitude": {
+          "geoAltitudeFt": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Geoaltitude"
+            "title": "Geoaltitudeft"
           },
-          "velocity": {
+          "groundSpeedKts": {
             "anyOf": [
               {
                 "type": "number"
@@ -176,7 +198,7 @@
                 "type": "null"
               }
             ],
-            "title": "Velocity"
+            "title": "Groundspeedkts"
           },
           "trueTrack": {
             "anyOf": [
@@ -189,16 +211,16 @@
             ],
             "title": "Truetrack"
           },
-          "verticalRate": {
+          "verticalRateFpm": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Verticalrate"
+            "title": "Verticalratefpm"
           },
           "onGround": {
             "type": "boolean",
@@ -221,11 +243,23 @@
           },
           "positionSource": {
             "type": "string",
+            "enum": [
+              "ADS-B",
+              "MLAT",
+              "TIS-B",
+              "ADS-C",
+              "Mode S",
+              "Unknown"
+            ],
             "title": "Positionsource"
           },
-          "category": {
-            "type": "string",
-            "title": "Category"
+          "isClimbing": {
+            "type": "boolean",
+            "title": "Isclimbing"
+          },
+          "isDescending": {
+            "type": "boolean",
+            "title": "Isdescending"
           },
           "isApproachingLhr": {
             "type": "boolean",
@@ -236,23 +270,26 @@
         "required": [
           "icao24",
           "callsign",
-          "originCountry",
+          "registration",
+          "aircraftType",
+          "category",
           "latitude",
           "longitude",
-          "baroAltitude",
-          "geoAltitude",
-          "velocity",
+          "baroAltitudeFt",
+          "geoAltitudeFt",
+          "groundSpeedKts",
           "trueTrack",
-          "verticalRate",
+          "verticalRateFpm",
           "onGround",
           "squawk",
           "lastContact",
           "positionSource",
-          "category",
+          "isClimbing",
+          "isDescending",
           "isApproachingLhr"
         ],
         "title": "AircraftState",
-        "description": "One aircraft's state, transformed from OpenSky's positional array."
+        "description": "One aircraft's state from the airplanes.live API."
       },
       "AirportWeather": {
         "properties": {
@@ -359,17 +396,6 @@
               "offline"
             ],
             "title": "Apihealth"
-          },
-          "apiCreditsRemaining": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Apicreditsremaining"
           }
         },
         "type": "object",
@@ -381,8 +407,7 @@
           "descendingAircraft",
           "throughputLast60Min",
           "avgAltitudeFt",
-          "apiHealth",
-          "apiCreditsRemaining"
+          "apiHealth"
         ],
         "title": "KPIs"
       },
