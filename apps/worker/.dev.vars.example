@@ -1,0 +1,6 @@
+# Local development secrets for Cloudflare Worker
+# Copy to .dev.vars and fill in your credentials
+# NEVER commit .dev.vars — it's gitignored
+
+OPENSKY_CLIENT_ID=
+OPENSKY_CLIENT_SECRET=

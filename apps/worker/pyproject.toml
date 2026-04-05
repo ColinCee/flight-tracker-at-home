@@ -1,0 +1,16 @@
+[project]
+name = "flight-tracker-worker"
+version = "0.1.0"
+description = "Flight Tracker at Home — Cloudflare Python Worker"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "httpx",
+    "pydantic",
+]
+
+[dependency-groups]
+dev = [
+    "workers-py",
+    "workers-runtime-sdk",
+]

@@ -55,6 +55,7 @@ __pycache__/
 .env
 .env.local
 .env*.local
+.dev.vars
 
 # Playwright
 test-results/

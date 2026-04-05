@@ -14,12 +14,17 @@ flight-tracker-at-home/
 │   │   │   ├── features/      # Feature modules (map/, kpi/) with colocated tests
 │   │   │   └── shared/        # Cross-feature: ui/, filters, units, utils
 │   │   └── openapi.json       # Exported OpenAPI spec from backend
-│   ├── backend/               # Python FastAPI + Pydantic
+│   ├── backend/               # Python FastAPI + Pydantic (local dev + tests)
 │   │   ├── src/main.py        # FastAPI app + endpoints (/health, /aircraft)
 │   │   ├── src/models.py      # Data contract — source of truth for API schema
 │   │   ├── src/opensky.py     # OpenSky API client (fetch, parse, enrich)
 │   │   ├── src/cache.py       # 10s TTL cache + KPI computation
 │   │   └── tests/             # Pytest tests
+│   ├── worker/                # Cloudflare Python Worker (production backend)
+│   │   ├── src/worker.py      # Worker entry point (ASGI bridge)
+│   │   ├── src/app.py         # FastAPI app factory
+│   │   ├── wrangler.jsonc     # Cloudflare Worker config
+│   │   └── pyproject.toml     # Worker Python dependencies
 │   └── e2e/                   # Playwright end-to-end tests
 │       ├── tests/             # Functional specs (health, aircraft, app)
 │       └── profiling/         # Memory profiling spec (separate config)
@@ -147,7 +152,7 @@ mise run codegen:check      # Verify generated types are in sync (CI)
 | Monorepo  | Nx + Bun + mise                         |
 | CI        | GitHub Actions                          |
 | Deploy FE | Cloudflare Pages                        |
-| Deploy BE | Render                                  |
+| Deploy BE | Cloudflare Python Worker                |
 
 ## Tooling
 

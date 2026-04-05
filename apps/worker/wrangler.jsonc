@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "flight-tracker-api",
+  "main": "src/worker.py",
+  "compatibility_date": "2025-11-02",
+  "compatibility_flags": ["python_workers", "python_dedicated_snapshot"],
+  "vars": {
+    "CORS_ORIGINS": "https://flight-tracker-at-home.pages.dev",
+    "CACHE_TTL": "20"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

@@ -103,37 +103,48 @@ If you are new to the repo, start with **mise**, then **bun/uv**, then **Nx**.
 
 ## Deployment
 
-The app is designed to run for free on **Cloudflare Pages** (frontend) + **Render** (backend).
+Everything runs on **Cloudflare** for free: Pages (frontend) + Python Worker (backend API).
 
-### Backend → Render
+### Backend → Cloudflare Worker
 
-1. Go to [render.com](https://render.com) → **New** → **Blueprint**
-2. Connect this GitHub repo — Render reads `render.yaml` automatically
-3. In the Render dashboard, set the secret env vars:
-   - `OPENSKY_CLIENT_ID` — your OpenSky OAuth2 client ID
-   - `OPENSKY_CLIENT_SECRET` — your OpenSky OAuth2 client secret
-4. Once deployed, note the service URL (e.g. `https://flight-tracker-api.onrender.com`)
+The backend runs as a [Cloudflare Python Worker](https://developers.cloudflare.com/workers/languages/python/) in `apps/worker/`.
+
+```sh
+# One-time: authenticate wrangler
+npx wrangler login
+
+# Deploy the worker
+cd apps/worker
+uv sync
+uv run pywrangler deploy
+
+# Set OpenSky secrets (optional, for higher rate limits)
+npx wrangler secret put OPENSKY_CLIENT_ID
+npx wrangler secret put OPENSKY_CLIENT_SECRET
+```
+
+The worker URL will be `https://flight-tracker-api.<account>.workers.dev`.
 
 ### Frontend → Cloudflare Pages
 
 1. Go to [pages.cloudflare.com](https://pages.cloudflare.com) → **Create a project** → connect this repo
 2. Configure build settings:
-   - **Build command:** `bun install && bunx nx build frontend`
+   - **Build command:** `npm install -g bun && bun install && bunx nx build frontend`
    - **Build output directory:** `apps/frontend/dist`
    - **Root directory:** `/` (repo root)
 3. Add environment variable:
-   - `VITE_API_BASE_URL` = your Render backend URL (e.g. `https://flight-tracker-api.onrender.com`)
+   - `VITE_API_BASE_URL` = your Worker URL (e.g. `https://flight-tracker-api.<account>.workers.dev`)
 4. Deploy — Cloudflare will auto-deploy on every push to `main`
 
 ### Environment variables reference
 
 | Variable | Where | Required | Default | Description |
 |----------|-------|----------|---------|-------------|
-| `OPENSKY_CLIENT_ID` | Backend (Render) | No | — | OAuth2 client ID for higher rate limits |
-| `OPENSKY_CLIENT_SECRET` | Backend (Render) | No | — | OAuth2 client secret |
-| `CACHE_TTL` | Backend (Render) | No | `5`/`10` | Base cache TTL in seconds (production: `20`) |
-| `CORS_ORIGINS` | Backend (Render) | No | `http://localhost:4200` | Comma-separated allowed origins |
-| `VITE_API_BASE_URL` | Frontend (Cloudflare) | No | `http://localhost:8000` | Backend API URL |
+| `OPENSKY_CLIENT_ID` | Worker (secret) | No | — | OAuth2 client ID for higher rate limits |
+| `OPENSKY_CLIENT_SECRET` | Worker (secret) | No | — | OAuth2 client secret |
+| `CACHE_TTL` | Worker (wrangler.jsonc) | No | `20` | Base cache TTL in seconds |
+| `CORS_ORIGINS` | Worker (wrangler.jsonc) | No | `https://flight-tracker-at-home.pages.dev` | Comma-separated allowed origins |
+| `VITE_API_BASE_URL` | Pages (env var) | No | `http://localhost:8000` | Backend API URL |
 
 ### Credit-aware throttling
 

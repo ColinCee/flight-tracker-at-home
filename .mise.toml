@@ -33,8 +33,8 @@ run = "cd apps/backend && uv sync"
 [tasks.format]
 description = "Format all code (ruff + biome)"
 run = """
-uvx ruff format apps/backend/
-uvx ruff check --fix apps/backend/ || true
+uvx ruff format apps/backend/ apps/worker/
+uvx ruff check --fix apps/backend/ apps/worker/ || true
 bunx @biomejs/biome format --write .
 bunx @biomejs/biome lint --fix . || true
 """
@@ -42,8 +42,8 @@ bunx @biomejs/biome lint --fix . || true
 [tasks.check]
 description = "Lint, format, and type check (no modifications)"
 run = """
-uvx ruff check apps/backend/
-uvx ruff format --check apps/backend/
+uvx ruff check apps/backend/ apps/worker/
+uvx ruff format --check apps/backend/ apps/worker/
 bunx @biomejs/biome check .
 cd apps/backend && uvx ty check
 cd -
