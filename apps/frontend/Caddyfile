@@ -7,6 +7,10 @@
 		reverse_proxy {$BACKEND_URL:localhost:8000}
 	}
 
+	handle /debug/* {
+		reverse_proxy {$BACKEND_URL:localhost:8000}
+	}
+
 	handle {
 		root * /srv
 		try_files {path} /index.html
