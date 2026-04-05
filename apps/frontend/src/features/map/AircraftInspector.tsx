@@ -13,6 +13,11 @@ import {
 import type { AircraftState } from '@/api/generated';
 import { Badge } from '@/shared/ui/badge';
 
+function formatVerticalRate(fpm: number | null): string {
+  if (fpm == null) return '—';
+  return `${fpm > 0 ? '+' : ''}${fpm.toLocaleString()} fpm`;
+}
+
 interface AircraftInspectorProps {
   aircraft: AircraftState;
   onClose: () => void;
@@ -35,21 +40,6 @@ function Field({
       <span className="text-[11px] text-zinc-400">{label}</span>
       <span className="ml-auto font-mono text-xs text-zinc-200">{value}</span>
     </div>
-  );
-}
-
-function VerticalRateIndicator({ rateFpm }: { rateFpm: number | null }) {
-  if (rateFpm == null || Math.abs(rateFpm) < 100) return null;
-
-  const isClimbing = rateFpm > 0;
-  const Icon = isClimbing ? ArrowUp : ArrowDown;
-  const color = isClimbing ? 'text-emerald-400' : 'text-amber-400';
-
-  return (
-    <span className={`inline-flex items-center gap-0.5 text-[11px] font-medium ${color}`}>
-      <Icon className="h-3 w-3" />
-      {Math.abs(Math.round(rateFpm)).toLocaleString()} ft/min
-    </span>
   );
 }
 
@@ -94,15 +84,31 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
             Inbound LHR
           </Badge>
         )}
-        {aircraft.onGround ? (
+        {aircraft.onGround && (
           <Badge
             variant="outline"
             className="border-zinc-600 bg-zinc-700/30 text-[10px] text-zinc-400"
           >
             On Ground
           </Badge>
-        ) : (
-          <VerticalRateIndicator rateFpm={aircraft.verticalRateFpm} />
+        )}
+        {aircraft.isClimbing && (
+          <Badge
+            variant="outline"
+            className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-[10px] text-emerald-400"
+          >
+            <ArrowUp className="h-3 w-3" />
+            Climbing
+          </Badge>
+        )}
+        {aircraft.isDescending && (
+          <Badge
+            variant="outline"
+            className="gap-1 border-amber-500/40 bg-amber-500/10 text-[10px] text-amber-400"
+          >
+            <ArrowDown className="h-3 w-3" />
+            Descending
+          </Badge>
         )}
       </div>
 
@@ -120,6 +126,18 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
           label="Speed"
           value={
             aircraft.groundSpeedKts != null ? `${Math.round(aircraft.groundSpeedKts)} kts` : '—'
+          }
+        />
+        <Field
+          icon={aircraft.isClimbing ? ArrowUp : ArrowDown}
+          label="V/S"
+          value={formatVerticalRate(aircraft.verticalRateFpm)}
+          accent={
+            aircraft.isClimbing
+              ? 'text-emerald-400'
+              : aircraft.isDescending
+                ? 'text-amber-400'
+                : undefined
           }
         />
         <Field
