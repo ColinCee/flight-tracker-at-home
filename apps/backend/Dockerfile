@@ -12,7 +12,10 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY src/ ./src/
 
 # --- Runtime stage ---
-FROM gcr.io/distroless/python3-debian12:nonroot
+FROM python:3.12-slim
+
+RUN useradd --create-home --shell /bin/false appuser
+USER appuser
 
 WORKDIR /app
 
