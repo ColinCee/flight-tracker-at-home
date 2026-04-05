@@ -9,7 +9,6 @@ import os
 import time
 
 import httpx
-
 from src.models import AircraftState
 
 logger = logging.getLogger(__name__)
@@ -35,6 +34,32 @@ TOKEN_URL = (
 
 # Refresh the token 60s before it actually expires
 TOKEN_REFRESH_MARGIN = 60
+
+# --- Data Dictionaries (Initialized once at startup) ---
+POSITION_SOURCE_MAP = {0: "ADS-B", 1: "ASTERIX", 2: "MLAT", 3: "FLARM"}
+
+CATEGORY_MAP = {
+    0: "Unknown",
+    1: "Unknown",
+    2: "Light",
+    3: "Small",
+    4: "Large",
+    5: "High Vortex Large",
+    6: "Heavy",
+    7: "High Performance",
+    8: "Rotorcraft",
+    9: "Glider",
+    10: "Lighter-than-air",
+    11: "Skydiver",
+    12: "Ultralight",
+    # 13 is reserved (who knows for what?)
+    14: "UAV",
+    15: "Space Vehicle",
+    16: "Emergency Surface Vehicle",
+    17: "Service Surface Vehicle",
+    18: "Point Obstacle",
+    19: "Line Obstacle",
+}
 
 
 class _TokenManager:
@@ -101,18 +126,22 @@ async def fetch_london_airspace() -> list[list]:
     auth_headers = await _token_manager.get_headers()
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(
-            url, params=params, headers=auth_headers, timeout=10.0
-        )
-        response.raise_for_status()
+        try:
+            response = await client.get(
+                url, params=params, headers=auth_headers, timeout=10.0
+            )
+            response.raise_for_status()
 
-        remaining = response.headers.get("X-Rate-Limit-Remaining")
-        if remaining is not None:
-            _remaining_credits = int(remaining)
+            remaining = response.headers.get("X-Rate-Limit-Remaining")
+            if remaining is not None:
+                _remaining_credits = int(remaining)
 
-        data = response.json()
-        # OpenSky returns the arrays under the "states" key
-        return data.get("states") or []
+            data = response.json()
+            # OpenSky returns the arrays under the "states" key
+            return data.get("states") or []
+        except httpx.HTTPError as e:
+            logger.warning("Error fetching from OpenSky: %s", e)
+            return []
 
 
 def get_remaining_credits() -> int | None:
@@ -145,6 +174,7 @@ def parse_state_vector(vector: list) -> AircraftState | None:
         10: "Lighter-than-air",
         11: "Skydiver",
         12: "Ultralight",
+        # 13 is reserved (who knows for what?)
         14: "UAV",
         15: "Space Vehicle",
         16: "Emergency Surface Vehicle",
@@ -256,6 +286,7 @@ async def get_current_airspace_state() -> list[AircraftState]:
     for vector in raw_vectors:
         parsed = parse_state_vector(vector)
         if parsed:
+            # Inject the Approach Logic here
             parsed.is_approaching_lhr = check_lhr_approach(parsed)
             valid_aircraft.append(parsed)
 
