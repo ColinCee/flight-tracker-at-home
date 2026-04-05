@@ -12,7 +12,7 @@ services:
         value: https://flight-tracker-at-home.pages.dev
       - key: CACHE_TTL
         value: "20"
-      - key: OPENSKY_CLIENT_ID
+      - key: OPENSKY_PROXY_URL
         sync: false # set manually in Render dashboard
-      - key: OPENSKY_CLIENT_SECRET
+      - key: OPENSKY_PROXY_KEY
         sync: false # set manually in Render dashboard

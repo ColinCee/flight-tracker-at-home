@@ -1,0 +1,7 @@
+# OpenSky Network OAuth2 credentials
+# Create an API client at: https://opensky-network.org → Account → API Clients
+OPENSKY_CLIENT_ID=
+OPENSKY_CLIENT_SECRET=
+
+# Shared secret — must match OPENSKY_PROXY_KEY on the backend
+PROXY_KEY=local-dev-key

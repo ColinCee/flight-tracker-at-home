@@ -113,3 +113,22 @@ if ! git diff --quiet; then
 fi
 echo "AI config files are in sync"
 """
+
+[tasks."dev:proxy"]
+description = "Run the OpenSky proxy worker locally"
+run = "cd apps/proxy && bunx wrangler dev"
+
+[tasks."deploy:proxy"]
+description = "Deploy the OpenSky proxy worker to Cloudflare"
+run = "cd apps/proxy && bunx wrangler deploy"
+
+[tasks."deploy:frontend"]
+description = "Build and deploy frontend to Cloudflare Pages"
+run = """
+bunx nx build frontend
+cd apps/frontend && bunx wrangler pages deploy dist --project-name=flight-tracker-at-home
+"""
+
+[tasks.deploy]
+description = "Deploy proxy worker and frontend to Cloudflare"
+depends = ["deploy:proxy", "deploy:frontend"]

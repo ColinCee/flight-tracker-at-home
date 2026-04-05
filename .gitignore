@@ -51,6 +51,10 @@ vite.config.*.timestamp*
 __pycache__/
 *.pyc
 
+# Cloudflare Workers
+.wrangler/
+.dev.vars
+
 # Environment variables (secrets)
 .env
 .env.local
