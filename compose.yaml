@@ -48,3 +48,15 @@ services:
     env_file:
       - apps/backend/.env
     profiles: [dev]
+
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      BACKEND_URL: backend-dev:8000
+    depends_on:
+      - backend-dev
+    profiles: [dev]

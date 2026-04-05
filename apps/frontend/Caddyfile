@@ -1,0 +1,18 @@
+:8080 {
+	handle /health {
+		reverse_proxy {$BACKEND_URL:localhost:8000}
+	}
+
+	handle /aircraft {
+		reverse_proxy {$BACKEND_URL:localhost:8000}
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	encode gzip
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+}
