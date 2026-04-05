@@ -74,7 +74,7 @@ The `.env` file is gitignored — credentials stay local.
 ### 4. Start the stack
 
 ```bash
-docker compose -f compose.prod.yaml up -d
+docker compose -f compose.yaml up -d
 ```
 
 Or point **Dockge** at this directory to manage it via the UI.
@@ -83,7 +83,7 @@ Or point **Dockge** at this directory to manage it via the UI.
 
 ```bash
 # Check containers are running
-docker compose -f compose.prod.yaml ps
+docker compose -f compose.yaml ps
 
 # Test the API
 curl https://api.colincheung.dev/health
@@ -112,12 +112,12 @@ No SSH keys, no webhooks, no manual steps after initial setup.
 
 ## Updating the compose config
 
-If `compose.prod.yaml` changes:
+If `compose.yaml` changes:
 
 ```bash
 cd flight-tracker-at-home
 git pull
-docker compose -f compose.prod.yaml up -d
+docker compose -f compose.yaml up -d
 ```
 
 ## Troubleshooting
