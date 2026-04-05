@@ -15,12 +15,7 @@ from src.models import AircraftState
 logger = logging.getLogger(__name__)
 
 # --- Configuration & Constants ---
-
-# When OPENSKY_PROXY_URL is set, requests go via the Cloudflare Worker proxy
-# (which handles OAuth2 auth). Otherwise, hit OpenSky directly (local dev).
-OPENSKY_PROXY_URL = os.getenv("OPENSKY_PROXY_URL")
-OPENSKY_PROXY_KEY = os.getenv("OPENSKY_PROXY_KEY", "")
-OPENSKY_DIRECT_URL = "https://opensky-network.org"
+OPENSKY_URL = "https://opensky-network.org/api/states/all"
 
 # London Bounding Box
 LAMIN = 51.20
@@ -32,7 +27,7 @@ LOMAX = 0.25
 LHR_LAT = 51.4700
 LHR_LON = -0.4543
 
-# OpenSky OAuth2 token endpoint (Keycloak) — used in direct mode only
+# OpenSky OAuth2 token endpoint (Keycloak)
 TOKEN_URL = (
     "https://auth.opensky-network.org/auth/realms/"
     "opensky-network/protocol/openid-connect/token"
@@ -68,21 +63,8 @@ CATEGORY_MAP = {
 }
 
 
-def _get_base_url() -> str:
-    """Return the base URL for OpenSky API requests."""
-    return OPENSKY_PROXY_URL or OPENSKY_DIRECT_URL
-
-
-def _using_proxy() -> bool:
-    return OPENSKY_PROXY_URL is not None
-
-
 class _TokenManager:
-    """Handles OAuth2 client credentials flow with automatic token refresh.
-
-    Only used when hitting OpenSky directly (no proxy). When the proxy is
-    configured, it handles auth and this class is dormant.
-    """
+    """Handles OAuth2 client credentials flow with automatic token refresh."""
 
     def __init__(self):
         self._access_token: str | None = None
@@ -90,23 +72,13 @@ class _TokenManager:
 
     @property
     def is_authenticated(self) -> bool:
-        """Whether credentials are configured (direct mode) or proxy is set."""
-        if _using_proxy():
-            return True
+        """Whether credentials are configured."""
         return bool(
             os.getenv("OPENSKY_CLIENT_ID") and os.getenv("OPENSKY_CLIENT_SECRET")
         )
 
     async def get_headers(self) -> dict[str, str]:
-        """Return request headers for OpenSky calls."""
-        headers: dict[str, str] = {}
-
-        # When using the proxy, send the shared key instead of OAuth token
-        if _using_proxy():
-            headers["X-Proxy-Key"] = OPENSKY_PROXY_KEY
-            return headers
-
-        # Direct mode: OAuth2 client credentials
+        """Return Authorization headers, refreshing the token if needed."""
         client_id = os.getenv("OPENSKY_CLIENT_ID")
         client_secret = os.getenv("OPENSKY_CLIENT_SECRET")
 
@@ -147,7 +119,7 @@ _remaining_credits: int | None = None
 async def fetch_london_airspace() -> list[list]:
     """Phase 1: Extraction - Fetches raw state vectors from OpenSky."""
     global _remaining_credits
-    url = f"{_get_base_url()}/api/states/all"
+    url = "https://opensky-network.org/api/states/all"
 
     # Passing the bounding box ensures we only use 1 API credit
     params = {"lamin": LAMIN, "lamax": LAMAX, "lomin": LOMIN, "lomax": LOMAX}

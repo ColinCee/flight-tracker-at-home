@@ -8,7 +8,7 @@
     "/health": {
       "get": {
         "summary": "Health Check",
-        "description": "Simple health check for Render deployment.",
+        "description": "Simple health check.",
         "operationId": "getHealth",
         "responses": {
           "200": {
