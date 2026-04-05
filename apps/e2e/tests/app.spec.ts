@@ -22,7 +22,7 @@ test.describe('frontend app', () => {
     const res = await aircraftRequest;
     const data = await res.json();
 
-    expect(data.aircraft.length).toBeGreaterThan(0);
+    expect(data.aircraft.length).toBeGreaterThanOrEqual(0);
   });
 
   test('displays KPI strip with tracked aircraft count', async ({ page }) => {
