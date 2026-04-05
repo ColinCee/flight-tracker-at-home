@@ -9,7 +9,7 @@ import os
 import time
 
 import httpx
-from src.models import AircraftState
+from models import AircraftState
 
 logger = logging.getLogger(__name__)
 

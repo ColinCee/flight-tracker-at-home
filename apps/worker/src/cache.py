@@ -12,8 +12,8 @@ import os
 import time
 from collections import deque
 
-from src.models import AircraftResponse, KPIs
-from src.opensky import (
+from models import AircraftResponse, KPIs
+from opensky import (
     _token_manager,
     get_current_airspace_state,
     get_remaining_credits,

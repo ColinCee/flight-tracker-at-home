@@ -48,8 +48,13 @@ Thumbs.db
 vite.config.*.timestamp*
 # Python
 .venv/
+.venv-workers/
 __pycache__/
 *.pyc
+
+# Cloudflare Workers
+.wrangler/
+python_modules/
 
 # Environment variables (secrets)
 .env

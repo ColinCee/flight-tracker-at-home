@@ -27,7 +27,7 @@ class Default(WorkerEntrypoint):
                 if val is not None:
                     os.environ[key] = str(val)
 
-            from src.app import create_app
+            from app import create_app
 
             _app = create_app()
 

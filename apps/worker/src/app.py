@@ -8,11 +8,11 @@ import os
 import time
 
 import httpx
+from cache import airspace_cache
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.cache import airspace_cache
-from src.models import AircraftResponse
-from src.opensky import _token_manager
+from models import AircraftResponse
+from opensky import _token_manager
 
 
 def create_app() -> FastAPI:

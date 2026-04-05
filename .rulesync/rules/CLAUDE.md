@@ -110,6 +110,7 @@ mise run setup:backend      # Install backend dependencies only
 
 # Development
 mise run dev                # Run frontend and backend together
+mise run dev:worker         # Run the Cloudflare Worker locally
 
 # Quality
 mise run format             # Format all code (ruff + biome), auto-fix
@@ -118,6 +119,10 @@ mise run typecheck          # Type check only (subset of check)
 mise run test               # Run all tests (pytest + vitest)
 mise run test:e2e           # Run Playwright e2e tests
 mise run test:e2e:ui        # Run Playwright with interactive UI
+
+# Deploy
+mise run deploy:worker      # Deploy the Cloudflare Worker (backend)
+mise run deploy:frontend    # Build and deploy frontend to Cloudflare Pages
 
 # Codegen & config
 mise run rules:sync         # Regenerate AI config files from .rulesync/
