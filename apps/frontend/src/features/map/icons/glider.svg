@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Glider (top-down). Very long wings, slender fuselage. -->
+  <!-- Fuselage (very slim) -->
+  <path d="M32 4 C31 4 30.5 7 30.5 10 L30.5 56 C30.5 58 31.2 60 32 60 C32.8 60 33.5 58 33.5 56 L33.5 10 C33.5 7 33 4 32 4Z" fill="white"/>
+  <!-- Left wing (very long, slight forward sweep) -->
+  <path d="M30.5 26 L3 30 L4 32 L30.5 30Z" fill="white"/>
+  <!-- Right wing -->
+  <path d="M33.5 26 L61 30 L60 32 L33.5 30Z" fill="white"/>
+  <!-- Left horizontal stabilizer (T-tail) -->
+  <path d="M30.5 54 L24 57 L25 58 L30.5 56Z" fill="white"/>
+  <!-- Right horizontal stabilizer -->
+  <path d="M33.5 54 L40 57 L39 58 L33.5 56Z" fill="white"/>
+  <!-- Vertical stabilizer -->
+  <path d="M31.2 55 L32 50 L32.8 55Z" fill="white" opacity="0.45"/>
+</svg>

@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   Compass,
@@ -12,6 +13,12 @@ import {
 } from 'lucide-react';
 import type { AircraftState } from '@/api/generated';
 import { Badge } from '@/shared/ui/badge';
+
+const EMERGENCY_SQUAWKS: Record<string, string> = {
+  '7700': 'Emergency',
+  '7600': 'Radio Failure',
+  '7500': 'Hijack',
+};
 
 function formatVerticalRate(fpm: number | null): string {
   if (fpm == null) return '—';
@@ -75,6 +82,15 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
 
       {/* Badges */}
       <div className="flex flex-wrap gap-1.5 pt-2 pb-1.5">
+        {aircraft.squawk && EMERGENCY_SQUAWKS[aircraft.squawk] && (
+          <Badge
+            variant="outline"
+            className="gap-1 border-red-500/50 bg-red-500/15 text-[10px] font-semibold text-red-400"
+          >
+            <AlertTriangle className="h-3 w-3" />
+            {EMERGENCY_SQUAWKS[aircraft.squawk]}
+          </Badge>
+        )}
         {aircraft.isApproachingLhr && (
           <Badge
             variant="outline"

@@ -5,19 +5,43 @@ import { useCallback, useMemo, useState } from 'react';
 import { useControl } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
 import { type AircraftFilter, matchesFilter } from '@/shared/filters';
-import aircraftIconUrl from './aircraft.svg';
+import gliderUrl from './icons/glider.svg';
+import helicopterUrl from './icons/helicopter.svg';
+import jetUrl from './icons/jet.svg';
+import propUrl from './icons/prop.svg';
 
-const AIRCRAFT_ICON = {
-  url: aircraftIconUrl,
-  width: 64,
-  height: 64,
-  mask: true,
+const ICON_SIZE = { width: 64, height: 64, mask: true } as const;
+
+const ICONS = {
+  jet: { url: jetUrl, ...ICON_SIZE },
+  prop: { url: propUrl, ...ICON_SIZE },
+  helicopter: { url: helicopterUrl, ...ICON_SIZE },
+  glider: { url: gliderUrl, ...ICON_SIZE },
 };
+
+function getIconForCategory(category: string) {
+  switch (category) {
+    case 'Rotorcraft':
+      return ICONS.helicopter;
+    case 'Light':
+    case 'Ultralight':
+      return ICONS.prop;
+    case 'Glider':
+    case 'Lighter-than-air':
+      return ICONS.glider;
+    default:
+      return ICONS.jet;
+  }
+}
+
+const EMERGENCY_SQUAWKS = new Set(['7500', '7600', '7700']);
 
 const COLOR_DEFAULT: [number, number, number, number] = [255, 255, 255, 200];
 const COLOR_APPROACHING: [number, number, number, number] = [255, 170, 0, 230];
 const COLOR_SELECTED: [number, number, number, number] = [100, 200, 255, 255];
 const COLOR_DIMMED: [number, number, number, number] = [255, 255, 255, 40];
+const COLOR_EMERGENCY: [number, number, number, number] = [255, 60, 60, 255];
+const COLOR_ROTORCRAFT: [number, number, number, number] = [80, 220, 120, 210];
 const PICKING_RADIUS = 5;
 
 function DeckGLOverlay(props: MapboxOverlayProps & { pickingRadius?: number }) {
@@ -66,7 +90,7 @@ export function AircraftLayer({
       new IconLayer<AircraftState>({
         id: 'aircraft-icons',
         data: aircraft,
-        getIcon: () => AIRCRAFT_ICON,
+        getIcon: (d) => getIconForCategory(d.category),
         getPosition: (d) => [d.longitude, d.latitude],
         getSize: (d) => {
           if (d.icao24 === selectedIcao24) return 30;
@@ -76,8 +100,11 @@ export function AircraftLayer({
         getAngle: (d) => -(d.trueTrack ?? 0),
         getColor: (d) => {
           if (d.icao24 === selectedIcao24) return COLOR_SELECTED;
+          if (d.squawk && EMERGENCY_SQUAWKS.has(d.squawk)) return COLOR_EMERGENCY;
           if (activeFilter && !matchesFilter(d, activeFilter)) return COLOR_DIMMED;
-          return d.isApproachingLhr ? COLOR_APPROACHING : COLOR_DEFAULT;
+          if (d.isApproachingLhr) return COLOR_APPROACHING;
+          if (d.category === 'Rotorcraft') return COLOR_ROTORCRAFT;
+          return COLOR_DEFAULT;
         },
         sizeScale: 1,
         sizeUnits: 'pixels',

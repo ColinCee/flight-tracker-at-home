@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Helicopter (top-down). Used for Rotorcraft category. -->
+  <!-- Fuselage (teardrop) -->
+  <path d="M32 16 C28 16 26 20 26 26 L26 38 C26 42 28 46 32 46 C36 46 38 42 38 38 L38 26 C38 20 36 16 32 16Z" fill="white"/>
+  <!-- Tail boom -->
+  <path d="M30.5 46 L30.5 58 L33.5 58 L33.5 46Z" fill="white"/>
+  <!-- Tail rotor -->
+  <ellipse cx="32" cy="58" rx="1" ry="4" fill="white" opacity="0.6"/>
+  <!-- Main rotor (cross pattern) -->
+  <line x1="32" y1="31" x2="8" y2="25" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="32" y1="31" x2="56" y2="37" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="32" y1="31" x2="56" y2="25" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="32" y1="31" x2="8" y2="37" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <!-- Rotor hub -->
+  <circle cx="32" cy="31" r="2" fill="white"/>
+  <!-- Landing skids -->
+  <line x1="24" y1="22" x2="24" y2="42" stroke="white" stroke-width="1" opacity="0.4"/>
+  <line x1="40" y1="22" x2="40" y2="42" stroke="white" stroke-width="1" opacity="0.4"/>
+</svg>
