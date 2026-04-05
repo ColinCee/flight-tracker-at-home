@@ -57,6 +57,9 @@ lamin=51.20  lomin=-0.90  lamax=51.70  lomax=0.25
 Covers Greater London — Heathrow to City Airport east-west, Croydon to Enfield
 north-south. Area is ~0.32 sq° → 1 credit per request.
 
+- Aircraft below 30.5m (~100ft) no longer get detected by OpenSky and should be removed.
+
+
 ### Heathrow arrival heuristic
 
 An aircraft is classified as "approaching Heathrow" when ALL conditions are met:

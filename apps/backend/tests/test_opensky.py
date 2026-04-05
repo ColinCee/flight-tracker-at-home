@@ -121,3 +121,60 @@ def test_check_lhr_approach_wrong_heading():
         is_approaching_lhr=False,
     )
     assert check_lhr_approach(aircraft) is False
+
+
+# --- 4. Test remove aircraft on ground or below 100ft ---
+def test_parse_state_vector_on_ground():
+    """Infrastructure rule: Drop aircraft currently on the ground."""
+    raw_vector = [
+        "400a5b",
+        "BAW123",
+        "United Kingdom",
+        1690000000,
+        1690000000,
+        -0.45,  # valid lon
+        51.47,  # valid lat
+        1000.0,  # baro_altitude
+        True,  # on_ground is True! (Index 8)
+        150.0,
+        90.0,
+        -5.0,
+        None,
+        1050.0,
+        "7700",
+        False,
+        0,
+        0,
+        0,
+    ]
+
+    aircraft = parse_state_vector(raw_vector)
+    assert aircraft is None
+
+
+def test_parse_state_vector_low_altitude():
+    """Infrastructure rule: Drop aircraft below 100ft (30.5 meters)."""
+    raw_vector = [
+        "400a5b",
+        "BAW123",
+        "United Kingdom",
+        1690000000,
+        1690000000,
+        -0.45,  # valid lon
+        51.47,  # valid lat
+        30.0,  # baro_altitude is < 30.5m! (Index 7)
+        False,  # on_ground
+        150.0,
+        90.0,
+        -5.0,
+        None,
+        1050.0,
+        "7700",
+        False,
+        0,
+        0,
+        0,
+    ]
+
+    aircraft = parse_state_vector(raw_vector)
+    assert aircraft is None
