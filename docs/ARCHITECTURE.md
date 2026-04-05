@@ -1,7 +1,7 @@
 # Architecture & Data Contract
 
 > Technical reference for both frontend and backend developers.
-> For product requirements, see [MVP.md](./MVP.md). Both files live in `docs/`.
+> For product requirements, see [MVP.md](PRODUCT-FEATURES.md). Both files live in `docs/`.
 
 ## Architecture Overview
 
@@ -92,6 +92,7 @@ The backend defaults to a **10-second cache TTL** as the minimum stable polling 
 | Method | Path        | Response           | Notes                                       |
 | ------ | ----------- | ------------------ | ------------------------------------------- |
 | GET    | `/aircraft` | `AircraftResponse` | Aircraft + KPIs in a single atomic response |
+| GET    | `/weather`  | `WeatherResponse`  | Cached METAR data for London airports       |
 | GET    | `/health`   | `{ status: "ok" }` | Health check                                |
 
 ---
@@ -159,6 +160,25 @@ class AircraftResponse(BaseModel):
     refresh_interval_ms: int                # Hint for frontend polling interval
     aircraft: list[AircraftState]           # All aircraft with known positions
     kpis: KPIs                              # Derived from aircraft list
+
+
+class AirportWeather(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    icao: str                               # ICAO airport code (e.g. EGLL)
+    name: str                               # Human readable name
+    condition: str                          # MET Norway weather symbol code
+    temperature_c: float | None             # Temperature in Celsius
+    wind_speed_kts: float | None            # Wind speed in knots
+    wind_direction_deg: float | None        # Wind direction in degrees
+
+
+class WeatherResponse(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    timestamp: int                          # Unix epoch when data was fetched
+    cache_age_seconds: float                # How stale the cached data is
+    weather: list[AirportWeather]           # Weather for London airports
 ```
 
 ### TypeScript interfaces (frontend)
