@@ -1,7 +1,7 @@
 """Cache for AircraftResponse — singleton that refreshes on a stable TTL.
 
 Airplanes.live allows 1 request per second without authentication.
-A 10-second default TTL ensures real-time UI updates while safely avoiding rate limits.
+A 10-second default TTL gives stable real-time updates within the API's effective rate limit.
 """
 
 import asyncio

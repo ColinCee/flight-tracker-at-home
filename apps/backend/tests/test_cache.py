@@ -56,7 +56,7 @@ async def test_cache_kpi_calculation(mock_get_state):
     assert response.kpis.climbing_aircraft == 0
     assert response.kpis.descending_aircraft == 0
     assert response.kpis.avg_altitude_ft == 1000  # No more metric
-    assert response.refresh_interval_ms == 10_000  # Anonymous = 10s
+    assert response.refresh_interval_ms == 10_000  # Default = 10s
 
 
 @pytest.mark.asyncio
