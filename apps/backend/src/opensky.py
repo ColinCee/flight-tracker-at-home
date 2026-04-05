@@ -9,12 +9,18 @@ import os
 import time
 
 import httpx
+
 from src.models import AircraftState
 
 logger = logging.getLogger(__name__)
 
 # --- Configuration & Constants ---
-OPENSKY_URL = "https://opensky-network.org/api/states/all"
+
+# When OPENSKY_PROXY_URL is set, requests go via the Cloudflare Worker proxy
+# (which handles OAuth2 auth). Otherwise, hit OpenSky directly (local dev).
+OPENSKY_PROXY_URL = os.getenv("OPENSKY_PROXY_URL")
+OPENSKY_PROXY_KEY = os.getenv("OPENSKY_PROXY_KEY", "")
+OPENSKY_DIRECT_URL = "https://opensky-network.org"
 
 # London Bounding Box
 LAMIN = 51.20
@@ -26,7 +32,7 @@ LOMAX = 0.25
 LHR_LAT = 51.4700
 LHR_LON = -0.4543
 
-# OpenSky OAuth2 token endpoint (Keycloak)
+# OpenSky OAuth2 token endpoint (Keycloak) — used in direct mode only
 TOKEN_URL = (
     "https://auth.opensky-network.org/auth/realms/"
     "opensky-network/protocol/openid-connect/token"
@@ -34,7 +40,6 @@ TOKEN_URL = (
 
 # Refresh the token 60s before it actually expires
 TOKEN_REFRESH_MARGIN = 60
-
 
 # --- Data Dictionaries (Initialized once at startup) ---
 POSITION_SOURCE_MAP = {0: "ADS-B", 1: "ASTERIX", 2: "MLAT", 3: "FLARM"}
@@ -63,8 +68,21 @@ CATEGORY_MAP = {
 }
 
 
+def _get_base_url() -> str:
+    """Return the base URL for OpenSky API requests."""
+    return OPENSKY_PROXY_URL or OPENSKY_DIRECT_URL
+
+
+def _using_proxy() -> bool:
+    return OPENSKY_PROXY_URL is not None
+
+
 class _TokenManager:
-    """Handles OAuth2 client credentials flow with automatic token refresh."""
+    """Handles OAuth2 client credentials flow with automatic token refresh.
+
+    Only used when hitting OpenSky directly (no proxy). When the proxy is
+    configured, it handles auth and this class is dormant.
+    """
 
     def __init__(self):
         self._access_token: str | None = None
@@ -72,13 +90,23 @@ class _TokenManager:
 
     @property
     def is_authenticated(self) -> bool:
-        """Whether credentials are configured."""
+        """Whether credentials are configured (direct mode) or proxy is set."""
+        if _using_proxy():
+            return True
         return bool(
             os.getenv("OPENSKY_CLIENT_ID") and os.getenv("OPENSKY_CLIENT_SECRET")
         )
 
     async def get_headers(self) -> dict[str, str]:
-        """Return Authorization headers, refreshing the token if needed."""
+        """Return request headers for OpenSky calls."""
+        headers: dict[str, str] = {}
+
+        # When using the proxy, send the shared key instead of OAuth token
+        if _using_proxy():
+            headers["X-Proxy-Key"] = OPENSKY_PROXY_KEY
+            return headers
+
+        # Direct mode: OAuth2 client credentials
         client_id = os.getenv("OPENSKY_CLIENT_ID")
         client_secret = os.getenv("OPENSKY_CLIENT_SECRET")
 
@@ -116,10 +144,10 @@ _token_manager = _TokenManager()
 _remaining_credits: int | None = None
 
 
-# --- Phase 1: Extraction ---
 async def fetch_london_airspace() -> list[list]:
     """Phase 1: Extraction - Fetches raw state vectors from OpenSky."""
     global _remaining_credits
+    url = f"{_get_base_url()}/api/states/all"
 
     # Passing the bounding box ensures we only use 1 API credit
     params = {"lamin": LAMIN, "lamax": LAMAX, "lomin": LOMIN, "lomax": LOMAX}
@@ -129,7 +157,7 @@ async def fetch_london_airspace() -> list[list]:
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
-                OPENSKY_URL, params=params, headers=auth_headers, timeout=10.0
+                url, params=params, headers=auth_headers, timeout=10.0
             )
             response.raise_for_status()
 
@@ -150,9 +178,38 @@ def get_remaining_credits() -> int | None:
     return _remaining_credits
 
 
-# --- Phase 2: Transformation ---
 def parse_state_vector(vector: list) -> AircraftState | None:
-    """Phase 2: Transformation - Maps raw array indices to the Pydantic AircraftState contract."""
+    """Phase 2: Transformation - Maps array indices to the Pydantic contract."""
+
+    # OpenSky Array Indices:
+    # 0: icao24, 1: callsign, 2: origin_country, 3: time_position, 4: last_contact
+    # 5: longitude, 6: latitude, 7: baro_altitude, 8: on_ground, 9: velocity
+    # 10: true_track, 11: vertical_rate, 12: sensors, 13: geo_altitude, 14: squawk
+    # 16: position_source, 17: aircraft_category
+
+    POSITION_SOURCE_MAP = {0: "ADS-B", 1: "ASTERIX", 2: "MLAT", 3: "FLARM"}
+
+    CATEGORY_MAP = {
+        0: "Unknown",
+        1: "Unknown",
+        2: "Light",
+        3: "Small",
+        4: "Large",
+        5: "High Vortex Large",
+        6: "Heavy",
+        7: "High Performance",
+        8: "Rotorcraft",
+        9: "Glider",
+        10: "Lighter-than-air",
+        11: "Skydiver",
+        12: "Ultralight",
+        14: "UAV",
+        15: "Space Vehicle",
+        16: "Emergency Surface Vehicle",
+        17: "Service Surface Vehicle",
+        18: "Point Obstacle",
+    }
+
     try:
         # Strict validation: Drop if positional data is missing
         if vector[5] is None or vector[6] is None:
@@ -194,7 +251,8 @@ def parse_state_vector(vector: list) -> AircraftState | None:
 # --- Phase 3: Spatial Math & Business Logic ---
 def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates the great-circle distance between two GPS points in kilometers."""
-    R = 6371.0
+    R = 6371.0  # Earth radius in kilometers
+
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
 
@@ -209,7 +267,11 @@ def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) ->
 
 
 def check_lhr_approach(aircraft: AircraftState) -> bool:
-    """Evaluates if an aircraft meets the heuristic criteria for a Heathrow approach."""
+    """
+    Determines if an aircraft is on final approach to Heathrow.
+    Checks are ordered from least to most computationally expensive.
+    """
+    # 1. Must be in the air
     if aircraft.on_ground:
         return False
 

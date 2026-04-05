@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.cache import airspace_cache
 from src.models import AircraftResponse
-from src.opensky import _token_manager
+from src.opensky import _get_base_url, _token_manager, _using_proxy
 
 app = FastAPI(title="Flight Tracker at Home API")
 
@@ -52,17 +52,22 @@ async def get_aircraft() -> AircraftResponse:
 )
 async def debug_opensky():
     """Diagnose OpenSky API connectivity from this server."""
-    api_url = "https://opensky-network.org/api/states/all?lamin=51.2&lamax=51.7&lomin=-0.9&lomax=0.25"
+    base = _get_base_url()
+    api_url = f"{base}/api/states/all?lamin=51.2&lamax=51.7&lomin=-0.9&lomax=0.25"
+    headers = await _token_manager.get_headers()
+
     results = {
         "authenticated": _token_manager.is_authenticated,
+        "using_proxy": _using_proxy(),
+        "base_url": base,
         "tests": {},
     }
 
-    # Test 1: API endpoint
+    # Test 1: API endpoint (via proxy if configured)
     try:
         start = time.time()
         async with httpx.AsyncClient() as client:
-            resp = await client.get(api_url, timeout=10.0)
+            resp = await client.get(api_url, headers=headers, timeout=10.0)
         elapsed = round(time.time() - start, 3)
         results["tests"]["api"] = {
             "status": resp.status_code,
@@ -71,36 +76,5 @@ async def debug_opensky():
         }
     except Exception as e:
         results["tests"]["api"] = {"error": repr(e), "ok": False}
-
-    # Test 2: Auth endpoint
-    try:
-        start = time.time()
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                "https://auth.opensky-network.org/auth/realms/opensky-network",
-                timeout=10.0,
-            )
-        elapsed = round(time.time() - start, 3)
-        results["tests"]["auth"] = {
-            "status": resp.status_code,
-            "elapsed_s": elapsed,
-            "ok": resp.status_code == 200,
-        }
-    except Exception as e:
-        results["tests"]["auth"] = {"error": repr(e), "ok": False}
-
-    # Test 3: Token acquisition (if credentials set)
-    if _token_manager.is_authenticated:
-        try:
-            start = time.time()
-            headers = await _token_manager.get_headers()
-            elapsed = round(time.time() - start, 3)
-            results["tests"]["token"] = {
-                "has_bearer": "Authorization" in headers,
-                "elapsed_s": elapsed,
-                "ok": True,
-            }
-        except Exception as e:
-            results["tests"]["token"] = {"error": repr(e), "ok": False}
 
     return results
