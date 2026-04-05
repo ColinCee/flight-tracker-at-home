@@ -54,7 +54,20 @@
   }
 }
 
+/* Hide scrollbar on KPI strip while keeping it scrollable */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* MapLibre popup overrides for dark theme */
+.aircraft-popup {
+  z-index: 10;
+}
+
 .aircraft-popup .maplibregl-popup-content {
   background: oklch(0.16 0 0 / 0.92);
   color: oklch(0.985 0 0);
