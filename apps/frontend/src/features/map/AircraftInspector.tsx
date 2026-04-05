@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import type { AircraftState } from '@/api/generated';
 import { Badge } from '@/shared/ui/badge';
-import { formatHeading } from '@/shared/units';
 
 interface AircraftInspectorProps {
   aircraft: AircraftState;
@@ -39,19 +38,17 @@ function Field({
   );
 }
 
-function VerticalRateIndicator({ rateFps }: { rateFps: number | null }) {
-  // 1.5 fps is roughly equal to the old 0.5 m/s threshold
-  if (rateFps == null || Math.abs(rateFps) < 1.5) return null;
+function VerticalRateIndicator({ rateFpm }: { rateFpm: number | null }) {
+  if (rateFpm == null || Math.abs(rateFpm) < 100) return null;
 
-  const isClimbing = rateFps > 0;
-  const fpm = Math.round(rateFps * 60); // fps → ft/min
+  const isClimbing = rateFpm > 0;
   const Icon = isClimbing ? ArrowUp : ArrowDown;
   const color = isClimbing ? 'text-emerald-400' : 'text-amber-400';
 
   return (
     <span className={`inline-flex items-center gap-0.5 text-[11px] font-medium ${color}`}>
       <Icon className="h-3 w-3" />
-      {Math.abs(fpm).toLocaleString()} ft/min
+      {Math.abs(Math.round(rateFpm)).toLocaleString()} ft/min
     </span>
   );
 }
@@ -105,7 +102,7 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
             On Ground
           </Badge>
         ) : (
-          <VerticalRateIndicator rateFps={aircraft.verticalSpeedFps} />
+          <VerticalRateIndicator rateFpm={aircraft.verticalRateFpm} />
         )}
       </div>
 
@@ -115,24 +112,23 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
           icon={Mountain}
           label="Alt"
           value={
-            aircraft.baroAltitudeFeet != null ? `${Math.round(aircraft.baroAltitudeFeet)} ft` : '—'
+            aircraft.baroAltitudeFt != null ? `${Math.round(aircraft.baroAltitudeFt)} ft` : '—'
           }
         />
         <Field
-          //TODO: We need to separate speed in the future, to use IAS for aircraft speed instead of GS.
-          //TODO: Preferably display both.
           icon={Gauge}
           label="Speed"
           value={
-            aircraft.velocityGsKnots != null ? `${Math.round(aircraft.velocityGsKnots)} kts` : '—'
+            aircraft.groundSpeedKts != null ? `${Math.round(aircraft.groundSpeedKts)} kts` : '—'
           }
         />
         <Field
           icon={Compass}
           label="Hdg"
-          value={aircraft.trueTrack != null ? formatHeading(aircraft.trueTrack) : '—'}
+          value={aircraft.trueTrack != null ? `${Math.round(aircraft.trueTrack)}°` : '—'}
         />
-        <Field icon={Globe} label="Origin" value={aircraft.originCountry} />
+        <Field icon={Plane} label="Type" value={aircraft.aircraftType ?? '—'} />
+        <Field icon={Globe} label="Reg" value={aircraft.registration ?? '—'} />
         {aircraft.squawk && (
           <Field icon={Radio} label="Squawk" value={aircraft.squawk} accent="text-zinc-400" />
         )}

@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Flight Tracker at Home API")
 
-if os.getenv("OPENSKY_MOCK", "").lower() in ("true", "1", "yes"):
-    logger.warning("OPENSKY_MOCK is enabled — serving fixture data")
+if os.getenv("MOCK_DATA", "").lower() in ("true", "1", "yes"):
+    logger.warning("MOCK_DATA is enabled — serving fixture data")
 
 # Setup CORS so the React frontend can talk to this backend
 # Comma-separated for multiple origins (e.g., "https://app.pages.dev,https://custom.com")
@@ -45,7 +45,7 @@ async def health():
 async def get_aircraft() -> AircraftResponse:
     """
     Main polling endpoint.
-    Fetches the lazy-cached state, abstracting the OpenSky API rate limits.
+    Fetches the lazy-cached state, abstracting the Airplanes.live API rate limits.
     """
     # This single call handles the 10s TTL, OpenSky fetching, and KPI math.
     state = await airspace_cache.get_state()

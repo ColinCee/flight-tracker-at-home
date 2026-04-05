@@ -30,12 +30,12 @@ def test_full_aircraft_pipeline(mock_get):
                 "flight": "BAW1    ",
                 "lat": 51.47,
                 "lon": -0.5,
-                "alt_baro": 800.0,
+                "alt_baro": 800,
                 "gs": 100.0,
                 "track": 92.0,
-                "baro_rate": -300.0,
+                "baro_rate": -300,
                 "squawk": "1234",
-                "type": "ADSB_ICAO",
+                "type": "adsb_icao",
                 "category": "A5",
             },
             # Invalid: Missing latitude/longitude
@@ -44,7 +44,7 @@ def test_full_aircraft_pipeline(mock_get):
                 "flight": "GHOST",
                 "lat": None,
                 "lon": None,
-                "alt_baro": 1000.0,
+                "alt_baro": 1000,
             },
         ]
     }
@@ -66,6 +66,9 @@ def test_full_aircraft_pipeline(mock_get):
     assert baw1["callsign"] == "BAW1"  # Whitespace stripped
     assert baw1["isApproachingLhr"] is True  # ATC logic applied successfully
 
-    # Verify the integer-to-string mapping logic
-    assert baw1["positionSource"] == "ADSB_ICAO"
-    assert baw1["category"] == "A5"
+    # Verify field mappings
+    assert baw1["positionSource"] == "ADS-B"
+    assert baw1["category"] == "Heavy"
+    assert baw1["aircraftType"] is None  # Mock doesn't include "t" field
+    assert baw1["isClimbing"] is False
+    assert baw1["isDescending"] is True

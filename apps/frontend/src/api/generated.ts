@@ -15,29 +15,40 @@ import type {
 } from '@tanstack/react-query';
 
 import { fetchClient } from './fetch-client';
+export type AircraftStatePositionSource = typeof AircraftStatePositionSource[keyof typeof AircraftStatePositionSource];
+
+
+export const AircraftStatePositionSource = {
+  'ADS-B': 'ADS-B',
+  MLAT: 'MLAT',
+  'TIS-B': 'TIS-B',
+  'ADS-C': 'ADS-C',
+  Mode_S: 'Mode S',
+  Unknown: 'Unknown',
+} as const;
+
 /**
- * One aircraft's state, transformed from OpenSky's positional array.
+ * One aircraft's state from the airplanes.live API.
  */
 export interface AircraftState {
   icao24: string;
   callsign: string | null;
   registration: string | null;
-  oat: number | null;
-  originCountry: string;
+  aircraftType: string | null;
+  category: string;
   latitude: number;
   longitude: number;
-  baroAltitudeFeet: number | null;
-  geoAltitudeFeet: number | null;
-  velocityGsKnots: number | null;
-  velocityIasKnots: number | null;
+  baroAltitudeFt: number | null;
+  geoAltitudeFt: number | null;
+  groundSpeedKts: number | null;
   trueTrack: number | null;
-  verticalSpeedFps: number | null;
+  verticalRateFpm: number | null;
   onGround: boolean;
   squawk: string | null;
   lastContact: number;
-  positionSource: string;
-  category: string;
-  aircraftType: string;
+  positionSource: AircraftStatePositionSource;
+  isClimbing: boolean;
+  isDescending: boolean;
   isApproachingLhr: boolean;
 }
 
@@ -59,7 +70,6 @@ export interface KPIs {
   throughputLast60Min: number;
   avgAltitudeFt: number | null;
   apiHealth: KPIsApiHealth;
-  apiCreditsRemaining: number | null;
 }
 
 /**
@@ -163,7 +173,7 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
 
 /**
  * Main polling endpoint.
-Fetches the lazy-cached state, abstracting the OpenSky API rate limits.
+Fetches the lazy-cached state, abstracting the Airplanes.live API rate limits.
  * @summary Get Aircraft State
  */
 export type getAircraftResponse200 = {

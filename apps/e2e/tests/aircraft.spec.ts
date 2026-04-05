@@ -43,7 +43,6 @@ test.describe('aircraft endpoint', () => {
       'throughputLast60Min',
       'avgAltitudeFt',
       'apiHealth',
-      'apiCreditsRemaining',
     ];
     expect(Object.keys(kpis).sort()).toEqual(expectedKeys.sort());
   });
@@ -61,32 +60,30 @@ test.describe('aircraft endpoint', () => {
     const response = await request.get(`${API}/aircraft`);
     const { aircraft } = await response.json();
 
-    // Currently returns empty stub, but when populated each item must match
     if (aircraft.length > 0) {
       const plane = aircraft[0];
       expect(plane).toMatchObject({
         icao24: expect.any(String),
-        originCountry: expect.any(String),
         latitude: expect.any(Number),
         longitude: expect.any(Number),
         onGround: expect.any(Boolean),
         lastContact: expect.any(Number),
         isApproachingLhr: expect.any(Boolean),
+        isClimbing: expect.any(Boolean),
+        isDescending: expect.any(Boolean),
         positionSource: expect.any(String),
         category: expect.any(String),
-        aircraftType: expect.any(String),
       });
 
       // Nullable fields should be present (even if null)
       expect(plane).toHaveProperty('callsign');
       expect(plane).toHaveProperty('registration');
-      expect(plane).toHaveProperty('oat');
-      expect(plane).toHaveProperty('baroAltitudeFeet');
-      expect(plane).toHaveProperty('geoAltitudeFeet');
-      expect(plane).toHaveProperty('velocityGsKnots');
-      expect(plane).toHaveProperty('velocityIasKnots');
+      expect(plane).toHaveProperty('aircraftType');
+      expect(plane).toHaveProperty('baroAltitudeFt');
+      expect(plane).toHaveProperty('geoAltitudeFt');
+      expect(plane).toHaveProperty('groundSpeedKts');
       expect(plane).toHaveProperty('trueTrack');
-      expect(plane).toHaveProperty('verticalSpeedFps');
+      expect(plane).toHaveProperty('verticalRateFpm');
       expect(plane).toHaveProperty('squawk');
     }
   });

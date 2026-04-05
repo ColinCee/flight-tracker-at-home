@@ -1,7 +1,7 @@
 """Cache for AircraftResponse — singleton that refreshes on a stable TTL.
 
 Airplanes.live allows 1 request per second without authentication.
-A 5-second default TTL ensures real-time UI updates while safely avoiding rate limits.
+A 10-second default TTL ensures real-time UI updates while safely avoiding rate limits.
 """
 
 import asyncio
@@ -15,7 +15,10 @@ from src.models import AircraftResponse, KPIs
 
 logger = logging.getLogger(__name__)
 
-_MOCK_MODE = os.getenv("OPENSKY_MOCK", "").lower() in ("true", "1", "yes")
+_MOCK_MODE = os.getenv("MOCK_DATA", "").lower() in ("true", "1", "yes")
+
+# Climbing/descending threshold: ~200 fpm (approx 1 m/s)
+_VERTICAL_RATE_THRESHOLD_FPM = 200.0
 
 
 def get_effective_ttl() -> float:
@@ -97,14 +100,13 @@ class AirspaceCache:
                     pass
                 else:
                     airborne_count += 1
-                    if ac.baro_altitude_feet is not None:
-                        altitude_sum += ac.baro_altitude_feet
+                    if ac.baro_altitude_ft is not None:
+                        altitude_sum += ac.baro_altitude_ft
                         altitude_count += 1
 
-                vr = ac.vertical_speed_fps or 0.0
-                if vr > 1.0:
+                if ac.is_climbing:
                     climbing_count += 1
-                elif vr < -1.0:
+                elif ac.is_descending:
                     descending_count += 1
 
                 if ac.is_approaching_lhr:
@@ -133,7 +135,6 @@ class AirspaceCache:
                 throughput_last_60min=len(self.arrival_times),
                 avg_altitude_ft=avg_alt,
                 api_health="live" if aircraft_list else "offline",
-                api_credits_remaining=None,
             )
 
             self.cached_response = AircraftResponse(

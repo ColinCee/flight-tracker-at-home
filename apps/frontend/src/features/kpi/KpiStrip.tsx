@@ -96,11 +96,6 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
             {health.label}
           </Badge>
         </div>
-        {kpis.apiCreditsRemaining != null && (
-          <span className="font-mono text-[10px] text-muted-foreground">
-            {kpis.apiCreditsRemaining.toLocaleString()} credits
-          </span>
-        )}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 """This module handles the extraction and transformation of Airplanes.live API data.
-It maps standard ADSBx v2 format JSON to strict Pydantic contracts and applies
+It maps ADSBx v2 format JSON to strict Pydantic contracts and applies
 spatial heuristics to determine Heathrow approach status.
 """
 
@@ -8,7 +8,7 @@ import math
 import time
 
 import httpx
-from src.models import AircraftState
+from src.models import AircraftState, PositionSource
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,49 @@ LHR_LON = -0.4543
 
 # Radius in Nautical Miles (30nm covers the London TMA well)
 RADIUS_NM = 30
+
+# Position source mapping: airplanes.live type → friendly name
+POSITION_SOURCE_MAP: dict[str, PositionSource] = {
+    "adsb_icao": "ADS-B",
+    "adsb_icao_nt": "ADS-B",
+    "adsr_icao": "ADS-B",
+    "mlat": "MLAT",
+    "tisb_icao": "TIS-B",
+    "tisb_other": "TIS-B",
+    "tisb_trackfile": "TIS-B",
+    "adsc": "ADS-C",
+    "mode_s": "Mode S",
+    "adsb_other": "ADS-B",
+    "adsr_other": "ADS-B",
+}
+
+CATEGORY_MAP = {
+    "A0": "Unknown",
+    "A1": "Light",
+    "A2": "Small",
+    "A3": "Large",
+    "A4": "High Vortex Large",
+    "A5": "Heavy",
+    "A6": "High Performance",
+    "A7": "Rotorcraft",
+    "B0": "Unknown",
+    "B1": "Glider",
+    "B2": "Lighter-than-air",
+    "B3": "Skydiver",
+    "B4": "Ultralight",
+    "B5": "Reserved",
+    "B6": "UAV",
+    "B7": "Space Vehicle",
+    "C0": "Unknown",
+    "C1": "Emergency Vehicle",
+    "C2": "Service Vehicle",
+    "C3": "Fixed Obstruction",
+    "C4": "Cluster Obstruction",
+    "C5": "Line Obstruction",
+    "D0": "Unknown",
+}
+
+_VERTICAL_RATE_THRESHOLD_FPM = 200
 
 _http_client: httpx.AsyncClient | None = None
 
@@ -39,7 +82,6 @@ def get_client() -> httpx.AsyncClient:
 # --- Phase 1: Extraction ---
 async def fetch_london_airspace() -> list[dict]:
     """Phase 1: Extraction - Fetches aircraft within 30nm of Heathrow."""
-    # Construct the endpoint: /v2/point/{lat}/{lon}/{radius}
     url = f"{AIRPLANES_LIVE_URL}/{LHR_LAT}/{LHR_LON}/{RADIUS_NM}"
 
     try:
@@ -51,60 +93,76 @@ async def fetch_london_airspace() -> list[dict]:
         return data.get("ac") or []
     except httpx.HTTPError as e:
         logger.warning("Error fetching from Airplanes.live: %s", e)
-        # If we return [], the cache overwrites the screen with empty data!
         raise
 
 
-def parse_state_vector(ac: dict) -> AircraftState | None:
-    """Phase 2: Transformation - Maps ADSBx v2 dictionary to the Pydantic contract."""
+def parse_aircraft(ac: dict) -> AircraftState | None:
+    """Phase 2: Transformation - Maps airplanes.live dict to AircraftState.
+
+    All aviation units are preserved as-is (feet, knots, fpm).
+    """
     try:
-        # Strict validation: Drop if positional data is missing
         lat = ac.get("lat")
         lon = ac.get("lon")
         if lat is None or lon is None:
             return None
 
-        # --- Filter: Drop planes on the ground or below 100ft ---
+        # airplanes.live returns "ground" string for on-ground aircraft
         alt_baro = ac.get("alt_baro")
+        is_on_ground = alt_baro == "ground"
 
-        # Airplanes.live explicitly tags planes on the tarmac as "ground"
-        if alt_baro == "ground":
+        if is_on_ground:
             return None
 
-        # If it's a number, ensure it is above 100 feet
+        # Filter below 100ft
         if isinstance(alt_baro, (int, float)) and alt_baro < 100.0:
             return None
 
-        # Clean the callsign
         raw_callsign = ac.get("flight")
         clean_callsign = raw_callsign.strip() if raw_callsign else None
+        # Reject garbage callsigns like "@@@@@@@@"
+        if clean_callsign and not clean_callsign[0].isalnum():
+            clean_callsign = None
 
-        # Airplanes.live provides the data source natively under "type" (e.g., adsb_icao, mlat)
-        data_source = str(ac.get("type", "Unknown")).upper()
+        raw_type = str(ac.get("type", "unknown"))
+        position_source: PositionSource = POSITION_SOURCE_MAP.get(raw_type, "Unknown")
 
-        # They also use standard alphanumeric FAA/ICAO categories (e.g., A1, A5)
-        category = str(ac.get("category", "Unknown"))
+        raw_category = str(ac.get("category", ""))
+        category = CATEGORY_MAP.get(raw_category, "Unknown")
+
+        # Compute last_contact from relative "seen" field
+        seen = ac.get("seen", 0)
+        last_contact = int(
+            time.time() - (seen if isinstance(seen, (int, float)) else 0)
+        )
+
+        baro_alt = alt_baro if isinstance(alt_baro, (int, float)) else None
+        raw_geo = ac.get("alt_geom")
+        geo_alt = int(raw_geo) if isinstance(raw_geo, (int, float)) else None
+        raw_baro_rate = ac.get("baro_rate")
+        vert_rate = (
+            int(raw_baro_rate) if isinstance(raw_baro_rate, (int, float)) else None
+        )
 
         return AircraftState(
-            icao24=ac.get("hex", "Unknown"),
+            icao24=ac.get("hex", "unknown"),
             callsign=clean_callsign,
             registration=ac.get("r"),
-            oat=ac.get("oat"),
-            origin_country="Unknown",  # Requires a heavy offline database lookup, safe to leave generic
-            last_contact=int(time.time()),
+            last_contact=last_contact,
             longitude=lon,
             latitude=lat,
-            baro_altitude_feet=ac.get("alt_baro"),
-            geo_altitude_feet=ac.get("alt_geom"),
-            velocity_gs_knots=ac.get("gs"),
-            velocity_ias_knots=ac.get("ias"),
+            baro_altitude_ft=int(baro_alt) if baro_alt is not None else None,
+            geo_altitude_ft=geo_alt,
+            ground_speed_kts=ac.get("gs"),
             true_track=ac.get("track"),
-            vertical_speed_fps=ac.get("baro_rate"),
-            on_ground=False,  # Filtered out above
+            vertical_rate_fpm=vert_rate,
+            on_ground=False,  # Ground aircraft filtered above
             squawk=ac.get("squawk"),
-            position_source=data_source,
+            position_source=position_source,
             category=category,
-            aircraft_type=ac.get("t", "Unknown"),
+            aircraft_type=ac.get("t"),
+            is_climbing=False,  # Evaluated downstream
+            is_descending=False,  # Evaluated downstream
             is_approaching_lhr=False,  # Evaluated downstream
         )
     except Exception as e:
@@ -115,7 +173,7 @@ def parse_state_vector(ac: dict) -> AircraftState | None:
 # --- Phase 3: Spatial Math & Business Logic ---
 def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates the great-circle distance between two GPS points in kilometers."""
-    R = 6371.0  # Earth radius in kilometers
+    R = 6371.0
 
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
@@ -131,28 +189,24 @@ def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) ->
 
 
 def check_lhr_approach(aircraft: AircraftState) -> bool:
-    """
-    Determines if an aircraft is on final approach to Heathrow.
-    Checks are ordered from least to most computationally expensive.
-    """
-    # 1. Must be in the air
+    """Determines if an aircraft is on final approach to Heathrow."""
     if aircraft.on_ground:
         return False
 
-    # 2. Must be descending (vertical rate is negative)
-    if aircraft.vertical_speed_fps is None or aircraft.vertical_speed_fps >= 0:
+    # Must be descending
+    if aircraft.vertical_rate_fpm is None or aircraft.vertical_rate_fpm >= 0:
         return False
 
-    # 3. Must be below 2000 meters (~6,500 ft)
-    if aircraft.baro_altitude_feet is None or aircraft.baro_altitude_feet > 2000:
+    # Must be below ~6,500 ft
+    if aircraft.baro_altitude_ft is None or aircraft.baro_altitude_ft > 6500:
         return False
 
-    # 4. Heading Check: Heathrow uses runways 09 (East) and 27 (West)
     if aircraft.true_track is None:
         return False
 
+    # Heathrow runways: 09 (East) and 27 (West)
     track = aircraft.true_track
-    tolerance = 15  # Allow +/- 15 degrees for crosswind crabbing or localizer intercept
+    tolerance = 15
 
     is_eastbound = (90 - tolerance) <= track <= (90 + tolerance)
     is_westbound = (270 - tolerance) <= track <= (270 + tolerance)
@@ -160,25 +214,25 @@ def check_lhr_approach(aircraft: AircraftState) -> bool:
     if not (is_eastbound or is_westbound):
         return False
 
-    # 5. Distance Check: Must be within 20km of LHR
     dist = calculate_distance_km(
         aircraft.latitude, aircraft.longitude, LHR_LAT, LHR_LON
     )
 
-    # Returns True if it passed all filters (dist <= 20), otherwise False
     return dist <= 20.0
 
 
 # --- Main Orchestrator ---
 async def get_current_airspace_state() -> list[AircraftState]:
     """Executes the ETL pipeline: Fetches, parses, and applies ATC logic."""
-    raw_vectors = await fetch_london_airspace()
+    raw_aircraft = await fetch_london_airspace()
 
     valid_aircraft = []
-    for vector in raw_vectors:
-        parsed = parse_state_vector(vector)
+    for ac_dict in raw_aircraft:
+        parsed = parse_aircraft(ac_dict)
         if parsed:
-            # Inject the Approach Logic here
+            vr = parsed.vertical_rate_fpm or 0
+            parsed.is_climbing = vr > _VERTICAL_RATE_THRESHOLD_FPM
+            parsed.is_descending = vr < -_VERTICAL_RATE_THRESHOLD_FPM
             parsed.is_approaching_lhr = check_lhr_approach(parsed)
             valid_aircraft.append(parsed)
 
