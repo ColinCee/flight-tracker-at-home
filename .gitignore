@@ -77,3 +77,6 @@ rulesync.local.jsonc
 # Playwright
 test-results/
 playwright-report/
+
+# Opencode settings
+opencode.json

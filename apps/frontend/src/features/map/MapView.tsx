@@ -4,9 +4,12 @@ import type { MapStyleDataEvent } from 'maplibre-gl';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AttributionControl, Map as MapGL, Popup } from 'react-map-gl/maplibre';
 import type { AircraftState } from '@/api/generated';
+import type { EnrichedAirportWeather } from '@/api/use-weather-data';
 import type { AircraftFilter } from '@/shared/filters';
 import { AircraftInspector } from './AircraftInspector';
 import { AircraftLayer } from './AircraftLayer';
+import { AirportInspector } from './AirportInspector';
+import { AirportLayer } from './AirportLayer';
 
 const INITIAL_VIEW_STATE = {
   longitude: -0.12,
@@ -19,19 +22,26 @@ const MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 interface MapViewProps {
   aircraft: AircraftState[];
   selectedAircraft?: AircraftState | null;
+  airports: EnrichedAirportWeather[];
+  selectedAirport?: EnrichedAirportWeather | null;
   activeFilter?: AircraftFilter;
   onAircraftClick?: (icao24: string) => void;
+  onAirportClick?: (icao: string) => void;
   onCloseInspector: () => void;
 }
 
 export function MapView({
   aircraft,
   selectedAircraft,
+  airports,
+  selectedAirport,
   activeFilter,
   onAircraftClick,
+  onAirportClick,
   onCloseInspector,
 }: MapViewProps) {
   const [isHoveringAircraft, setIsHoveringAircraft] = useState(false);
+  const [isHoveringAirport, setIsHoveringAirport] = useState(false);
   const deckClickedRef = useRef(false);
 
   useEffect(() => {
@@ -61,6 +71,14 @@ export function MapView({
     [onAircraftClick],
   );
 
+  const handleAirportClick = useCallback(
+    (icao: string) => {
+      deckClickedRef.current = true;
+      onAirportClick?.(icao);
+    },
+    [onAirportClick],
+  );
+
   const handleMapClick = useCallback(() => {
     if (deckClickedRef.current) {
       deckClickedRef.current = false;
@@ -74,7 +92,7 @@ export function MapView({
       initialViewState={INITIAL_VIEW_STATE}
       style={{ width: '100%', height: '100%' }}
       mapStyle={MAP_STYLE}
-      cursor={isHoveringAircraft ? 'pointer' : 'grab'}
+      cursor={isHoveringAircraft || isHoveringAirport ? 'pointer' : 'grab'}
       onClick={handleMapClick}
       onStyleData={handleStyleData}
       attributionControl={false}
@@ -87,6 +105,12 @@ export function MapView({
         onAircraftClick={handleAircraftClick}
         onHoverChange={setIsHoveringAircraft}
       />
+      <AirportLayer
+        airports={airports}
+        selectedIcao={selectedAirport?.icao}
+        onAirportClick={handleAirportClick}
+        onHoverChange={setIsHoveringAirport}
+      />
       {selectedAircraft && (
         <Popup
           longitude={selectedAircraft.longitude}
@@ -98,6 +122,19 @@ export function MapView({
           maxWidth="none"
         >
           <AircraftInspector aircraft={selectedAircraft} onClose={onCloseInspector} />
+        </Popup>
+      )}
+      {selectedAirport && (
+        <Popup
+          longitude={selectedAirport.longitude}
+          latitude={selectedAirport.latitude}
+          closeButton={false}
+          closeOnClick={false}
+          className="airport-popup"
+          offset={20}
+          maxWidth="none"
+        >
+          <AirportInspector airport={selectedAirport} onClose={onCloseInspector} />
         </Popup>
       )}
     </MapGL>
