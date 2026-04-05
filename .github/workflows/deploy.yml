@@ -11,20 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy-proxy:
-    name: Deploy Proxy Worker
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/proxy
-          wranglerVersion: "4.80.0"
-          command: deploy
-
   deploy-frontend:
     name: Deploy Frontend (Pages)
     runs-on: ubuntu-latest
