@@ -26,7 +26,7 @@ Real-time aviation dashboard showing aircraft over London airspace with Heathrow
 | Map | MapLibre GL JS, react-map-gl, Deck.gl |
 | State | TanStack Query (auto-polling) |
 | Backend | Python 3.12, FastAPI |
-| Data | [OpenSky Network](https://opensky-network.org/) REST API |
+| Data | [airplanes.live](https://airplanes.live/) REST API |
 | E2E Tests | Playwright |
 | Monorepo | Nx + Bun + mise |
 | Deploy (FE) | Cloudflare Pages |
@@ -35,10 +35,10 @@ Real-time aviation dashboard showing aircraft over London airspace with Heathrow
 ## Architecture
 
 ```
-OpenSky API → Backend (FastAPI + adaptive cache) → Frontend (React + Deck.gl)
+airplanes.live API → Backend (FastAPI + 10s cache) → Frontend (React + Deck.gl)
 ```
 
-The backend fetches aircraft positions from OpenSky, enriches them with a Heathrow approach heuristic, and caches results with a dynamic TTL that scales based on remaining API credits. The frontend polls the backend and renders aircraft on a map with real-time KPIs.
+The backend fetches aircraft positions from airplanes.live, enriches them with a Heathrow approach heuristic, and caches results with a 10-second TTL. The frontend polls the backend and renders aircraft on a map with real-time KPIs.
 
 See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for deep dives into the data contract, caching strategy, and design decisions.
 
@@ -54,15 +54,6 @@ See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for deep dives into the data 
 mise install        # install runtimes
 mise run setup      # install all dependencies + git hooks
 mise run dev        # start frontend (localhost:4200) + backend (localhost:8000)
-```
-
-### OpenSky credentials (optional)
-
-Works without credentials (400 calls/day). For 10× capacity:
-
-```sh
-cp apps/backend/.env.example apps/backend/.env
-# Fill in OPENSKY_CLIENT_ID and OPENSKY_CLIENT_SECRET
 ```
 
 ## Commands
