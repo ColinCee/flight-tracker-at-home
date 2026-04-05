@@ -1,7 +1,7 @@
 # Flight Tracker Docker Compose
 #
 # Production (self-hosted server):
-#   docker compose up -d
+#   docker compose --profile prod up -d
 #   Runs backend (from GHCR) + Cloudflare Tunnel + Tugtainer auto-updater
 #   Setup: see docs/SELF-HOST.md
 #

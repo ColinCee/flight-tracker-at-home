@@ -54,6 +54,9 @@ git clone https://github.com/ColinCee/flight-tracker-at-home.git
 cd flight-tracker-at-home
 
 cat > .env << 'EOF'
+# Activate production services (needed for Dockge / plain docker compose up)
+COMPOSE_PROFILES=prod
+
 # OpenSky Network OAuth2 credentials
 OPENSKY_CLIENT_ID=your-client-id
 OPENSKY_CLIENT_SECRET=your-client-secret
@@ -74,16 +77,16 @@ The `.env` file is gitignored — credentials stay local.
 ### 4. Start the stack
 
 ```bash
-docker compose --profile prod up -d
+docker compose up -d
 ```
 
-Or point **Dockge** at this directory to manage it via the UI.
+Or point **Dockge** at this directory to manage it via the UI — it works out of the box because `COMPOSE_PROFILES=prod` in `.env` activates the right services.
 
 ### 5. Verify
 
 ```bash
 # Check containers are running
-docker compose --profile prod ps
+docker compose ps
 
 # Test the API
 curl https://api.colincheung.dev/health
@@ -117,7 +120,7 @@ If `compose.yaml` changes:
 ```bash
 cd flight-tracker-at-home
 git pull
-docker compose --profile prod up -d
+docker compose up -d
 ```
 
 ## Troubleshooting

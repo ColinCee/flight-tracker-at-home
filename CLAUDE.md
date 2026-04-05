@@ -112,10 +112,7 @@ mise run codegen            # Regenerate frontend types from backend schema
 mise run codegen:check      # Verify generated types are in sync (CI)
 
 # Deploy
-mise run deploy             # Deploy proxy worker + frontend to Cloudflare
-mise run deploy:proxy       # Deploy proxy worker only
 mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
-mise run dev:proxy          # Run proxy worker locally
 ```
 
 ## CI (GitHub Actions)
