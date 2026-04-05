@@ -69,6 +69,8 @@ jobs:
       - run: mise run setup
       - run: bunx playwright install chromium --with-deps
       - run: mise run test:e2e
+        env:
+          OPENSKY_MOCK: "true"
 
   memory-profile:
     name: Memory Profile
@@ -87,6 +89,7 @@ jobs:
         env:
           MEMORY_REPORT_FILE: memory-report.md
           MEMORY_SOAK_SECONDS: 120
+          OPENSKY_MOCK: "true"
       - name: Comment memory report on PR
         if: always()
         run: |

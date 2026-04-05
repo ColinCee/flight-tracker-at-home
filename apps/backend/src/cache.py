@@ -21,6 +21,8 @@ from src.opensky import (
 
 logger = logging.getLogger(__name__)
 
+_MOCK_MODE = os.getenv("OPENSKY_MOCK", "").lower() in ("true", "1", "yes")
+
 # Dev defaults match OpenSky data resolution
 _TTL_DEV_AUTHENTICATED = 5.0
 _TTL_DEV_ANONYMOUS = 10.0
@@ -92,7 +94,12 @@ class AirspaceCache:
 
         # 2. Cache is stale: Fetch fresh data (Phases 1-3)
         try:
-            aircraft_list = await get_current_airspace_state()
+            if _MOCK_MODE:
+                from src.mock_data import get_mock_aircraft
+
+                aircraft_list = get_mock_aircraft()
+            else:
+                aircraft_list = await get_current_airspace_state()
         except Exception as e:
             logger.warning("OpenSky fetch failed: %r", e)
             # Serve stale cache instead of losing data
