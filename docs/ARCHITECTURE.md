@@ -35,7 +35,7 @@ the frontend can adapt dynamically.
 
 - **Endpoint:** `GET https://api.airplanes.live/v2/point/{lat}/{lon}/{radius_nm}`
 - **Auth:** None required — free public API, no keys or credentials
-- **Rate limit:** ~1 request per 10 seconds sustained
+- **Rate limit:** ~1 request per 10 seconds sustained (see [note below](#rate-limiting))
 - **Response:** `{ ac: [...], msg: "...", now: int, ... }`
 - **Each aircraft** is a JSON object with named fields (not positional arrays)
 - **Units:** Aviation-native — feet, knots, ft/min (no conversion needed)
@@ -63,6 +63,27 @@ An aircraft is classified as "approaching Heathrow" when ALL conditions are met:
 
 ~90% accurate for a portfolio demo. Heathrow's controlled airspace means very
 few false positives.
+
+### Rate limiting
+
+The [API guide](https://airplanes.live/api-guide/) states "1 request per second",
+but empirical testing (April 2026) shows a much stricter Cloudflare-fronted limit:
+
+| Interval | Result |
+|----------|--------|
+| 3s | Constant 429 flapping (~50% failure) |
+| 5s | ~40% failure rate even in isolation |
+| 7s | Still intermittent 429s |
+| 10s | Stable — 8/8 consecutive 200s after cooldown |
+| 15s | Rock solid |
+
+Other observations:
+- **429 response:** `"You have been rate limited. Please contact us..."` — no `Retry-After` header
+- **Per-IP:** Multiple clients on the same IP share the budget
+- **Cooldown:** After a burst of 429s, ~30 seconds of silence is needed before stable responses resume
+- **Token bucket:** Behaviour suggests a sliding window or token bucket, not a simple fixed-rate limiter
+
+The backend defaults to a **10-second cache TTL** as the minimum stable polling interval.
 
 ---
 
