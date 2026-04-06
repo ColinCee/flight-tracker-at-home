@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/ci.yml/badge.svg)](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/ci.yml)
 [![Deploy](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/deploy.yml/badge.svg)](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/deploy.yml)
-[![Docker](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/docker.yml/badge.svg)](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/docker.yml)
 
 Real-time aviation dashboard showing aircraft around the London airspace with London airport arrival tracking.
 
@@ -30,7 +29,7 @@ Real-time aviation dashboard showing aircraft around the London airspace with Lo
 | E2E Tests | Playwright |
 | Monorepo | Nx + Bun + mise |
 | Deploy (FE) | Cloudflare Pages |
-| Deploy (BE) | Self-hosted Docker + Cloudflare Tunnel |
+| Deploy (BE) | Dokploy (Beelink) + Cloudflare Tunnel |
 
 ## Architecture
 
@@ -83,15 +82,14 @@ docs/
 
 - **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — Technical decisions, data contract, and stack
 - **[docs/MVP.md](docs/PRODUCT-FEATURES.md)** — Product spec and scope
-- **[docs/SELF-HOST.md](./docs/SELF-HOST.md)** — Self-hosting the backend with Docker + Cloudflare Tunnel
+- **[docs/SELF-HOST.md](./docs/SELF-HOST.md)** — Self-hosting the backend with Dokploy + Cloudflare Tunnel
 
 ## Deployment
 
 | Component | Platform | Trigger |
 |-----------|----------|---------|
 | Frontend | Cloudflare Pages | Auto-deploy on merge to `main` |
-| Backend | Self-hosted Docker (Beelink) | Auto-pulls new images via [Tugtainer](https://github.com/quenary/tugtainer) |
-| Backend image | GHCR (`ghcr.io/colincee/flight-tracker-at-home/backend`) | Built on merge to `main` |
-| Networking | Cloudflare Tunnel | `api.colincheung.dev` → Docker backend |
+| Backend | [Dokploy](https://dokploy.com/) on Beelink | CI → Tailscale → Dokploy API on merge to `main` |
+| Networking | Cloudflare Tunnel (via Dokploy) | `api.colincheung.dev` → Dokploy backend service |
 
-The three workflow badges at the top show current CI, deploy, and Docker build status.
+The two workflow badges at the top show current CI and deploy status.
