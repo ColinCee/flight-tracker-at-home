@@ -14,7 +14,8 @@ COPY src/ ./src/
 # --- Runtime stage ---
 FROM python:3.12-slim
 
-RUN useradd --create-home --shell /bin/false appuser
+RUN useradd --create-home --shell /bin/false appuser \
+    && mkdir -p /app/data && chown appuser:appuser /app/data
 USER appuser
 
 WORKDIR /app

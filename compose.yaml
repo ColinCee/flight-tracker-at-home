@@ -18,6 +18,10 @@ services:
       - "8000"
     env_file:
       - .env
+    volumes:
+      - heatmap_data:/app/data
+    environment:
+      - HEATMAP_DB_PATH=/app/data/historical_heatmap.parquet
     labels:
       - "tugtainer.enable=true"
     profiles: [prod]
@@ -66,3 +70,4 @@ services:
 
 volumes:
   tugtainer_data:
+  heatmap_data:
