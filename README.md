@@ -4,7 +4,7 @@
 [![Deploy](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/deploy.yml/badge.svg)](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/deploy.yml)
 [![Docker](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/docker.yml/badge.svg)](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/docker.yml)
 
-Real-time aviation dashboard showing aircraft over London airspace with Heathrow arrival tracking.
+Real-time aviation dashboard showing aircraft around the London airspace with London airport arrival tracking.
 
 **[▶ Live Demo](https://flight-tracker-at-home.pages.dev)**
 &nbsp;·&nbsp;
@@ -13,9 +13,9 @@ Real-time aviation dashboard showing aircraft over London airspace with Heathrow
 ## What it does
 
 - Plots live aircraft on a dark-themed interactive map (OpenFreeMap tiles)
-- Highlights planes approaching Heathrow in orange (heading + altitude + descent heuristic)
-- Real-time KPIs: tracked, airborne, inbound LHR, climbing, descending, avg altitude
-- Rolling 60-minute Heathrow arrival throughput counter
+- Highlights planes approaching an airport in orange (heading + altitude + "ILS check")
+- Real-time KPIs: tracked, airborne, inbound airport, climbing, descending, avg altitude
+- Rolling 60-minute London Airport arrival throughput counter
 - Click any aircraft for callsign, altitude, speed, heading, and squawk
 
 ## Tech Stack
