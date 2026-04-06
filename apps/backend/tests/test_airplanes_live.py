@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pytest
 from src.airplanes_live import (
     calculate_distance_km,
-    check_lhr_approach,
     get_current_airspace_state,
+    get_destination,
     parse_aircraft,
 )
 from src.models import AircraftState
@@ -61,7 +61,7 @@ def test_parse_aircraft_valid():
     assert aircraft.position_source == "ADS-B"
     assert aircraft.is_climbing is False
     assert aircraft.is_descending is False
-    assert aircraft.is_approaching_lhr is False
+    assert aircraft.destination is None
 
 
 # --- 3. parse_aircraft: missing lat/lon ---
@@ -239,9 +239,9 @@ async def test_orchestrator_sets_climbing_descending(mock_fetch):
     assert level.is_descending is False
 
 
-# --- 13. check_lhr_approach: valid approach ---
-def test_check_lhr_approach_valid():
-    """Aircraft meeting all LHR approach criteria."""
+# --- 13. get_destination: valid approach ---
+def test_get_destination_valid():
+    """Aircraft meeting all approach criteria for LHR."""
     aircraft = AircraftState(
         icao24="123456",
         callsign="BAW1",
@@ -261,13 +261,13 @@ def test_check_lhr_approach_valid():
         position_source="ADS-B",
         is_climbing=False,
         is_descending=True,
-        is_approaching_lhr=False,
+        destination=None,
     )
-    assert check_lhr_approach(aircraft) is True
+    assert get_destination(aircraft) == "LHR"
 
 
-# --- 14. check_lhr_approach: wrong heading ---
-def test_check_lhr_approach_wrong_heading():
+# --- 14. get_destination: wrong heading ---
+def test_get_destination_wrong_heading():
     """Aircraft close and descending, but flying North."""
     aircraft = AircraftState(
         icao24="123456",
@@ -288,14 +288,14 @@ def test_check_lhr_approach_wrong_heading():
         position_source="ADS-B",
         is_climbing=False,
         is_descending=True,
-        is_approaching_lhr=False,
+        destination=None,
     )
-    assert check_lhr_approach(aircraft) is False
+    assert get_destination(aircraft) is None
 
 
-# --- 15. check_lhr_approach: too high ---
-def test_check_lhr_approach_too_high():
-    """Aircraft above 6500ft should not be considered on approach."""
+# --- 15. get_destination: too high ---
+def test_get_destination_too_high():
+    """Aircraft above 4000ft should not be considered on approach."""
     aircraft = AircraftState(
         icao24="123456",
         callsign="BAW1",
@@ -315,14 +315,14 @@ def test_check_lhr_approach_too_high():
         position_source="ADS-B",
         is_climbing=False,
         is_descending=True,
-        is_approaching_lhr=False,
+        destination=None,
     )
-    assert check_lhr_approach(aircraft) is False
+    assert get_destination(aircraft) is None
 
 
-# --- 16. check_lhr_approach: not descending ---
-def test_check_lhr_approach_not_descending():
-    """Aircraft that is level or climbing should not be on approach."""
+# --- 16. get_destination: not descending ---
+def test_get_destination_not_descending():
+    """Aircraft that is climbing should not be on approach."""
     aircraft = AircraftState(
         icao24="123456",
         callsign="BAW1",
@@ -335,20 +335,20 @@ def test_check_lhr_approach_not_descending():
         geo_altitude_ft=850,
         ground_speed_kts=100.0,
         true_track=92.0,
-        vertical_rate_fpm=0,
+        vertical_rate_fpm=500,
         on_ground=False,
         squawk=None,
         last_contact=0,
         position_source="ADS-B",
-        is_climbing=False,
+        is_climbing=True,
         is_descending=False,
-        is_approaching_lhr=False,
+        destination=None,
     )
-    assert check_lhr_approach(aircraft) is False
+    assert get_destination(aircraft) is None
 
 
-# --- 17. check_lhr_approach: too far from Heathrow ---
-def test_check_lhr_approach_too_far():
+# --- 17. get_destination: too far ---
+def test_get_destination_too_far():
     """Aircraft more than 20km away should not be on approach."""
     aircraft = AircraftState(
         icao24="123456",
@@ -369,13 +369,13 @@ def test_check_lhr_approach_too_far():
         position_source="ADS-B",
         is_climbing=False,
         is_descending=True,
-        is_approaching_lhr=False,
+        destination=None,
     )
-    assert check_lhr_approach(aircraft) is False
+    assert get_destination(aircraft) is None
 
 
-# --- 18. check_lhr_approach: on_ground ---
-def test_check_lhr_approach_on_ground():
+# --- 18. get_destination: on_ground ---
+def test_get_destination_on_ground():
     """Aircraft on the ground should never be on approach."""
     aircraft = AircraftState(
         icao24="123456",
@@ -396,13 +396,13 @@ def test_check_lhr_approach_on_ground():
         position_source="ADS-B",
         is_climbing=False,
         is_descending=False,
-        is_approaching_lhr=False,
+        destination=None,
     )
-    assert check_lhr_approach(aircraft) is False
+    assert get_destination(aircraft) is None
 
 
-# --- 19. check_lhr_approach: westbound valid ---
-def test_check_lhr_approach_westbound():
+# --- 19. get_destination: westbound valid ---
+def test_get_destination_westbound():
     """Aircraft on valid westbound (runway 27) approach should be detected."""
     aircraft = AircraftState(
         icao24="123456",
@@ -423,13 +423,13 @@ def test_check_lhr_approach_westbound():
         position_source="ADS-B",
         is_climbing=False,
         is_descending=True,
-        is_approaching_lhr=False,
+        destination=None,
     )
-    assert check_lhr_approach(aircraft) is True
+    assert get_destination(aircraft) == "LHR"
 
 
-# --- 20. check_lhr_approach: null vertical rate ---
-def test_check_lhr_approach_null_vertical_rate():
+# --- 20. get_destination: null vertical rate ---
+def test_get_destination_null_vertical_rate():
     """Aircraft with no vertical rate data should not be on approach."""
     aircraft = AircraftState(
         icao24="123456",
@@ -450,13 +450,13 @@ def test_check_lhr_approach_null_vertical_rate():
         position_source="ADS-B",
         is_climbing=False,
         is_descending=False,
-        is_approaching_lhr=False,
+        destination=None,
     )
-    assert check_lhr_approach(aircraft) is False
+    assert get_destination(aircraft) is None
 
 
-# --- 21. check_lhr_approach: null altitude ---
-def test_check_lhr_approach_null_altitude():
+# --- 21. get_destination: null altitude ---
+def test_get_destination_null_altitude():
     """Aircraft with no barometric altitude should not be on approach."""
     aircraft = AircraftState(
         icao24="123456",
@@ -477,9 +477,9 @@ def test_check_lhr_approach_null_altitude():
         position_source="ADS-B",
         is_climbing=False,
         is_descending=True,
-        is_approaching_lhr=False,
+        destination=None,
     )
-    assert check_lhr_approach(aircraft) is False
+    assert get_destination(aircraft) is None
 
 
 # --- 22. parse_aircraft: non-numeric gs/track are safely ignored ---
@@ -542,3 +542,61 @@ def test_parse_aircraft_missing_hex():
     aircraft = parse_aircraft(ac)
     assert aircraft is not None
     assert aircraft.icao24 == "unknown"
+
+
+# --- 26. get_destination: parallel north (false positive prevention) ---
+def test_get_destination_parallel_north():
+    """Aircraft flying Westbound (270) but 5km North of the Heathrow centerline."""
+    aircraft = AircraftState(
+        icao24="123456",
+        callsign="BAW1",
+        registration="G-EUAA",
+        aircraft_type="A320",
+        category="Heavy",
+        # LHR is at 51.4700. We place this plane at 51.5200 (~5.5km North)
+        latitude=51.5200,
+        longitude=-0.2500,  # East of LHR, approaching
+        baro_altitude_ft=2000,
+        geo_altitude_ft=2050,
+        ground_speed_kts=140.0,
+        true_track=270.0,  # Valid runway heading
+        vertical_rate_fpm=-700,  # Valid descent
+        on_ground=False,
+        squawk=None,
+        last_contact=0,
+        position_source="ADS-B",
+        is_climbing=False,
+        is_descending=True,
+        destination=None,
+    )
+    # Fails because the bearing from LHR is ~60 deg, not the required 90 deg
+    assert get_destination(aircraft) is None
+
+
+# --- 27. get_destination: parallel south (false positive prevention) ---
+def test_get_destination_parallel_south():
+    """Aircraft flying Eastbound (90) but 5km South of the Heathrow centerline."""
+    aircraft = AircraftState(
+        icao24="123456",
+        callsign="BAW1",
+        registration="G-EUAA",
+        aircraft_type="A320",
+        category="Heavy",
+        # LHR is at 51.4700. We place this plane at 51.4200 (~5.5km South)
+        latitude=51.4200,
+        longitude=-0.6500,  # West of LHR, approaching
+        baro_altitude_ft=2000,
+        geo_altitude_ft=2050,
+        ground_speed_kts=140.0,
+        true_track=90.0,  # Valid runway heading
+        vertical_rate_fpm=-700,  # Valid descent
+        on_ground=False,
+        squawk=None,
+        last_contact=0,
+        position_source="ADS-B",
+        is_climbing=False,
+        is_descending=True,
+        destination=None,
+    )
+    # Fails because the bearing from LHR is ~240 deg, not the required 270 deg
+    assert get_destination(aircraft) is None

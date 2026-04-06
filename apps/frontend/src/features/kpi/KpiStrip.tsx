@@ -64,10 +64,10 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
       />
       <Separator />
       <KpiItem
-        label="Inbound LHR"
-        value={kpis.inboundLhrAircraft}
-        isActive={activeFilter === 'inbound-lhr'}
-        onClick={toggle('inbound-lhr')}
+        label="Inbound London"
+        value={kpis.inboundLondonAircraft}
+        isActive={activeFilter === 'inbound-london'}
+        onClick={toggle('inbound-london')}
       />
       <Separator />
       <KpiItem

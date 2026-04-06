@@ -45,7 +45,7 @@ class AircraftState(BaseModel):
     position_source: PositionSource
     is_climbing: bool
     is_descending: bool
-    is_approaching_lhr: bool
+    destination: Literal["LHR", "LGW", "STN", "LTN", "LCY"] | None
 
 
 class KPIs(BaseModel):
@@ -53,7 +53,7 @@ class KPIs(BaseModel):
 
     tracked_aircraft: int
     airborne_aircraft: int
-    inbound_lhr_aircraft: int
+    inbound_london_aircraft: int
     climbing_aircraft: int
     descending_aircraft: int
     throughput_last_60min: int

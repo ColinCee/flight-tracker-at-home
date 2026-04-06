@@ -38,9 +38,13 @@ describe('matchesFilter', () => {
     expect(matchesFilter(makeAircraft({ onGround: true }), 'airborne')).toBe(false);
   });
 
-  it('inbound-lhr filter matches approaching aircraft', () => {
-    expect(matchesFilter(makeAircraft({ isApproachingLhr: true }), 'inbound-lhr')).toBe(true);
-    expect(matchesFilter(makeAircraft({ isApproachingLhr: false }), 'inbound-lhr')).toBe(false);
+  it('inbound-london filter matches approaching aircraft', () => {
+    // Should be true if it has any valid London destination (e.g., 'LHR', 'LGW')
+    expect(matchesFilter(makeAircraft({ destination: 'LHR' }), 'inbound-london')).toBe(true);
+    expect(matchesFilter(makeAircraft({ destination: 'LGW' }), 'inbound-london')).toBe(true);
+
+    // Should be false if destination is null
+    expect(matchesFilter(makeAircraft({ destination: null }), 'inbound-london')).toBe(false);
   });
 
   it('climbing filter uses backend-computed isClimbing boolean', () => {

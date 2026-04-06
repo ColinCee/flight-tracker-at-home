@@ -23,7 +23,7 @@ test.describe('aircraft endpoint', () => {
     expect(kpis).toMatchObject({
       trackedAircraft: expect.any(Number),
       airborneAircraft: expect.any(Number),
-      inboundLhrAircraft: expect.any(Number),
+      inboundLondonAircraft: expect.any(Number),
       climbingAircraft: expect.any(Number),
       descendingAircraft: expect.any(Number),
       throughputLast60Min: expect.any(Number),
@@ -37,7 +37,7 @@ test.describe('aircraft endpoint', () => {
     const expectedKeys = [
       'trackedAircraft',
       'airborneAircraft',
-      'inboundLhrAircraft',
+      'inboundLondonAircraft',
       'climbingAircraft',
       'descendingAircraft',
       'throughputLast60Min',
@@ -68,7 +68,6 @@ test.describe('aircraft endpoint', () => {
         longitude: expect.any(Number),
         onGround: expect.any(Boolean),
         lastContact: expect.any(Number),
-        isApproachingLhr: expect.any(Boolean),
         isClimbing: expect.any(Boolean),
         isDescending: expect.any(Boolean),
         positionSource: expect.any(String),
@@ -85,6 +84,7 @@ test.describe('aircraft endpoint', () => {
       expect(plane).toHaveProperty('trueTrack');
       expect(plane).toHaveProperty('verticalRateFpm');
       expect(plane).toHaveProperty('squawk');
+      expect(plane).toHaveProperty('destination');
     }
   });
 

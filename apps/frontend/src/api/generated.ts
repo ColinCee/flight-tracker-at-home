@@ -49,7 +49,7 @@ export interface AircraftState {
   positionSource: AircraftStatePositionSource;
   isClimbing: boolean;
   isDescending: boolean;
-  isApproachingLhr: boolean;
+  destination: 'LHR' | 'LGW' | 'STN' | 'LTN' | 'LCY' | null;
 }
 
 export type KPIsApiHealth = typeof KPIsApiHealth[keyof typeof KPIsApiHealth];
@@ -64,7 +64,7 @@ export const KPIsApiHealth = {
 export interface KPIs {
   trackedAircraft: number;
   airborneAircraft: number;
-  inboundLhrAircraft: number;
+  inboundLondonAircraft: number;
   climbingAircraft: number;
   descendingAircraft: number;
   throughputLast60Min: number;

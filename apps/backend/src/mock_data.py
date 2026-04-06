@@ -30,7 +30,7 @@ MOCK_AIRCRAFT: list[AircraftState] = [
         aircraft_type="A359",
         is_climbing=False,
         is_descending=True,
-        is_approaching_lhr=True,
+        destination="LHR",
     ),
     # Approaching Heathrow from the west (ILS 09R)
     AircraftState(
@@ -52,7 +52,7 @@ MOCK_AIRCRAFT: list[AircraftState] = [
         aircraft_type="A320",
         is_climbing=False,
         is_descending=True,
-        is_approaching_lhr=True,
+        destination="LHR",
     ),
     # Cruising over London at high altitude
     AircraftState(
@@ -74,7 +74,7 @@ MOCK_AIRCRAFT: list[AircraftState] = [
         aircraft_type="B77W",
         is_climbing=False,
         is_descending=False,
-        is_approaching_lhr=False,
+        destination=None,
     ),
     # Climbing out of London City Airport
     AircraftState(
@@ -96,7 +96,7 @@ MOCK_AIRCRAFT: list[AircraftState] = [
         aircraft_type="E190",
         is_climbing=True,
         is_descending=False,
-        is_approaching_lhr=False,
+        destination=None,
     ),
     # Descending towards Gatwick
     AircraftState(
@@ -118,7 +118,7 @@ MOCK_AIRCRAFT: list[AircraftState] = [
         aircraft_type="A320",
         is_climbing=False,
         is_descending=True,
-        is_approaching_lhr=False,
+        destination="LGW",
     ),
     # Helicopter over central London
     AircraftState(
@@ -140,7 +140,7 @@ MOCK_AIRCRAFT: list[AircraftState] = [
         aircraft_type="EC35",
         is_climbing=False,
         is_descending=False,
-        is_approaching_lhr=False,
+        destination=None,
     ),
 ]
 
