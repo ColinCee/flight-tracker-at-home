@@ -1,11 +1,12 @@
 # Self-Hosting Guide
 
-Run the Flight Tracker backend on your own Linux machine, exposed via Cloudflare Tunnel.
+Run the Flight Tracker backend on your own Linux machine using [Dokploy](https://dokploy.com/), exposed via Cloudflare Tunnel.
 
 ## Prerequisites
 
 - Linux machine (always-on, residential IP)
 - Docker & Docker Compose installed
+- [Dokploy](https://docs.dokploy.com/) installed (or raw Docker Compose — see below)
 - A domain managed by Cloudflare (e.g. `colincheung.dev`)
 - Internet access (airplanes.live API — no account needed)
 
@@ -16,108 +17,81 @@ Browser → flight-tracker-at-home.pages.dev (Cloudflare Pages)
               ↓ API calls
           api.colincheung.dev (Cloudflare Tunnel)
               ↓ (encrypted, no open ports)
-          Your machine (Docker: backend + cloudflared + tugtainer)
+          Your machine (Dokploy: backend + cloudflared)
               ↓
           airplanes.live API (free, no auth needed)
 ```
 
-## Setup
+## Option A: Dokploy (Recommended)
 
-### 1. Make the GHCR package public
+If you have Dokploy installed, deploy the backend as an application:
 
-The backend Docker image is pushed to GitHub Container Registry by CI. Make it publicly pullable:
+1. **Create project** in Dokploy dashboard
+2. **Add application** → GitHub source → this repo → Dockerfile at `apps/backend/Dockerfile`
+3. **Set env vars**: `CORS_ORIGINS=https://your-frontend-domain.pages.dev`
+4. **Deploy** — Dokploy builds from source and starts the container
+5. **Add cloudflared** as a separate Docker image application (`cloudflare/cloudflared:latest`)
+6. Set the cloudflared command to `cloudflared tunnel --no-autoupdate run` with `TUNNEL_TOKEN` env var
 
-1. Go to GitHub → Your profile → Packages → `flight-tracker-at-home/backend`
-2. Package settings → Danger Zone → Change visibility → **Public**
+### Auto-deploy from CI
 
-This lets your server (and Tugtainer) pull images without authentication.
+Add a deploy step to your GitHub Actions that joins your Tailscale network and calls the Dokploy API:
 
-### 2. Create a Cloudflare Tunnel
+```yaml
+- uses: tailscale/github-action@v4
+  with:
+    oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+    oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+    tags: tag:ci
+- run: |
+    curl -sf -X POST 'http://your-server:3000/api/trpc/application.deploy' \
+      -H 'x-api-key: ${{ secrets.DOKPLOY_API_KEY }}' \
+      -H 'Content-Type: application/json' \
+      -d '{"json":{"applicationId":"your-app-id"}}'
+```
+
+## Option B: Plain Docker Compose
+
+If you prefer raw Docker Compose without Dokploy:
+
+### 1. Create a Cloudflare Tunnel
 
 1. Go to [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → Networks → Tunnels
 2. Create a new tunnel, name it `flight-tracker`
-3. Choose **Docker** as the environment — it will show you a token and a `docker run` command
-4. **Run the `docker run` command** on your server to connect the tunnel and satisfy the wizard
-5. Add a **public hostname**:
-   - Subdomain: `api`
-   - Domain: `colincheung.dev`
-   - Type: `HTTP`
-   - URL: `backend:8000`
-6. Save, then stop the temporary container (`Ctrl+C`)
+3. Choose **Docker** as the environment — copy the tunnel token
+4. Add a **public hostname**: `api.yourdomain.com` → `http://backend:8000`
 
-The token encodes your tunnel config. Save it for the next step.
-
-### 3. Clone the repo and create `.env`
+### 2. Clone and configure
 
 ```bash
 git clone https://github.com/ColinCee/flight-tracker-at-home.git
 cd flight-tracker-at-home
 
 cat > .env << 'EOF'
-# Activate production services (needed for Dockge / plain docker compose up)
 COMPOSE_PROFILES=prod
-
-# Cache TTL (seconds)
 CACHE_TTL=10
-
-# CORS — allow the frontend origin
 CORS_ORIGINS=https://flight-tracker-at-home.pages.dev
-
-# Cloudflare Tunnel token
 TUNNEL_TOKEN=your-tunnel-token-here
 EOF
 ```
 
-The `.env` file is gitignored — config stays local.
-
-### 4. Start the stack
+### 3. Start
 
 ```bash
 docker compose up -d
 ```
 
-Or point **Dockge** at this directory to manage it via the UI — it works out of the box because `COMPOSE_PROFILES=prod` in `.env` activates the right services.
-
-### 5. Verify
+### 4. Verify
 
 ```bash
-# Check containers are running
-docker compose ps
-
-# Test the API
-curl https://api.colincheung.dev/health
-
-# Test airplanes.live connectivity
-curl https://api.colincheung.dev/debug/airplanes_live
+curl https://api.yourdomain.com/docs
 ```
 
-### 6. Update GitHub Actions variable
+## Updating GitHub Actions variable
 
 In your repo: Settings → Secrets and variables → Actions → Variables:
 
-Set `VITE_API_BASE_URL` = `https://api.colincheung.dev`
-
-This tells the frontend build where the API lives.
-
-## Auto-deployment
-
-When you merge to `main`:
-
-1. **CI** builds a new Docker image and pushes it to GHCR (`:latest` tag)
-2. **Tugtainer** on your machine detects the new image, pulls it, and restarts the backend
-3. **CI** also deploys the frontend to Cloudflare Pages
-
-No SSH keys, no webhooks, no manual steps after initial setup.
-
-## Updating the compose config
-
-If `compose.yaml` changes:
-
-```bash
-cd flight-tracker-at-home
-git pull
-docker compose up -d
-```
+Set `VITE_API_BASE_URL` = `https://api.yourdomain.com`
 
 ## Troubleshooting
 
@@ -127,9 +101,4 @@ docker compose up -d
 
 **airplanes.live rate limiting:**
 - The API allows ~1 request per 10 seconds sustained. The backend's 10s cache TTL respects this.
-- If you see empty responses or errors, check `/debug/airplanes_live` to see current status.
 - No authentication or API keys are needed.
-
-**Tugtainer not updating:**
-- Check `docker logs tugtainer`
-- Ensure GHCR package visibility is set to **Public**
