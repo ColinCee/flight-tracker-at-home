@@ -55,7 +55,7 @@ def test_full_aircraft_pipeline(mock_get):
     data = response.json()
 
     assert data["kpis"]["trackedAircraft"] == 1  # Ghost plane was dropped!
-    assert data["kpis"]["inboundLhrAircraft"] == 1  # BAW1 was flagged as approaching
+    assert data["kpis"]["inboundLondonAircraft"] == 1  # BAW1 was flagged as approaching
     assert data["kpis"]["apiHealth"] == "live"
 
     aircraft_list = data["aircraft"]
@@ -64,7 +64,7 @@ def test_full_aircraft_pipeline(mock_get):
     baw1 = aircraft_list[0]
     assert baw1["icao24"] == "111111"
     assert baw1["callsign"] == "BAW1"  # Whitespace stripped
-    assert baw1["isApproachingLhr"] is True  # ATC logic applied successfully
+    assert baw1["destination"] == "LHR"  # ATC logic applied successfully
 
     # Verify field mappings
     assert baw1["positionSource"] == "ADS-B"

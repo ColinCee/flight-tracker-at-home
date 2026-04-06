@@ -91,13 +91,13 @@ export function AircraftInspector({ aircraft, onClose }: AircraftInspectorProps)
             {EMERGENCY_SQUAWKS[aircraft.squawk]}
           </Badge>
         )}
-        {aircraft.isApproachingLhr && (
+        {aircraft.destination != null && (
           <Badge
             variant="outline"
             className="gap-1 border-amber-500/40 bg-amber-500/10 text-[10px] text-amber-400"
           >
             <PlaneLanding className="h-3 w-3" />
-            Inbound LHR
+            Inbound {aircraft.destination}
           </Badge>
         )}
         {aircraft.onGround && (

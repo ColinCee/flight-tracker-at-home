@@ -7,7 +7,7 @@ from src.cache import AirspaceCache
 from src.models import AircraftState
 
 
-def create_mock_aircraft(icao: str, approaching: bool) -> AircraftState:
+def create_mock_aircraft(icao: str, destination: str | None) -> AircraftState:
     return AircraftState(
         icao24=icao,
         callsign="TEST",
@@ -27,7 +27,7 @@ def create_mock_aircraft(icao: str, approaching: bool) -> AircraftState:
         position_source="ADS-B",
         is_climbing=False,
         is_descending=False,
-        is_approaching_lhr=approaching,
+        destination=destination,
     )
 
 
@@ -37,8 +37,8 @@ async def test_cache_kpi_calculation(mock_get_state):
     """Tests that the cache correctly calculates KPIs from the mocked data."""
     # Setup mock to return 2 planes (1 approaching, 1 not)
     mock_get_state.return_value = [
-        create_mock_aircraft("A111", approaching=True),
-        create_mock_aircraft("B222", approaching=False),
+        create_mock_aircraft("A111", destination="LHR"),
+        create_mock_aircraft("B222", destination=None),
     ]
 
     # Create an isolated cache instance
@@ -49,7 +49,7 @@ async def test_cache_kpi_calculation(mock_get_state):
 
     # Assert KPIs
     assert response.kpis.tracked_aircraft == 2
-    assert response.kpis.inbound_lhr_aircraft == 1
+    assert response.kpis.inbound_london_aircraft == 1
     assert response.kpis.throughput_last_60min == 1
     assert response.kpis.api_health == "live"
     assert response.kpis.airborne_aircraft == 2
@@ -63,7 +63,7 @@ async def test_cache_kpi_calculation(mock_get_state):
 @patch("src.cache.get_current_airspace_state")
 async def test_cache_ttl_logic(mock_get_state):
     """Ensures the cache doesn't fetch new data until the TTL expires."""
-    mock_get_state.return_value = [create_mock_aircraft("A111", approaching=True)]
+    mock_get_state.return_value = [create_mock_aircraft("A111", destination="LHR")]
 
     cache = AirspaceCache()
 
@@ -84,7 +84,7 @@ async def test_cache_ttl_logic(mock_get_state):
 @patch("src.cache.get_current_airspace_state")
 async def test_cache_serves_stale_data_on_error(mock_get_state):
     """On upstream failure, the cache serves stale data with 'stale' health."""
-    mock_get_state.return_value = [create_mock_aircraft("A111", approaching=False)]
+    mock_get_state.return_value = [create_mock_aircraft("A111", destination=None)]
 
     cache = AirspaceCache()
 
@@ -107,15 +107,15 @@ async def test_cache_serves_stale_data_on_error(mock_get_state):
 @patch("src.cache.get_current_airspace_state")
 async def test_cache_climbing_descending_kpis(mock_get_state):
     """Tests that climbing and descending KPIs are counted correctly."""
-    climbing = create_mock_aircraft("C111", approaching=False)
+    climbing = create_mock_aircraft("C111", destination=None)
     climbing.is_climbing = True
     climbing.vertical_rate_fpm = 1500
 
-    descending = create_mock_aircraft("D222", approaching=False)
+    descending = create_mock_aircraft("D222", destination=None)
     descending.is_descending = True
     descending.vertical_rate_fpm = -1200
 
-    level = create_mock_aircraft("L333", approaching=False)
+    level = create_mock_aircraft("L333", destination=None)
 
     mock_get_state.return_value = [climbing, descending, level]
 
@@ -146,7 +146,7 @@ async def test_cache_empty_aircraft_offline(mock_get_state):
 @patch("src.cache.get_current_airspace_state")
 async def test_cache_throughput_pruning(mock_get_state):
     """Arrival entries older than 60 minutes should be pruned."""
-    mock_get_state.return_value = [create_mock_aircraft("A111", approaching=True)]
+    mock_get_state.return_value = [create_mock_aircraft("A111", destination="LHR")]
 
     cache = AirspaceCache()
 
@@ -161,7 +161,7 @@ async def test_cache_throughput_pruning(mock_get_state):
     cache.last_update = 0.0  # Force re-fetch
 
     # New fetch with a different aircraft
-    mock_get_state.return_value = [create_mock_aircraft("B222", approaching=True)]
+    mock_get_state.return_value = [create_mock_aircraft("B222", destination="LHR")]
     response = await cache.get_state()
 
     # Old entry pruned, new one added

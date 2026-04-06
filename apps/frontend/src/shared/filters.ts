@@ -1,6 +1,6 @@
 import type { AircraftState } from '@/api/generated';
 
-export type AircraftFilter = 'airborne' | 'inbound-lhr' | 'climbing' | 'descending' | null;
+export type AircraftFilter = 'airborne' | 'inbound-london' | 'climbing' | 'descending' | null;
 
 export function matchesFilter(ac: AircraftState, filter: AircraftFilter): boolean {
   switch (filter) {
@@ -8,8 +8,8 @@ export function matchesFilter(ac: AircraftState, filter: AircraftFilter): boolea
       return true;
     case 'airborne':
       return !ac.onGround;
-    case 'inbound-lhr':
-      return ac.isApproachingLhr;
+    case 'inbound-london':
+      return ac.destination != null;
     case 'climbing':
       return ac.isClimbing;
     case 'descending':

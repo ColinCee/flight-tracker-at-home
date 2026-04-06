@@ -261,9 +261,23 @@
             "type": "boolean",
             "title": "Isdescending"
           },
-          "isApproachingLhr": {
-            "type": "boolean",
-            "title": "Isapproachinglhr"
+          "destination": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "LHR",
+                  "LGW",
+                  "STN",
+                  "LTN",
+                  "LCY"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination"
           }
         },
         "type": "object",
@@ -286,7 +300,7 @@
           "positionSource",
           "isClimbing",
           "isDescending",
-          "isApproachingLhr"
+          "destination"
         ],
         "title": "AircraftState",
         "description": "One aircraft's state from the airplanes.live API."
@@ -361,9 +375,9 @@
             "type": "integer",
             "title": "Airborneaircraft"
           },
-          "inboundLhrAircraft": {
+          "inboundLondonAircraft": {
             "type": "integer",
-            "title": "Inboundlhraircraft"
+            "title": "Inboundlondonaircraft"
           },
           "climbingAircraft": {
             "type": "integer",
@@ -402,7 +416,7 @@
         "required": [
           "trackedAircraft",
           "airborneAircraft",
-          "inboundLhrAircraft",
+          "inboundLondonAircraft",
           "climbingAircraft",
           "descendingAircraft",
           "throughputLast60Min",

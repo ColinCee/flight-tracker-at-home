@@ -119,7 +119,7 @@ class AirspaceCache:
                 elif ac.is_descending:
                     descending_count += 1
 
-                if ac.is_approaching_lhr:
+                if ac.destination is not None:
                     inbound_count += 1
                     if ac.icao24 not in self.seen_arrivals:
                         self.seen_arrivals.add(ac.icao24)
@@ -140,7 +140,7 @@ class AirspaceCache:
             kpis = KPIs(
                 tracked_aircraft=len(aircraft_list),
                 airborne_aircraft=airborne_count,
-                inbound_lhr_aircraft=inbound_count,
+                inbound_london_aircraft=inbound_count,
                 climbing_aircraft=climbing_count,
                 descending_aircraft=descending_count,
                 throughput_last_60min=len(self.arrival_times),

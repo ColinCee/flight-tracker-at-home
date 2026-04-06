@@ -102,7 +102,7 @@ export function AircraftLayer({
           if (d.icao24 === selectedIcao24) return COLOR_SELECTED;
           if (d.squawk && EMERGENCY_SQUAWKS.has(d.squawk)) return COLOR_EMERGENCY;
           if (activeFilter && !matchesFilter(d, activeFilter)) return COLOR_DIMMED;
-          if (d.isApproachingLhr) return COLOR_APPROACHING;
+          if (d.destination != null) return COLOR_APPROACHING;
           if (d.category === 'Rotorcraft') return COLOR_ROTORCRAFT;
           return COLOR_DEFAULT;
         },

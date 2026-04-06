@@ -45,7 +45,7 @@ test.describe('frontend app', () => {
     await expect(trackedLabel).toBeVisible({ timeout: 10_000 });
 
     // KPI labels should be present
-    await expect(page.getByRole('button', { name: 'Inbound LHR' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Inbound London' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Airborne' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Avg Alt' })).toBeVisible();
   });

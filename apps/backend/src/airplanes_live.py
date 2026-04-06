@@ -6,6 +6,7 @@ spatial heuristics to determine Heathrow approach status.
 import logging
 import math
 import time
+from typing import Literal, TypedDict
 
 import httpx
 from src.models import AircraftState, PositionSource
@@ -15,12 +16,12 @@ logger = logging.getLogger(__name__)
 # --- Configuration & Constants ---
 AIRPLANES_LIVE_URL = "https://api.airplanes.live/v2/point"
 
-# Heathrow (EGLL) Reference Coordinates
-LHR_LAT = 51.4700
-LHR_LON = -0.4543
+# Central London Reference Coordinates
+LONDON_LAT = 51.5072
+LONDON_LON = -0.1276
 
-# Radius in Nautical Miles (30nm covers the London TMA well)
-RADIUS_NM = 30
+# Radius in Nautical Miles
+RADIUS_NM = 60
 
 # Position source mapping: airplanes.live type → friendly name
 POSITION_SOURCE_MAP: dict[str, PositionSource] = {
@@ -97,8 +98,8 @@ def get_client() -> httpx.AsyncClient:
 
 # --- Phase 1: Extraction ---
 async def fetch_london_airspace() -> list[dict]:
-    """Phase 1: Extraction - Fetches aircraft within 30nm of Heathrow."""
-    url = f"{AIRPLANES_LIVE_URL}/{LHR_LAT}/{LHR_LON}/{RADIUS_NM}"
+    """Phase 1: Extraction - Fetches aircraft within 60nm of Central London."""
+    url = f"{AIRPLANES_LIVE_URL}/{LONDON_LAT}/{LONDON_LON}/{RADIUS_NM}"
 
     try:
         client = get_client()
@@ -180,7 +181,7 @@ def parse_aircraft(ac: dict) -> AircraftState | None:
             aircraft_type=ac.get("t"),
             is_climbing=False,  # Evaluated downstream
             is_descending=False,  # Evaluated downstream
-            is_approaching_lhr=False,  # Evaluated downstream
+            destination=None,  # Evaluated downstream
         )
     except Exception as e:
         logger.warning("Failed to parse aircraft dictionary: %s", e)
@@ -188,6 +189,21 @@ def parse_aircraft(ac: dict) -> AircraftState | None:
 
 
 # --- Phase 3: Spatial Math & Business Logic ---
+class AirportData(TypedDict):
+    lat: float
+    lon: float
+    headings: list[int]
+
+
+LONDON_AIRPORTS: dict[str, AirportData] = {
+    "LHR": {"lat": 51.4700, "lon": -0.4543, "headings": [90, 270]},
+    "LGW": {"lat": 51.1537, "lon": -0.1821, "headings": [80, 260]},
+    "STN": {"lat": 51.8860, "lon": 0.2389, "headings": [40, 220]},
+    "LTN": {"lat": 51.8747, "lon": -0.3683, "headings": [70, 250]},
+    "LCY": {"lat": 51.5053, "lon": 0.0553, "headings": [90, 270]},
+}
+
+
 def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates the great-circle distance between two GPS points in kilometers."""
     R = 6371.0
@@ -205,37 +221,83 @@ def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) ->
     return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)))
 
 
-def check_lhr_approach(aircraft: AircraftState) -> bool:
-    """Determines if an aircraft is on final approach to Heathrow."""
-    if aircraft.on_ground:
-        return False
+def calculate_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculates the initial bearing (forward azimuth) from point 1 to point 2 in degrees."""
+    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
 
-    # Must be descending
-    if aircraft.vertical_rate_fpm is None or aircraft.vertical_rate_fpm >= 0:
-        return False
-
-    # Must be below ~6,500 ft
-    if aircraft.baro_altitude_ft is None or aircraft.baro_altitude_ft > 6500:
-        return False
-
-    if aircraft.true_track is None:
-        return False
-
-    # Heathrow runways: 09 (East) and 27 (West)
-    track = aircraft.true_track
-    tolerance = 15
-
-    is_eastbound = (90 - tolerance) <= track <= (90 + tolerance)
-    is_westbound = (270 - tolerance) <= track <= (270 + tolerance)
-
-    if not (is_eastbound or is_westbound):
-        return False
-
-    dist = calculate_distance_km(
-        aircraft.latitude, aircraft.longitude, LHR_LAT, LHR_LON
+    dlon = lon2 - lon1
+    x = math.sin(dlon) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - (
+        math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
     )
 
-    return dist <= 20.0
+    initial_bearing = math.atan2(x, y)
+
+    # Convert from radians to degrees and normalize to 0-360
+    initial_bearing = math.degrees(initial_bearing)
+    return (initial_bearing + 360) % 360
+
+
+def get_destination(
+    aircraft: AircraftState,
+) -> Literal["LHR", "LGW", "STN", "LTN", "LCY"] | None:
+    """Determines if an aircraft is on final approach inside an ILS cone."""
+    if aircraft.on_ground:
+        return None
+
+    # Must be descending or level
+    if aircraft.vertical_rate_fpm is None or aircraft.vertical_rate_fpm > 0:
+        return None
+
+    # Must be below 4,000 ft (Typical ILS intercept altitude)
+    if aircraft.baro_altitude_ft is None or aircraft.baro_altitude_ft > 4000:
+        return None
+
+    if aircraft.true_track is None:
+        return None
+
+    track = aircraft.true_track
+
+    for airport_code, data in LONDON_AIRPORTS.items():
+        lat_airport = data["lat"]
+        lon_airport = data["lon"]
+
+        # 1. Fast Distance Check: Must be within 25km
+        dist = calculate_distance_km(
+            aircraft.latitude,
+            aircraft.longitude,
+            lat_airport,
+            lon_airport,
+        )
+        if dist > 25.0:
+            continue
+
+        headings = data["headings"]
+
+        for h in headings:
+            # 2. Heading Check: Is the plane pointing exactly at the runway? (+/- 15 deg for crosswinds)
+            if not ((h - 15) <= track <= (h + 15)):
+                continue
+
+            # 3. Position Check (The ILS Cone): Is the plane physically lined up with the runway?
+            runway_reciprocal = (h + 180) % 360
+            bearing_from_airport = calculate_bearing(
+                lat_airport,
+                lon_airport,
+                aircraft.latitude,
+                aircraft.longitude,
+            )
+
+            # Calculate the shortest angular distance
+            angle_diff = abs(
+                (bearing_from_airport - runway_reciprocal + 180) % 360 - 180
+            )
+
+            # If the plane is within an 8-degree cone extending from the runway, it is on approach!
+            if angle_diff <= 8.0:
+                return airport_code  # type: ignore
+
+    return None
 
 
 # --- Main Orchestrator ---
@@ -250,7 +312,7 @@ async def get_current_airspace_state() -> list[AircraftState]:
             vr = parsed.vertical_rate_fpm or 0
             parsed.is_climbing = vr > _VERTICAL_RATE_THRESHOLD_FPM
             parsed.is_descending = vr < -_VERTICAL_RATE_THRESHOLD_FPM
-            parsed.is_approaching_lhr = check_lhr_approach(parsed)
+            parsed.destination = get_destination(parsed)
             valid_aircraft.append(parsed)
 
     return valid_aircraft
