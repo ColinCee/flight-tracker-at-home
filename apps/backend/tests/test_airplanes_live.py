@@ -79,13 +79,17 @@ def test_parse_aircraft_missing_coords():
 # --- 4. parse_aircraft: alt_baro="ground" ---
 def test_parse_aircraft_on_ground():
     ac = {"hex": "400a5b", "lat": 51.47, "lon": -0.45, "alt_baro": "ground"}
-    assert parse_aircraft(ac) is None
+    aircraft = parse_aircraft(ac)
+    assert aircraft is not None
+    assert aircraft.on_ground is True
 
 
 # --- 5. parse_aircraft: alt_baro < 100 ---
 def test_parse_aircraft_low_altitude():
     ac = {"hex": "400a5b", "lat": 51.47, "lon": -0.45, "alt_baro": 99}
-    assert parse_aircraft(ac) is None
+    aircraft = parse_aircraft(ac)
+    assert aircraft is not None
+    assert aircraft.on_ground is True
 
 
 # --- 6. parse_aircraft: strips callsign whitespace ---

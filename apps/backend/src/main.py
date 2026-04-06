@@ -3,17 +3,26 @@
 import logging
 import os
 import time
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from src.airplanes_live import get_client
+from src.airplanes_live import close_client, get_client, init_client
 from src.cache import airspace_cache
 from src.models import AircraftResponse, WeatherResponse
 from src.weather import weather_cache
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Flight Tracker at Home API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_client()
+    yield
+    await close_client()
+
+
+app = FastAPI(title="Flight Tracker at Home API", lifespan=lifespan)
 
 if os.getenv("MOCK_DATA", "").lower() in ("true", "1", "yes"):
     logger.warning("MOCK_DATA is enabled — serving fixture data")
@@ -49,8 +58,14 @@ async def get_aircraft() -> AircraftResponse:
     Fetches the lazy-cached state, abstracting the Airplanes.live API rate limits.
     """
     # This single call handles the 10s TTL, Airplanes.live fetching, and KPI math.
-    state = await airspace_cache.get_state()
-    return state
+    try:
+        state = await airspace_cache.get_state()
+        return state
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail="Airplanes.live API is unavailable and no cache exists",
+        ) from e
 
 
 @app.get(

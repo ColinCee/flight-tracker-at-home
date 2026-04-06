@@ -21,7 +21,13 @@ _MOCK_MODE = os.getenv("MOCK_DATA", "").lower() in ("true", "1", "yes")
 def get_effective_ttl() -> float:
     """Return the cache TTL in seconds. Defaults to 10.0."""
     env_ttl = os.getenv("CACHE_TTL")
-    return float(env_ttl) if env_ttl else 10.0
+    if not env_ttl:
+        return 10.0
+    try:
+        return float(env_ttl)
+    except ValueError:
+        logger.warning("Invalid CACHE_TTL value %r, falling back to 10.0", env_ttl)
+        return 10.0
 
 
 class AirspaceCache:
@@ -86,7 +92,9 @@ class AirspaceCache:
                     )
                     self.cached_response.kpis.api_health = "stale"
                     return self.cached_response
-                aircraft_list = []
+
+                # No cache available, raise the error so the API can return 503
+                raise
 
             # 3. Process KPIs
             fetch_time = time.time()

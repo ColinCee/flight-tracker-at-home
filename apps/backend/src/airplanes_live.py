@@ -68,14 +68,30 @@ _VERTICAL_RATE_THRESHOLD_FPM = 200
 _http_client: httpx.AsyncClient | None = None
 
 
-def get_client() -> httpx.AsyncClient:
-    """Lazily initialize the client inside the active Event Loop."""
+def init_client():
+    """Initialize the client inside the active Event Loop."""
     global _http_client
     if _http_client is None:
         _http_client = httpx.AsyncClient(
             headers={"User-Agent": "FlightTrackerAtHome/1.1 (London TMA Project)"},
             timeout=10.0,
         )
+
+
+async def close_client():
+    """Close the HTTP client cleanly on shutdown."""
+    global _http_client
+    if _http_client is not None:
+        await _http_client.aclose()
+        _http_client = None
+
+
+def get_client() -> httpx.AsyncClient:
+    """Get the HTTP client."""
+    global _http_client
+    if _http_client is None:
+        init_client()
+    assert _http_client is not None
     return _http_client
 
 
@@ -109,14 +125,9 @@ def parse_aircraft(ac: dict) -> AircraftState | None:
 
         # airplanes.live returns "ground" string for on-ground aircraft
         alt_baro = ac.get("alt_baro")
-        is_on_ground = alt_baro == "ground"
-
-        if is_on_ground:
-            return None
-
-        # Filter below 100ft
-        if isinstance(alt_baro, (int, float)) and alt_baro < 100.0:
-            return None
+        is_on_ground = alt_baro == "ground" or (
+            isinstance(alt_baro, (int, float)) and alt_baro < 100.0
+        )
 
         raw_callsign = ac.get("flight")
         clean_callsign = raw_callsign.strip() if raw_callsign else None
@@ -162,7 +173,7 @@ def parse_aircraft(ac: dict) -> AircraftState | None:
             ground_speed_kts=gs,
             true_track=track,
             vertical_rate_fpm=vert_rate,
-            on_ground=False,  # Ground aircraft filtered above
+            on_ground=is_on_ground,
             squawk=ac.get("squawk"),
             position_source=position_source,
             category=category,
