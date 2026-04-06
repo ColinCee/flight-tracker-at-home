@@ -21,9 +21,9 @@ flight-tracker-at-home/
 │   │   ├── src/cache.py       # 10s TTL cache + KPI computation
 │   │   ├── src/spatial_snapshot.py # Async process to store aircraft position 
 │   │   ├── src/weather.py     # Get weather data for airports
-│   │   └── tests/             # Pytest tests
+│   │   └── tests/             # Pytest tests (test_airplanes_live, test_cache, test_heatmap, test_spatial_snapshot, test_weather, test_integration)
 │   └── e2e/                   # Playwright end-to-end tests
-│       ├── tests/             # Functional specs (health, aircraft, app)
+│       ├── tests/             # Functional specs (health, aircraft, weather, app, heatmap)
 │       └── profiling/         # Memory profiling spec (separate config)
 ├── scripts/
 │   └── memory-profile.sh      # CI memory profiling (server RSS + browser JS heap)
@@ -44,16 +44,28 @@ flight-tracker-at-home/
 
 ### Frontend (apps/frontend)
 
-- **MapView.tsx** — MapLibre GL map with OpenFreeMap dark tiles, centered on London
+- **MapView.tsx** — MapLibre GL map with OpenFreeMap dark tiles, centered on London; switches between live radar and 3D heatmap views
 - **AircraftLayer.tsx** — Deck.gl IconLayer rendering aircraft with heading rotation; 4 SVG icons (jet, prop, helicopter, glider) selected by category, category-based coloring, emergency squawk highlighting (red pulsing ring)
+- **HeatmapLayer.tsx** — Deck.gl H3HexagonLayer rendering aggregated flight volume in 3D; extruded hexagons colored by average altitude
+- **AirportLayer.tsx** — Deck.gl IconLayer for airport markers (LHR, LGW, STN, LTN, LCY)
+- **AircraftInspector.tsx** — Popup panel showing selected aircraft details (callsign, altitude, speed, destination)
+- **AirportInspector.tsx** — Popup panel showing airport weather (MET NORWAY API: condition, temperature, wind)
+- **AltitudeLegend.tsx** — Map overlay showing altitude color gradient legend
+- **KpiStrip.tsx** — Filter buttons (Tracked, Inbound London, Airborne) + KPI values + API health badge
+- **TopBar.tsx** — Navigation bar with Live Radar / Heatmap toggle; 3D controls onboarding tooltip (persisted to localStorage)
 - **useAircraftData.ts** — React Query hook wrapping Orval-generated `useGetAircraft`, auto-polls every 10s
+- **useWeatherData.ts** — React Query hook for airport weather, cached 30 minutes
 - **icons/jet.svg** — Aircraft silhouette SVGs (plus prop.svg, helicopter.svg, glider.svg), used as IconLayer atlas with `mask: true` for dynamic coloring
 
 ### Backend (apps/backend)
 
+- **main.py** — FastAPI app with endpoints: `/health`, `/aircraft`, `/weather`, `/heatmap`, `/debug/airplanes_live`; background ETL task runs every 60s to capture spatial snapshots
 - **airplanes_live.py** — 3-phase ETL: fetch London airspace from airplanes.live point endpoint (30nm radius) → parse JSON aircraft objects into `AircraftState` → enrich with `is_approaching_lhr` heuristic (haversine distance, altitude, heading, descent rate), `is_climbing`, and `is_descending`. No authentication needed — free public API.
 - **cache.py** — `AirspaceCache` singleton with 10s TTL lazy refresh; tracks rolling 60-min throughput for KPIs. On upstream failure (rate limit, timeout), serves stale cached data instead of losing aircraft.
-- **models.py** — Pydantic models (`AircraftState`, `KPIs`, `AircraftResponse`) with `alias_generator=to_camel`
+- **weather.py** — Fetches MET Norway weather for London airports; `WeatherCache` with 30-min TTL
+- **spatial_snapshot.py** — H3 hexagon binning (resolution 8) + DuckDB parquet storage for historical heatmap data
+- **models.py** — Pydantic models (`AircraftState`, `KPIs`, `AircraftResponse`, `WeatherResponse`) with `alias_generator=to_camel`
+- **mock_data.py** — Fixture data for E2E testing when `MOCK_DATA=true`
 
 ### Production environment variables
 
@@ -69,12 +81,23 @@ flight-tracker-at-home/
 ### Data Flow
 
 ```
+# Live Radar View
 airplanes.live API (10s cache TTL)
   → airplanes_live.py (fetch + parse + enrich)
   → cache.py (TTL + KPIs + stale fallback)
   → GET /aircraft (AircraftResponse JSON)
   → useAircraftData (React Query, adaptive refetch)
   → AircraftLayer (Deck.gl IconLayer)
+
+# Heatmap View
+GET /heatmap (reads from historical_heatmap.parquet)
+  → HeatmapLayer (Deck.gl H3HexagonLayer, 3D extruded)
+  → Click hexagon → Popup with sector stats
+
+# Background ETL (every 60s)
+get_current_airspace_state()
+  → snapshot_to_parquet (H3 binning + DuckDB append)
+  → historical_heatmap.parquet (persistent)
 ```
 
 ## Essential Commands
