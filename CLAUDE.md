@@ -51,9 +51,9 @@ flight-tracker-at-home/
 - **AircraftInspector.tsx** — Popup panel showing selected aircraft details (callsign, altitude, speed, destination)
 - **AirportInspector.tsx** — Popup panel showing airport weather (MET NORWAY API: condition, temperature, wind)
 - **AltitudeLegend.tsx** — Map overlay showing altitude color gradient legend
-- **KpiStrip.tsx** — Filter buttons (Tracked, Inbound London, Airborne) + KPI values + API health badge
+- **KpiStrip.tsx** — Always-visible bottom bar: filter buttons (Tracked, Inbound London, Airborne, Climbing, Descending) + KPI values + API health badge + poll countdown; shows placeholder '—' values while loading
 - **TopBar.tsx** — Navigation bar with Live Radar / Heatmap toggle; 3D controls onboarding tooltip (persisted to localStorage)
-- **useAircraftData.ts** — React Query hook wrapping Orval-generated `useGetAircraft`, auto-polls every 10s
+- **useAircraftData.ts** — React Query hook wrapping Orval-generated `useGetAircraft`, auto-polls every 10s; exposes `dataUpdatedAt` and `pollIntervalMs` for freshness indicators
 - **useWeatherData.ts** — React Query hook for airport weather, cached 30 minutes
 - **icons/jet.svg** — Aircraft silhouette SVGs (plus prop.svg, helicopter.svg, glider.svg), used as IconLayer atlas with `mask: true` for dynamic coloring
 

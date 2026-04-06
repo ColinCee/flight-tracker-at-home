@@ -9,15 +9,18 @@ interface AircraftData {
   kpis: KPIs | null;
   isLoading: boolean;
   isError: boolean;
+  dataUpdatedAt: number;
+  pollIntervalMs: number;
 }
 
 export function useAircraftData(): AircraftData {
   const intervalRef = useRef(DEFAULT_POLL_INTERVAL_MS);
+  const activeIntervalMs = intervalRef.current;
 
-  const { data, isLoading, isError } = useGetAircraft({
+  const { data, isLoading, isError, dataUpdatedAt } = useGetAircraft({
     query: {
       queryKey: getGetAircraftQueryKey(),
-      refetchInterval: intervalRef.current,
+      refetchInterval: activeIntervalMs,
     },
   });
 
@@ -33,5 +36,7 @@ export function useAircraftData(): AircraftData {
     kpis: response?.kpis ?? null,
     isLoading,
     isError,
+    dataUpdatedAt,
+    pollIntervalMs: activeIntervalMs,
   };
 }
