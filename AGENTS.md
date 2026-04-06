@@ -141,8 +141,7 @@ mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
   - Peak RSS for backend (uvicorn) and frontend (vite dev server)
   - JS heap usage from Chromium via CDP `Runtime.getHeapUsage`
   - Soak trend (stable / growing / shrinking) per process
-- **Deploy** — On merge to main: deploys frontend to Cloudflare Pages; on PRs: creates preview deployments with status checks. Backend auto-deploys via Tugtainer (pulls new GHCR images).
-- **Docker** — Builds backend (distroless Python) image, pushes to GHCR on main
+- **Deploy** — On merge to main: deploys frontend to Cloudflare Pages; backend auto-deploys via Tailscale CI → Dokploy API. On PRs: creates preview deployments with status checks.
 
 ## Key Conventions
 

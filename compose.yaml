@@ -1,45 +1,36 @@
 # Flight Tracker Docker Compose
 #
-# Production (self-hosted server):
-#   docker compose --profile prod up -d
-#   Runs backend (from GHCR) + Cloudflare Tunnel + Tugtainer auto-updater
-#   Setup: see docs/SELF-HOST.md
+# Production (Dokploy):
+#   Dokploy deploys this as a Compose service, pulling from GitHub.
+#   Config is in this file — Dokploy is just the runner.
+#   See docs/SELF-HOST.md for setup details.
 #
 # Local development:
 #   docker compose --profile dev up
 #   Builds and runs the backend locally on port 8000
 
 services:
-  # --- Production services ---
+  # --- Production services (deployed by Dokploy) ---
   backend:
-    image: ghcr.io/colincee/flight-tracker-at-home/backend:latest
+    build:
+      context: apps/backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     expose:
       - "8000"
-    env_file:
-      - .env
-    labels:
-      - "tugtainer.enable=true"
+    environment:
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://flight-tracker-at-home.pages.dev}
+      - CACHE_TTL=${CACHE_TTL:-10}
     profiles: [prod]
 
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    command: cloudflared tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:?Set TUNNEL_TOKEN env var}
     depends_on:
       - backend
-    profiles: [prod]
-
-  tugtainer:
-    image: ghcr.io/quenary/tugtainer:1
-    restart: unless-stopped
-    ports:
-      - "100.100.146.119:9412:80"
-    volumes:
-      - tugtainer_data:/tugtainer
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      - TZ=Europe/London
     profiles: [prod]
 
   # --- Local development ---
@@ -63,6 +54,3 @@ services:
     depends_on:
       - backend-dev
     profiles: [dev]
-
-volumes:
-  tugtainer_data:
