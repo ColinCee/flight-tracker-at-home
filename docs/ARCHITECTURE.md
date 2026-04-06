@@ -93,11 +93,13 @@ The backend defaults to a **10-second cache TTL** as the minimum stable polling 
 
 ## API Endpoints
 
-| Method | Path        | Response           | Notes                                       |
-|--------|-------------|--------------------|---------------------------------------------|
-| GET    | `/aircraft` | `AircraftResponse` | Aircraft + KPIs in a single atomic response |
-| GET    | `/weather`  | `WeatherResponse`  | Cached METAR data for London airports       |
-| GET    | `/health`   | `{ status: "ok" }` | Health check                                |
+| Method | Path                    | Response           | Notes                                       |
+|--------|-------------------------|--------------------|---------------------------------------------|
+| GET    | `/aircraft`             | `AircraftResponse` | Aircraft + KPIs in a single atomic response |
+| GET    | `/weather`              | `WeatherResponse`  | Cached METAR data for London airports       |
+| GET    | `/heatmap`              | `HeatmapCell[]`    | H3 hex-binned historical flight volume      |
+| GET    | `/health`               | `{ status: "ok" }` | Health check                                |
+| GET    | `/debug/airplanes_live` | Raw JSON           | Raw upstream response (debug only)          |
 
 ---
 

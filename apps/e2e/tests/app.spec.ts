@@ -53,10 +53,9 @@ test.describe('frontend app', () => {
   test('shows API health indicator', async ({ page }) => {
     await page.goto('/');
 
-    // Health badge should show Live/Stale/Offline
+    // Health badge should settle on Live/Stale/Offline once data loads
     const healthBadge = page.locator('[data-slot="badge"]');
     await expect(healthBadge).toBeVisible({ timeout: 10_000 });
-    const text = await healthBadge.textContent();
-    expect(['Live', 'Stale', 'Offline']).toContain(text?.trim());
+    await expect(healthBadge).toHaveText(/^(Live|Stale|Offline)$/, { timeout: 10_000 });
   });
 });
