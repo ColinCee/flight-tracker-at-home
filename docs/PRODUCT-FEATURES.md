@@ -1,4 +1,5 @@
 # Aviation Dashboard — Product Features Spec
+
 # This was originally an MVP document.
 
 **Authors:** Colin & Calvin Cheung
@@ -13,7 +14,7 @@ useful as a portfolio piece and learning project.
 
 A live 2D map of aircraft over London with callsign / altitude / speed
 datablocks, plus a KPI strip showing inbound arrivals and runway throughput for
-major London airports. Deployed and shareable via a public URL. The map should also display 
+major London airports. Deployed and shareable via a public URL. The map should also display
 major London airports with clickable popups containing real-time METAR weather
 conditions.
 
@@ -30,17 +31,17 @@ conditions.
 
 ## Stack
 
-| Layer       | Technology                              |
-| ----------- | --------------------------------------- |
-| Frontend    | React + Vite + Tailwind CSS             |
-| Map         | MapLibre GL JS + react-map-gl + Deck.gl |
-| Map tiles   | OpenFreeMap (dark style)                |
-| State mgmt  | TanStack Query (React Query)            |
-| Backend     | Python / FastAPI                        |
-| Data source | airplanes.live REST API + MET Norway    |
-| Monorepo    | Nx + Bun + mise                         |
-| Deploy (FE) | Cloudflare Pages                        |
-| Deploy (BE) | Self-hosted (Docker + Cloudflare Tunnel)|
+| Layer       | Technology                               |
+|-------------|------------------------------------------|
+| Frontend    | React + Vite + Tailwind CSS              |
+| Map         | MapLibre GL JS + react-map-gl + Deck.gl  |
+| Map tiles   | OpenFreeMap (dark style)                 |
+| State mgmt  | TanStack Query (React Query)             |
+| Backend     | Python / FastAPI                         |
+| Data source | airplanes.live REST API + MET Norway     |
+| Monorepo    | Nx + Bun + mise                          |
+| Deploy (FE) | Cloudflare Pages                         |
+| Deploy (BE) | Self-hosted (Docker + Cloudflare Tunnel) |
 
 > See [ARCHITECTURE.md](./ARCHITECTURE.md) for technical details, data contract,
 > and implementation guidance. Both files live in `docs/`.
@@ -56,9 +57,9 @@ conditions.
 
 ## Risks & Mitigations
 
-| Risk                                    | Impact | Mitigation                                                    |
-| --------------------------------------- | ------ | ------------------------------------------------------------- |
-| airplanes.live rate limits (~1 req/10s) | Low    | Lazy caching (zero calls when idle), 10s TTL, single instance |
-| MET Norway user-agent restrictions      | High   | Send custom User-Agent in headers, aggressive 30m caching     |
-| airplanes.live data gaps                | Medium | Show "stale data" warning, degrade gracefully                 |
+| Risk                                    | Impact | Mitigation                                                                       |
+|-----------------------------------------|--------|----------------------------------------------------------------------------------|
+| airplanes.live rate limits (~1 req/10s) | Low    | Lazy caching (zero calls when idle), 10s TTL, single instance                    |
+| MET Norway user-agent restrictions      | High   | Send custom User-Agent in headers, aggressive 30m caching                        |
+| airplanes.live data gaps                | Medium | Show "stale data" warning, degrade gracefully                                    |
 | Arrival heuristic false positives       | Low    | Strict ILS cone mathematical filtering prevents parallel traffic false positives |

@@ -94,3 +94,13 @@ class WeatherResponse(BaseModel):
     timestamp: int
     cache_age_seconds: float
     weather: list[AirportWeather]
+
+
+class HeatmapHexagon(BaseModel):
+    """Aggregated heatmap data for a single H3 hexagon."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    hex_id: str
+    total_volume: int
+    avg_altitude: float

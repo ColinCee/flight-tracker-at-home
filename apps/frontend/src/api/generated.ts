@@ -96,6 +96,15 @@ export interface AirportWeather {
 }
 
 /**
+ * Aggregated heatmap data for a single H3 hexagon.
+ */
+export interface HeatmapHexagon {
+  hexId: string;
+  totalVolume: number;
+  avgAltitude: number;
+}
+
+/**
  * Single response for the weather polling endpoint.
  */
 export interface WeatherResponse {
@@ -448,6 +457,96 @@ export function useGetWeather<TData = Awaited<ReturnType<typeof getWeather>>, TE
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetWeatherQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+/**
+ * Query the Parquet file for the aggregated heatmap.
+Note: This is a sync def endpoint because DuckDB's Python API is synchronous.
+FastAPI will run this in a background threadpool to avoid blocking the event loop.
+ * @summary Get Heatmap Data
+ */
+export type getHeatmapResponse200 = {
+  data: HeatmapHexagon[]
+  status: 200
+}
+
+export type getHeatmapResponseSuccess = (getHeatmapResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getHeatmapResponse = (getHeatmapResponseSuccess)
+
+export const getGetHeatmapUrl = () => {
+
+
+
+
+  return `/heatmap`
+}
+
+export const getHeatmap = async ( options?: RequestInit): Promise<getHeatmapResponse> => {
+
+  return fetchClient<getHeatmapResponse>(getGetHeatmapUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHeatmapQueryKey = () => {
+    return [
+    `/heatmap`
+    ] as const;
+    }
+
+
+export const getGetHeatmapQueryOptions = <TData = Awaited<ReturnType<typeof getHeatmap>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHeatmap>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHeatmapQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHeatmap>>> = ({ signal }) => getHeatmap({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHeatmap>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHeatmapQueryResult = NonNullable<Awaited<ReturnType<typeof getHeatmap>>>
+export type GetHeatmapQueryError = unknown
+
+
+/**
+ * @summary Get Heatmap Data
+ */
+
+export function useGetHeatmap<TData = Awaited<ReturnType<typeof getHeatmap>>, TError = unknown>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHeatmap>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHeatmapQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

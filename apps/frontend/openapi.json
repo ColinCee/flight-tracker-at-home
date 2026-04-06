@@ -76,6 +76,29 @@
           }
         }
       }
+    },
+    "/heatmap": {
+      "get": {
+        "summary": "Get Heatmap Data",
+        "description": "Query the Parquet file for the aggregated heatmap.\nNote: This is a sync def endpoint because DuckDB's Python API is synchronous.\nFastAPI will run this in a background threadpool to avoid blocking the event loop.",
+        "operationId": "getHeatmap",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HeatmapHexagon"
+                  },
+                  "type": "array",
+                  "title": "Response Getheatmap"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -364,6 +387,30 @@
         ],
         "title": "AirportWeather",
         "description": "Weather data for a specific airport via MET Norway."
+      },
+      "HeatmapHexagon": {
+        "properties": {
+          "hexId": {
+            "type": "string",
+            "title": "Hexid"
+          },
+          "totalVolume": {
+            "type": "integer",
+            "title": "Totalvolume"
+          },
+          "avgAltitude": {
+            "type": "number",
+            "title": "Avgaltitude"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hexId",
+          "totalVolume",
+          "avgAltitude"
+        ],
+        "title": "HeatmapHexagon",
+        "description": "Aggregated heatmap data for a single H3 hexagon."
       },
       "KPIs": {
         "properties": {

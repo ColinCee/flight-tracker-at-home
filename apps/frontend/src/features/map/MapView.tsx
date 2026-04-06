@@ -3,14 +3,17 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { MapStyleDataEvent } from 'maplibre-gl';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AttributionControl, Map as MapGL, Popup } from 'react-map-gl/maplibre';
-import type { AircraftState } from '@/api/generated';
+import type { AircraftState, HeatmapHexagon } from '@/api/generated';
 import type { EnrichedAirportWeather } from '@/api/use-weather-data';
+import type { ViewMode } from '@/features/navigation/TopBar';
 import type { AircraftFilter } from '@/shared/filters';
 import { AircraftInspector } from './AircraftInspector';
 import { AircraftLayer } from './AircraftLayer';
 import { AirportInspector } from './AirportInspector';
 import { AirportLayer } from './AirportLayer';
 import { AltitudeLegend } from './AltitudeLegend';
+import { HeatmapLayer } from './HeatmapLayer';
+import { HexagonInspector } from './HexagonInspector';
 
 const INITIAL_VIEW_STATE = {
   longitude: -0.12,
@@ -21,6 +24,8 @@ const INITIAL_VIEW_STATE = {
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 
 interface MapViewProps {
+  viewMode: ViewMode;
+  heatmapData?: HeatmapHexagon[];
   aircraft: AircraftState[];
   selectedAircraft?: AircraftState | null;
   airports: EnrichedAirportWeather[];
@@ -32,6 +37,8 @@ interface MapViewProps {
 }
 
 export function MapView({
+  viewMode,
+  heatmapData,
   aircraft,
   selectedAircraft,
   airports,
@@ -44,6 +51,18 @@ export function MapView({
   const [isHoveringAircraft, setIsHoveringAircraft] = useState(false);
   const [isHoveringAirport, setIsHoveringAirport] = useState(false);
   const deckClickedRef = useRef(false);
+  const [selectedHexagon, setSelectedHexagon] = useState<{
+    data: HeatmapHexagon;
+    lngLat: [number, number];
+  } | null>(null);
+
+  useEffect(() => {
+    // Reset selection and hover states when switching views
+    setIsHoveringAircraft(false);
+    setIsHoveringAirport(false);
+    setSelectedHexagon(null);
+    onCloseInspector();
+  }, [viewMode, onCloseInspector]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -85,8 +104,14 @@ export function MapView({
       deckClickedRef.current = false;
       return;
     }
+    setSelectedHexagon(null); // Clear the hexagon popup on background click
     onCloseInspector();
   }, [onCloseInspector]);
+
+  const handleHexagonClick = useCallback((data: HeatmapHexagon, lngLat: [number, number]) => {
+    deckClickedRef.current = true; // Tell the map not to dismiss this click
+    setSelectedHexagon({ data, lngLat });
+  }, []);
 
   return (
     <MapGL
@@ -101,14 +126,18 @@ export function MapView({
       <AttributionControl compact position="top-left" />
       <AltitudeLegend />
 
-      <AircraftLayer aircraft={aircraft} />
-      <AircraftLayer
-        aircraft={aircraft}
-        selectedIcao24={selectedAircraft?.icao24}
-        activeFilter={activeFilter}
-        onAircraftClick={handleAircraftClick}
-        onHoverChange={setIsHoveringAircraft}
-      />
+      {/*Swap the layers based on the View Mode! */}
+      {viewMode === 'live' ? (
+        <AircraftLayer
+          aircraft={aircraft}
+          selectedIcao24={selectedAircraft?.icao24}
+          activeFilter={activeFilter}
+          onAircraftClick={handleAircraftClick}
+          onHoverChange={setIsHoveringAircraft}
+        />
+      ) : (
+        <HeatmapLayer data={heatmapData} onHexagonClick={handleHexagonClick} />
+      )}
       <AirportLayer
         airports={airports}
         selectedIcao={selectedAirport?.icao}
@@ -121,7 +150,7 @@ export function MapView({
           latitude={selectedAircraft.latitude}
           closeButton={false}
           closeOnClick={false}
-          className="aircraft-popup"
+          className="map-popup"
           offset={20}
           maxWidth="none"
         >
@@ -134,11 +163,24 @@ export function MapView({
           latitude={selectedAirport.latitude}
           closeButton={false}
           closeOnClick={false}
-          className="airport-popup"
+          className="map-popup"
           offset={20}
           maxWidth="none"
         >
           <AirportInspector airport={selectedAirport} onClose={onCloseInspector} />
+        </Popup>
+      )}
+      {viewMode === 'heatmap' && selectedHexagon && (
+        <Popup
+          longitude={selectedHexagon.lngLat[0]}
+          latitude={selectedHexagon.lngLat[1]}
+          closeButton={false}
+          closeOnClick={false}
+          className="map-popup"
+          offset={10}
+          maxWidth="none"
+        >
+          <HexagonInspector hexagon={selectedHexagon} onClose={() => setSelectedHexagon(null)} />
         </Popup>
       )}
     </MapGL>
