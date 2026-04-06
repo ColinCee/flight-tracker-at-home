@@ -156,7 +156,7 @@ def get_heatmap_data(hours: int = 24):
     query = """
         SELECT
             hex_id,
-            SUM(volume) as total_volume,
+            SUM(total_volume) as total_volume,
             AVG(avg_altitude) as avg_altitude
         FROM 'historical_heatmap.parquet'
         GROUP BY hex_id
