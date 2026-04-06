@@ -10,6 +10,7 @@ import { AircraftInspector } from './AircraftInspector';
 import { AircraftLayer } from './AircraftLayer';
 import { AirportInspector } from './AirportInspector';
 import { AirportLayer } from './AirportLayer';
+import { AltitudeLegend } from './AltitudeLegend';
 
 const INITIAL_VIEW_STATE = {
   longitude: -0.12,
@@ -98,6 +99,9 @@ export function MapView({
       attributionControl={false}
     >
       <AttributionControl compact position="top-left" />
+      <AltitudeLegend />
+
+      <AircraftLayer aircraft={aircraft} />
       <AircraftLayer
         aircraft={aircraft}
         selectedIcao24={selectedAircraft?.icao24}
