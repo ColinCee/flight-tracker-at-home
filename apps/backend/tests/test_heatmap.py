@@ -137,12 +137,14 @@ class TestETLPipeline:
 
         con = duckdb.connect()
         try:
-            df = con.sql(f"SELECT * FROM '{db_path}'").fetchdf()
+            res = con.execute(f"SELECT * FROM '{db_path}'")
+            cols = [desc[0] for desc in res.description]
+            df = [dict(zip(cols, row, strict=True)) for row in res.fetchall()]
         finally:
             con.close()
 
         assert len(df) == 1
-        assert df.iloc[0]["total_volume"] == 1
+        assert df[0]["total_volume"] == 1
 
 
 class TestSnapshotToParquetWithCache:
@@ -182,10 +184,12 @@ class TestSnapshotToParquetWithCache:
 
         con = duckdb.connect()
         try:
-            df = con.sql(f"SELECT * FROM '{db_path}'").fetchdf()
+            res = con.execute(f"SELECT * FROM '{db_path}'")
+            cols = [desc[0] for desc in res.description]
+            df = [dict(zip(cols, row, strict=True)) for row in res.fetchall()]
         finally:
             con.close()
 
         assert len(df) == 1
-        assert df.iloc[0]["total_volume"] == 1
-        assert df.iloc[0]["avg_altitude"] == 2000
+        assert df[0]["total_volume"] == 1
+        assert df[0]["avg_altitude"] == 2000

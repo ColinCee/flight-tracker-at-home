@@ -45,7 +45,9 @@ class TestSnapshotToParquet:
         db_path = os.environ["HEATMAP_DB_PATH"]
         con = duckdb.connect()
         try:
-            return con.sql(f"SELECT * FROM '{db_path}'").fetchdf()
+            res = con.execute(f"SELECT * FROM '{db_path}'")
+            cols = [desc[0] for desc in res.description]
+            return [dict(zip(cols, row, strict=True)) for row in res.fetchall()]
         finally:
             con.close()
 
@@ -90,9 +92,9 @@ class TestSnapshotToParquet:
 
         df = self._read_parquet()
         assert len(df) == 1
-        assert df.iloc[0]["hex_id"] == hex_id
-        assert df.iloc[0]["total_volume"] == 2
-        assert df.iloc[0]["avg_altitude"] == 3000
+        assert df[0]["hex_id"] == hex_id
+        assert df[0]["total_volume"] == 2
+        assert df[0]["avg_altitude"] == 3000
 
     def test_snapshot_calculates_avg_altitude(self):
         """Test that average altitude is calculated correctly across snapshots."""
@@ -104,13 +106,15 @@ class TestSnapshotToParquet:
         db_path = os.environ["HEATMAP_DB_PATH"]
         con = duckdb.connect()
         try:
-            df = con.sql(
+            res = con.execute(
                 f"SELECT hex_id, SUM(total_volume) as total_volume, AVG(avg_altitude) as avg_altitude FROM '{db_path}' GROUP BY hex_id"
-            ).fetchdf()
+            )
+            cols = [desc[0] for desc in res.description]
+            df = [dict(zip(cols, row, strict=True)) for row in res.fetchall()]
         finally:
             con.close()
 
-        row = df.iloc[0]
+        row = df[0]
         assert row["total_volume"] == 2
         assert row["avg_altitude"] == 2000
 
@@ -154,7 +158,7 @@ class TestSnapshotToParquet:
         snapshot_to_parquet([create_mock_aircraft("111111", lat, lon, 2000)])
 
         df = self._read_parquet()
-        assert df.iloc[0]["hex_id"] == expected_hex
+        assert df[0]["hex_id"] == expected_hex
 
     def test_snapshot_handles_null_altitude(self):
         """Test that null altitude falls back to 0."""
@@ -165,7 +169,7 @@ class TestSnapshotToParquet:
         snapshot_to_parquet([aircraft])
 
         df = self._read_parquet()
-        assert df.iloc[0]["avg_altitude"] == 0
+        assert df[0]["avg_altitude"] == 0
 
     def test_snapshot_empty_list_does_nothing(self):
         """Test that empty aircraft list does not create a file."""
@@ -207,4 +211,4 @@ class TestSnapshotToParquet:
         snapshot_to_parquet(aircraft_list)
 
         df = self._read_parquet()
-        assert list(df.columns) == ["hex_id", "total_volume", "avg_altitude"]
+        assert list(df[0].keys()) == ["hex_id", "total_volume", "avg_altitude"]

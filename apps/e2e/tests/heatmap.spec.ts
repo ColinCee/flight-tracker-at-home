@@ -18,9 +18,9 @@ test.describe('heatmap endpoint', () => {
 
     // If there's data, verify structure
     if (data.length > 0) {
-      expect(data[0]).toHaveProperty('hex_id');
-      expect(data[0]).toHaveProperty('total_volume');
-      expect(data[0]).toHaveProperty('avg_altitude');
+      expect(data[0]).toHaveProperty('hexId');
+      expect(data[0]).toHaveProperty('totalVolume');
+      expect(data[0]).toHaveProperty('avgAltitude');
     }
   });
 
@@ -30,7 +30,7 @@ test.describe('heatmap endpoint', () => {
     const data = await response.json();
 
     // If there's data, verify each hex is unique
-    const hexIds = data.map((d: { hex_id: string }) => d.hex_id);
+    const hexIds = data.map((d: { hexId: string }) => d.hexId);
     const uniqueHexIds = new Set(hexIds);
     expect(uniqueHexIds.size).toBe(hexIds.length);
   });

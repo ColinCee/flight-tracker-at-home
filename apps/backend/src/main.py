@@ -8,7 +8,6 @@ from contextlib import asynccontextmanager
 
 import duckdb
 import httpx
-import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from src.airplanes_live import (
@@ -171,14 +170,21 @@ def get_heatmap_data() -> list[HeatmapHexagon]:
         query = f"""
             SELECT
                 hex_id,
-                SUM(total_volume) as total_volume,
-                AVG(avg_altitude) as avg_altitude
+                CAST(SUM(total_volume) AS BIGINT) as total_volume,
+                SUM(avg_altitude * total_volume) / SUM(total_volume) as avg_altitude
             FROM '{DB_PATH}'
             GROUP BY hex_id
         """
 
-        results = duckdb.sql(query).df().to_dict(orient="records")
+        con = duckdb.connect()
+        try:
+            res = con.execute(query)
+            cols = [desc[0] for desc in res.description]
+            results = [dict(zip(cols, row, strict=True)) for row in res.fetchall()]
+        finally:
+            con.close()
+
         return [HeatmapHexagon(**row) for row in results]
-    except (duckdb.Error, pd.errors.EmptyDataError) as e:
+    except duckdb.Error as e:
         logger.error(f"Heatmap query failed: {e}")
         return []
