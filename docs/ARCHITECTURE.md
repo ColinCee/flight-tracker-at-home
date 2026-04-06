@@ -51,15 +51,19 @@ Centre point covers Greater London — Heathrow to City Airport. The 30nm radius
 captures all aircraft in the London TMA. airplanes.live returns only aircraft
 with known positions.
 
-### Heathrow arrival heuristic
+### London Arrival Heuristic (The ILS Cone)
 
-An aircraft is classified as "approaching Heathrow" when ALL conditions are met:
+An aircraft is classified as "approaching a London airport" when ALL conditions
+are met. To prevent false positives from aircraft flying parallel downwind legs,
+we use strict geometric funneling:
 
-- Within **20 km** of LHR (51.4700°N, 0.4543°W)
-- Below **6,500 ft** barometric altitude
-- Descending (negative vertical rate)
-- Heading within **±15°** of runway headings (090° or 270°)
-- Not on ground
+- Distance: Within 25 km of the target airport (LHR, LGW, STN, LTN, LCY)
+- Altitude: Below 4,000 ft barometric altitude
+- Descent: Descending or level (vertical rate <= 0)
+- Heading: True track within ±15° of the specific runway heading
+- The ILS Cone: The calculated bearing from the airport to the aircraft must
+  fall within an 8° angular cone extending outward from the runway centerline 
+  (the reciprocal heading)
 
 ~90% accurate for a portfolio demo. Heathrow's controlled airspace means very
 few false positives.
@@ -69,13 +73,13 @@ few false positives.
 The [API guide](https://airplanes.live/api-guide/) states "1 request per second",
 but empirical testing (April 2026) shows a much stricter Cloudflare-fronted limit:
 
-| Interval | Result |
-|----------|--------|
-| 3s | Constant 429 flapping (~50% failure) |
-| 5s | ~40% failure rate even in isolation |
-| 7s | Still intermittent 429s |
-| 10s | Stable — 8/8 consecutive 200s after cooldown |
-| 15s | Rock solid |
+| Interval | Result                                       |
+|----------|----------------------------------------------|
+| 3s       | Constant 429 flapping (~50% failure)         |
+| 5s       | ~40% failure rate even in isolation          |
+| 7s       | Still intermittent 429s                      |
+| 10s      | Stable — 8/8 consecutive 200s after cooldown |
+| 15s      | Rock solid                                   |
 
 Other observations:
 - **429 response:** `"You have been rate limited. Please contact us..."` — no `Retry-After` header
@@ -90,7 +94,7 @@ The backend defaults to a **10-second cache TTL** as the minimum stable polling 
 ## API Endpoints
 
 | Method | Path        | Response           | Notes                                       |
-| ------ | ----------- | ------------------ | ------------------------------------------- |
+|--------|-------------|--------------------|---------------------------------------------|
 | GET    | `/aircraft` | `AircraftResponse` | Aircraft + KPIs in a single atomic response |
 | GET    | `/weather`  | `WeatherResponse`  | Cached METAR data for London airports       |
 | GET    | `/health`   | `{ status: "ok" }` | Health check                                |
@@ -136,7 +140,7 @@ class AircraftState(BaseModel):
     position_source: PositionSource         # ADS-B, MLAT, TIS-B, etc.
     is_climbing: bool                       # Derived from vertical_rate_fpm > 0
     is_descending: bool                     # Derived from vertical_rate_fpm < 0
-    is_approaching_lhr: bool                # Computed via heuristic (see above)
+    destination: Literal["LHR", "LGW", "STN", "LTN", "LCY"] | None # Computed via ILS cone heuristic
 
 
 class KPIs(BaseModel):
@@ -144,7 +148,7 @@ class KPIs(BaseModel):
 
     tracked_aircraft: int                   # Total aircraft in query radius
     airborne_aircraft: int                  # Aircraft not on ground
-    inbound_lhr_aircraft: int               # Aircraft matching arrival heuristic
+    inbound_london_aircraft: int            # Aircraft matching arrival heuristic for any airport
     climbing_aircraft: int                  # Aircraft with positive vertical rate
     descending_aircraft: int                # Aircraft with negative vertical rate
     throughput_last_60min: int              # Arrivals detected in rolling 60-min window
@@ -190,16 +194,16 @@ Run `mise run codegen` to regenerate after backend model changes.
 
 ### KPI definitions
 
-| KPI                  | JSON field              | Source                                                 |
-| -------------------- | ----------------------- | ------------------------------------------------------ |
-| Tracked aircraft     | `trackedAircraft`       | Total aircraft in query radius                         |
-| Airborne aircraft    | `airborneAircraft`      | Aircraft not on ground                                 |
-| Inbound to LHR       | `inboundLhrAircraft`    | Count of aircraft matching arrival heuristic           |
-| Climbing             | `climbingAircraft`      | Aircraft with positive vertical rate                   |
-| Descending           | `descendingAircraft`    | Aircraft with negative vertical rate                   |
-| Estimated throughput | `throughputLast60Min`   | Arrivals detected in rolling 60-min window             |
-| Average altitude     | `avgAltitudeFt`         | Mean barometric altitude of airborne aircraft (feet)   |
-| API health           | `apiHealth`             | `"live"` / `"stale"` / `"offline"`                     |
+| KPI                  | JSON field              | Source                                                       |
+|----------------------|-------------------------|--------------------------------------------------------------|
+| Tracked aircraft     | `trackedAircraft`       | Total aircraft in query radius                               |
+| Airborne aircraft    | `airborneAircraft`      | Aircraft not on ground                                       |
+| Inbound to London    | `inboundLondonAircraft` | Count of aircraft matching arrival heuristic for any airport |
+| Climbing             | `climbingAircraft`      | Aircraft with positive vertical rate                         |
+| Descending           | `descendingAircraft`    | Aircraft with negative vertical rate                         |
+| Estimated throughput | `throughputLast60Min`   | Arrivals detected in rolling 60-min window                   |
+| Average altitude     | `avgAltitudeFt`         | Mean barometric altitude of airborne aircraft (feet)         |
+| API health           | `apiHealth`             | `"live"` / `"stale"` / `"offline"`                           |
 
 ---
 
@@ -218,6 +222,7 @@ Run `mise run codegen` to regenerate after backend model changes.
   coloring on the frontend.
 - **`is_climbing` / `is_descending` booleans** — pre-computed on the backend
   from `vertical_rate_fpm`, simplifying frontend logic and KPI computation.
+- **`destination`** — uses spatial ILS cone mathematics to determine approach status for 5 major London airports.
 - **`registration` and `aircraft_type`** — airplanes.live provides these natively,
   enabling richer aircraft datablocks and tooltips.
 - **`squawk` included** — emergency codes (7700/7600/7500) enable visual
@@ -229,14 +234,14 @@ Run `mise run codegen` to regenerate after backend model changes.
 
 ## Environment Variables
 
-| Variable           | Where          | Required | Default                | Description                                  |
-| ------------------ | -------------- | -------- | ---------------------- | -------------------------------------------- |
-| `CACHE_TTL`        | Backend        | No       | `10`                   | Cache TTL in seconds                         |
-| `CORS_ORIGINS`     | Backend        | No       | `http://localhost:4200`| Comma-separated allowed origins              |
-| `MOCK_DATA`        | Backend        | No       | —                      | Set to `true` for E2E fixture mode           |
-| `VITE_API_BASE_URL`| Frontend build | No       | `http://localhost:8000`| Backend URL                                  |
-| `TUNNEL_TOKEN`     | compose.yaml   | Yes (prod)| —                     | Cloudflare Tunnel token                      |
-| `COMPOSE_PROFILES` | .env (server)  | No       | —                      | Set to `prod` for production                 |
+| Variable            | Where          | Required   | Default                 | Description                        |
+|---------------------|----------------|------------|-------------------------|------------------------------------|
+| `CACHE_TTL`         | Backend        | No         | `10`                    | Cache TTL in seconds               |
+| `CORS_ORIGINS`      | Backend        | No         | `http://localhost:4200` | Comma-separated allowed origins    |
+| `MOCK_DATA`         | Backend        | No         | —                       | Set to `true` for E2E fixture mode |
+| `VITE_API_BASE_URL` | Frontend build | No         | `http://localhost:8000` | Backend URL                        |
+| `TUNNEL_TOKEN`      | compose.yaml   | Yes (prod) | —                       | Cloudflare Tunnel token            |
+| `COMPOSE_PROFILES`  | .env (server)  | No         | —                       | Set to `prod` for production       |
 
 ### CORS
 
@@ -245,10 +250,10 @@ FastAPI's `CORSMiddleware` must allow the frontend origin:
 
 ```python
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[os.getenv("CORS_ORIGINS", "http://localhost:4200")],
-    allow_methods=["GET"],
-    allow_headers=["*"],
+  CORSMiddleware,
+  allow_origins=[os.getenv("CORS_ORIGINS", "http://localhost:4200")],
+  allow_methods=["GET"],
+  allow_headers=["*"],
 )
 ```
 
@@ -272,12 +277,12 @@ The OpenAPI spec is always available at `/docs` (Swagger UI) and `/openapi.json`
 ## Stack Details
 
 | Layer        | Technology                               | Rationale                                                                |
-| ------------ | ---------------------------------------- | ------------------------------------------------------------------------ |
-| Frontend     | React 19 + Vite 8 + Tailwind CSS        | Fast builds, modern React                                                |
+|--------------|------------------------------------------|--------------------------------------------------------------------------|
+| Frontend     | React 19 + Vite 8 + Tailwind CSS         | Fast builds, modern React                                                |
 | Map          | MapLibre GL JS + react-map-gl            | Free, open-source, WebGL-accelerated, no API key                         |
 | Data overlay | Deck.gl (IconLayer)                      | GPU-rendered aircraft icons with heading rotation + smooth interpolation |
 | Map tiles    | OpenFreeMap (dark style)                 | Free, no API key, no rate limits                                         |
-| State mgmt  | TanStack Query (React Query)             | Auto-polling via `refetchInterval`, caching, loading states              |
+| State mgmt   | TanStack Query (React Query)             | Auto-polling via `refetchInterval`, caching, loading states              |
 | Backend      | Python 3.12 / FastAPI                    | Auto-generates OpenAPI spec from Pydantic models                         |
 | Data source  | airplanes.live (`/v2/point/...`)         | Free, no auth, aviation-native units, rich aircraft metadata             |
 | API contract | Pydantic → OpenAPI → Orval               | Typed React Query hooks + TypeScript types from FastAPI spec             |
