@@ -80,35 +80,19 @@
     "/heatmap": {
       "get": {
         "summary": "Get Heatmap Data",
-        "description": "Query the Parquet file for the aggregated heatmap.",
+        "description": "Query the Parquet file for the aggregated heatmap.\nNote: This is a sync def endpoint because DuckDB's Python API is synchronous.\nFastAPI will run this in a background threadpool to avoid blocking the event loop.",
         "operationId": "getHeatmap",
-        "parameters": [
-          {
-            "name": "hours",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 24,
-              "title": "Hours"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "items": {
+                    "$ref": "#/components/schemas/HeatmapHexagon"
+                  },
+                  "type": "array",
+                  "title": "Response Getheatmap"
                 }
               }
             }
@@ -404,18 +388,29 @@
         "title": "AirportWeather",
         "description": "Weather data for a specific airport via MET Norway."
       },
-      "HTTPValidationError": {
+      "HeatmapHexagon": {
         "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
+          "hexId": {
+            "type": "string",
+            "title": "Hexid"
+          },
+          "totalVolume": {
+            "type": "integer",
+            "title": "Totalvolume"
+          },
+          "avgAltitude": {
+            "type": "number",
+            "title": "Avgaltitude"
           }
         },
         "type": "object",
-        "title": "HTTPValidationError"
+        "required": [
+          "hexId",
+          "totalVolume",
+          "avgAltitude"
+        ],
+        "title": "HeatmapHexagon",
+        "description": "Aggregated heatmap data for a single H3 hexagon."
       },
       "KPIs": {
         "properties": {
@@ -476,46 +471,6 @@
           "apiHealth"
         ],
         "title": "KPIs"
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
       },
       "WeatherResponse": {
         "properties": {

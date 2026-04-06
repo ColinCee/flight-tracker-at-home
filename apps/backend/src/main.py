@@ -7,6 +7,8 @@ import time
 from contextlib import asynccontextmanager
 
 import duckdb
+import httpx
+import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from src.airplanes_live import (
@@ -16,8 +18,8 @@ from src.airplanes_live import (
     init_client,
 )
 from src.cache import airspace_cache
-from src.models import AircraftResponse, WeatherResponse
-from src.spatial_snapshot import snapshot_to_parquet
+from src.models import AircraftResponse, HeatmapHexagon, WeatherResponse
+from src.spatial_snapshot import DB_PATH, snapshot_to_parquet
 from src.weather import weather_cache
 
 logger = logging.getLogger(__name__)
@@ -36,8 +38,14 @@ async def run_etl_pipeline():
                 # Run the Pandas/DuckDB code in a background thread
                 await asyncio.to_thread(snapshot_to_parquet, aircraft_list)
                 logger.info("Successfully appended snapshot to Parquet.")
-        except Exception as e:
-            logger.error(f"ETL Snapshot failed: {e}")
+        except (httpx.RequestError, httpx.HTTPStatusError) as e:
+            logger.error(f"ETL API fetch failed: {e}")
+        except (duckdb.Error, OSError) as e:
+            logger.error(f"ETL Storage failed: {e}")
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            logger.exception("Unexpected error in ETL pipeline")
 
 
 @asynccontextmanager
@@ -89,10 +97,11 @@ async def get_aircraft() -> AircraftResponse:
     try:
         state = await airspace_cache.get_state()
         return state
-    except Exception as e:
+    except (httpx.RequestError, httpx.HTTPStatusError) as e:
+        # Specifically handle upstream API failure when no cache is available
         raise HTTPException(
             status_code=503,
-            detail="Airplanes.live API is unavailable and no cache exists",
+            detail=f"Airplanes.live API is currently unreachable: {e!s}",
         ) from e
 
 
@@ -125,8 +134,10 @@ async def debug_airplanes_live():
             "elapsed_s": elapsed,
             "ok": resp.status_code in (200, 429),
         }
-    except Exception as e:
-        results["tests"]["api"] = {"error": repr(e), "ok": False}
+    except httpx.TimeoutException:
+        results["tests"]["api"] = {"error": "Request timed out", "ok": False}
+    except httpx.RequestError as e:
+        results["tests"]["api"] = {"error": f"Connection error: {e!s}", "ok": False}
 
     return results
 
@@ -145,22 +156,29 @@ async def get_weather() -> WeatherResponse:
     return await weather_cache.get_weather()
 
 
-@app.get("/heatmap", operation_id="getHeatmap")
-def get_heatmap_data(hours: int = 24):
-    """Query the Parquet file for the aggregated heatmap."""
-
-    # Return a plain array instead of {"data": []}
-    if not os.path.exists("historical_heatmap.parquet"):
-        return []
-
-    query = """
-        SELECT
-            hex_id,
-            SUM(total_volume) as total_volume,
-            AVG(avg_altitude) as avg_altitude
-        FROM 'historical_heatmap.parquet'
-        GROUP BY hex_id
+@app.get("/heatmap", response_model=list[HeatmapHexagon], operation_id="getHeatmap")
+def get_heatmap_data() -> list[HeatmapHexagon]:
+    """
+    Query the Parquet file for the aggregated heatmap.
+    Note: This is a sync def endpoint because DuckDB's Python API is synchronous.
+    FastAPI will run this in a background threadpool to avoid blocking the event loop.
     """
 
-    results = duckdb.sql(query).df().to_dict(orient="records")
-    return results
+    # Return a plain array instead of {"data": []}
+    if not os.path.exists(DB_PATH):
+        return []
+    try:
+        query = f"""
+            SELECT
+                hex_id,
+                SUM(total_volume) as total_volume,
+                AVG(avg_altitude) as avg_altitude
+            FROM '{DB_PATH}'
+            GROUP BY hex_id
+        """
+
+        results = duckdb.sql(query).df().to_dict(orient="records")
+        return [HeatmapHexagon(**row) for row in results]
+    except (duckdb.Error, pd.errors.EmptyDataError) as e:
+        logger.error(f"Heatmap query failed: {e}")
+        return []

@@ -1,8 +1,6 @@
 """Integration tests for the heatmap endpoint and ETL pipeline."""
 
 import os
-import shutil
-import tempfile
 from unittest.mock import patch
 
 import duckdb
@@ -17,18 +15,9 @@ client = TestClient(app)
 class TestHeatmapEndpoint:
     """Tests for the /heatmap endpoint."""
 
-    @pytest.fixture(autouse=True)
-    def setup_and_teardown(self):
-        """Create a temporary directory for test files and clean up after."""
-        self.original_cwd = os.getcwd()
-        self.temp_dir = tempfile.mkdtemp()
-        os.chdir(self.temp_dir)
-        yield
-        os.chdir(self.original_cwd)
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
     def _create_parquet_file(self, data: list[dict]):
         """Helper to create a parquet file with test data."""
+        db_path = os.environ["HEATMAP_DB_PATH"]
         con = duckdb.connect()
         try:
             for i, row in enumerate(data):
@@ -40,7 +29,7 @@ class TestHeatmapEndpoint:
                     con.sql(
                         f"INSERT INTO test_data VALUES ('{row['hex_id']}', {row['total_volume']}, {row['avg_altitude']})"
                     )
-            con.sql("COPY test_data TO 'historical_heatmap.parquet' (FORMAT PARQUET)")
+            con.sql(f"COPY test_data TO '{db_path}' (FORMAT PARQUET)")
         finally:
             con.close()
 
@@ -63,12 +52,12 @@ class TestHeatmapEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
-        assert data[0]["hex_id"] == hex_id
-        assert data[0]["total_volume"] == 5
-        assert data[0]["avg_altitude"] == 3000
+        assert data[0]["hexId"] == hex_id
+        assert data[0]["totalVolume"] == 5
+        assert data[0]["avgAltitude"] == 3000
 
-    def test_heatmap_returns_snake_case(self):
-        """Test that response uses snake_case field names (same as parquet)."""
+    def test_heatmap_returns_camel_case(self):
+        """Test that response uses camelCase field names (via Pydantic)."""
         lat, lon = 51.47, -0.50
         hex_id = h3.latlng_to_cell(lat, lon, 8)
 
@@ -81,11 +70,11 @@ class TestHeatmapEndpoint:
 
         assert len(data) > 0
         keys = set(data[0].keys())
-        assert "hex_id" in keys
-        assert "total_volume" in keys
-        assert "avg_altitude" in keys
-        assert "hexId" not in keys
-        assert "totalVolume" not in keys
+        assert "hexId" in keys
+        assert "totalVolume" in keys
+        assert "avgAltitude" in keys
+        assert "hex_id" not in keys
+        assert "total_volume" not in keys
 
     def test_heatmap_returns_multiple_hexagons(self):
         """Test that multiple different hexagons are all returned."""
@@ -105,32 +94,8 @@ class TestHeatmapEndpoint:
         assert len(data) == 2
 
 
-class TestHeatmapEndpointEdgeCases:
-    """Edge case tests for the /heatmap endpoint."""
-
-    @pytest.fixture(autouse=True)
-    def setup_and_teardown(self):
-        """Create a temporary directory for test files and clean up after."""
-        self.original_cwd = os.getcwd()
-        self.temp_dir = tempfile.mkdtemp()
-        os.chdir(self.temp_dir)
-        yield
-        os.chdir(self.original_cwd)
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-
 class TestETLPipeline:
     """Tests for the ETL pipeline integration."""
-
-    @pytest.fixture(autouse=True)
-    def setup_and_teardown(self):
-        """Create a temporary directory for test files and clean up after."""
-        self.original_cwd = os.getcwd()
-        self.temp_dir = tempfile.mkdtemp()
-        os.chdir(self.temp_dir)
-        yield
-        os.chdir(self.original_cwd)
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @pytest.mark.asyncio
     @patch("src.airplanes_live.fetch_london_airspace")
@@ -167,11 +132,12 @@ class TestETLPipeline:
         aircraft_list = [state.aircraft[0].model_copy()]
         snapshot_to_parquet(aircraft_list)
 
-        assert os.path.exists("historical_heatmap.parquet")
+        db_path = os.environ["HEATMAP_DB_PATH"]
+        assert os.path.exists(db_path)
 
         con = duckdb.connect()
         try:
-            df = con.sql("SELECT * FROM 'historical_heatmap.parquet'").fetchdf()
+            df = con.sql(f"SELECT * FROM '{db_path}'").fetchdf()
         finally:
             con.close()
 
@@ -181,16 +147,6 @@ class TestETLPipeline:
 
 class TestSnapshotToParquetWithCache:
     """Tests for snapshot_to_parquet with real AircraftState objects."""
-
-    @pytest.fixture(autouse=True)
-    def setup_and_teardown(self):
-        """Create a temporary directory for test files and clean up after."""
-        self.original_cwd = os.getcwd()
-        self.temp_dir = tempfile.mkdtemp()
-        os.chdir(self.temp_dir)
-        yield
-        os.chdir(self.original_cwd)
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_snapshot_with_lhr_approach_aircraft(self):
         """Test snapshot with realistic LHR approach data."""
@@ -221,11 +177,12 @@ class TestSnapshotToParquetWithCache:
 
         snapshot_to_parquet([aircraft])
 
-        assert os.path.exists("historical_heatmap.parquet")
+        db_path = os.environ["HEATMAP_DB_PATH"]
+        assert os.path.exists(db_path)
 
         con = duckdb.connect()
         try:
-            df = con.sql("SELECT * FROM 'historical_heatmap.parquet'").fetchdf()
+            df = con.sql(f"SELECT * FROM '{db_path}'").fetchdf()
         finally:
             con.close()
 

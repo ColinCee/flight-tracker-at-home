@@ -1,10 +1,7 @@
 import os
-import shutil
-import tempfile
 
 import duckdb
 import h3
-import pytest
 from src.models import AircraftState
 from src.spatial_snapshot import snapshot_to_parquet
 
@@ -43,21 +40,12 @@ def create_mock_aircraft(
 class TestSnapshotToParquet:
     """Tests for the snapshot_to_parquet function."""
 
-    @pytest.fixture(autouse=True)
-    def setup_and_teardown(self):
-        """Create a temporary directory for test files and clean up after."""
-        self.original_cwd = os.getcwd()
-        self.temp_dir = tempfile.mkdtemp()
-        os.chdir(self.temp_dir)
-        yield
-        os.chdir(self.original_cwd)
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
     def _read_parquet(self):
         """Helper to read parquet using duckdb directly."""
+        db_path = os.environ["HEATMAP_DB_PATH"]
         con = duckdb.connect()
         try:
-            return con.sql("SELECT * FROM 'historical_heatmap.parquet'").fetchdf()
+            return con.sql(f"SELECT * FROM '{db_path}'").fetchdf()
         finally:
             con.close()
 
@@ -70,7 +58,8 @@ class TestSnapshotToParquet:
 
         snapshot_to_parquet(aircraft_list)
 
-        assert os.path.exists("historical_heatmap.parquet")
+        db_path = os.environ["HEATMAP_DB_PATH"]
+        assert os.path.exists(db_path)
 
     def test_snapshot_appends_to_existing_file(self):
         """Test that subsequent snapshots append to the existing parquet file."""
@@ -112,10 +101,11 @@ class TestSnapshotToParquet:
         snapshot_to_parquet([create_mock_aircraft("111111", lat, lon, 1000)])
         snapshot_to_parquet([create_mock_aircraft("222222", lat, lon, 3000)])
 
+        db_path = os.environ["HEATMAP_DB_PATH"]
         con = duckdb.connect()
         try:
             df = con.sql(
-                "SELECT hex_id, SUM(total_volume) as total_volume, AVG(avg_altitude) as avg_altitude FROM 'historical_heatmap.parquet' GROUP BY hex_id"
+                f"SELECT hex_id, SUM(total_volume) as total_volume, AVG(avg_altitude) as avg_altitude FROM '{db_path}' GROUP BY hex_id"
             ).fetchdf()
         finally:
             con.close()
@@ -143,7 +133,8 @@ class TestSnapshotToParquet:
 
         snapshot_to_parquet([aircraft])
 
-        assert not os.path.exists("historical_heatmap.parquet")
+        db_path = os.environ["HEATMAP_DB_PATH"]
+        assert not os.path.exists(db_path)
 
     def test_snapshot_skips_missing_longitude(self):
         """Test that aircraft with missing longitude are not included."""
@@ -152,7 +143,8 @@ class TestSnapshotToParquet:
 
         snapshot_to_parquet([aircraft])
 
-        assert not os.path.exists("historical_heatmap.parquet")
+        db_path = os.environ["HEATMAP_DB_PATH"]
+        assert not os.path.exists(db_path)
 
     def test_snapshot_uses_resolution_8_h3(self):
         """Test that H3 resolution 8 is used for binning."""
@@ -179,7 +171,8 @@ class TestSnapshotToParquet:
         """Test that empty aircraft list does not create a file."""
         snapshot_to_parquet([])
 
-        assert not os.path.exists("historical_heatmap.parquet")
+        db_path = os.environ["HEATMAP_DB_PATH"]
+        assert not os.path.exists(db_path)
 
     def test_snapshot_all_on_ground_does_nothing(self):
         """Test that all on-ground aircraft result in no file."""
@@ -190,7 +183,8 @@ class TestSnapshotToParquet:
 
         snapshot_to_parquet(aircraft_list)
 
-        assert not os.path.exists("historical_heatmap.parquet")
+        db_path = os.environ["HEATMAP_DB_PATH"]
+        assert not os.path.exists(db_path)
 
     def test_snapshot_multiple_hexagons(self):
         """Test that different hexagons are tracked separately."""

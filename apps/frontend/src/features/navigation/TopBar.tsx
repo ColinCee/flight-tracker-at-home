@@ -4,6 +4,8 @@ import { cn } from '@/shared/utils';
 
 export type ViewMode = 'live' | 'heatmap';
 
+const SEEN_3D_TIP_KEY = 'hasSeen3DTip';
+
 interface TopBarProps {
   activeView: ViewMode;
   onViewChange: (view: ViewMode) => void;
@@ -15,7 +17,7 @@ export function TopBar({ activeView, onViewChange }: TopBarProps) {
   // Automatically show the tooltip the first time they switch to the Heatmap
   useEffect(() => {
     if (activeView === 'heatmap') {
-      const hasSeenTip = localStorage.getItem('hasSeen3DTip');
+      const hasSeenTip = localStorage.getItem(SEEN_3D_TIP_KEY);
       if (!hasSeenTip) {
         setShowTooltip(true);
       }
@@ -27,14 +29,14 @@ export function TopBar({ activeView, onViewChange }: TopBarProps) {
 
   const handleDismiss = () => {
     setShowTooltip(false);
-    localStorage.setItem('hasSeen3DTip', 'true');
+    localStorage.setItem(SEEN_3D_TIP_KEY, 'true');
   };
 
   return (
     // We changed this wrapper to a flex-col so the tooltip drops down neatly below the bar
     <div className="absolute left-1/2 top-6 z-50 flex -translate-x-1/2 flex-col items-center gap-3">
       {/* 1. The Main Navigation Bar */}
-      <div className="flex items-center gap-1 rounded-full border border-zinc-700/60 bg-zinc-900/80 p-1 opacity-60 backdrop-blur-md transition-all duration-300 hover:shadow-xl sm:opacity-40 sm:hover:opacity-100">
+      <div className="flex items-center gap-1 rounded-full border border-zinc-700/60 bg-zinc-900/80 p-1 opacity-90 backdrop-blur-md transition-all duration-300 hover:shadow-xl sm:opacity-80 sm:hover:opacity-100">
         <button
           type="button"
           onClick={() => onViewChange('live')}
@@ -95,6 +97,7 @@ export function TopBar({ activeView, onViewChange }: TopBarProps) {
               type="button"
               onClick={handleDismiss}
               className="text-zinc-500 transition-colors hover:text-zinc-300"
+              aria-label="Close"
             >
               <X className="h-4 w-4" />
             </button>

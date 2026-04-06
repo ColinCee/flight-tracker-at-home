@@ -95,18 +95,13 @@ export interface AirportWeather {
   windDirectionDeg: number | null;
 }
 
-export type ValidationErrorCtx = { [key: string]: unknown };
-
-export interface ValidationError {
-  loc: (string | number)[];
-  msg: string;
-  type: string;
-  input?: unknown;
-  ctx?: ValidationErrorCtx;
-}
-
-export interface HTTPValidationError {
-  detail?: ValidationError[];
+/**
+ * Aggregated heatmap data for a single H3 hexagon.
+ */
+export interface HeatmapHexagon {
+  hexId: string;
+  totalVolume: number;
+  avgAltitude: number;
 }
 
 /**
@@ -117,10 +112,6 @@ export interface WeatherResponse {
   cacheAgeSeconds: number;
   weather: AirportWeather[];
 }
-
-export type GetHeatmapParams = {
-hours?: number;
-};
 
 /**
  * Simple health check.
@@ -478,45 +469,33 @@ export function useGetWeather<TData = Awaited<ReturnType<typeof getWeather>>, TE
 
 /**
  * Query the Parquet file for the aggregated heatmap.
+Note: This is a sync def endpoint because DuckDB's Python API is synchronous.
+FastAPI will run this in a background threadpool to avoid blocking the event loop.
  * @summary Get Heatmap Data
  */
 export type getHeatmapResponse200 = {
-  data: unknown
+  data: HeatmapHexagon[]
   status: 200
-}
-
-export type getHeatmapResponse422 = {
-  data: HTTPValidationError
-  status: 422
 }
 
 export type getHeatmapResponseSuccess = (getHeatmapResponse200) & {
   headers: Headers;
 };
-export type getHeatmapResponseError = (getHeatmapResponse422) & {
-  headers: Headers;
-};
+;
 
-export type getHeatmapResponse = (getHeatmapResponseSuccess | getHeatmapResponseError)
+export type getHeatmapResponse = (getHeatmapResponseSuccess)
 
-export const getGetHeatmapUrl = (params?: GetHeatmapParams,) => {
-  const normalizedParams = new URLSearchParams();
+export const getGetHeatmapUrl = () => {
 
-  Object.entries(params || {}).forEach(([key, value]) => {
 
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
-    }
-  });
 
-  const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/heatmap?${stringifiedParams}` : `/heatmap`
+  return `/heatmap`
 }
 
-export const getHeatmap = async (params?: GetHeatmapParams, options?: RequestInit): Promise<getHeatmapResponse> => {
+export const getHeatmap = async ( options?: RequestInit): Promise<getHeatmapResponse> => {
 
-  return fetchClient<getHeatmapResponse>(getGetHeatmapUrl(params),
+  return fetchClient<getHeatmapResponse>(getGetHeatmapUrl(),
   {
     ...options,
     method: 'GET'
@@ -529,23 +508,23 @@ export const getHeatmap = async (params?: GetHeatmapParams, options?: RequestIni
 
 
 
-export const getGetHeatmapQueryKey = (params?: GetHeatmapParams,) => {
+export const getGetHeatmapQueryKey = () => {
     return [
-    `/heatmap`, ...(params ? [params] : [])
+    `/heatmap`
     ] as const;
     }
 
 
-export const getGetHeatmapQueryOptions = <TData = Awaited<ReturnType<typeof getHeatmap>>, TError = HTTPValidationError>(params?: GetHeatmapParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHeatmap>>, TError, TData>, }
+export const getGetHeatmapQueryOptions = <TData = Awaited<ReturnType<typeof getHeatmap>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHeatmap>>, TError, TData>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetHeatmapQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getGetHeatmapQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHeatmap>>> = ({ signal }) => getHeatmap(params, { signal });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHeatmap>>> = ({ signal }) => getHeatmap({ signal });
 
 
 
@@ -555,19 +534,19 @@ const {query: queryOptions} = options ?? {};
 }
 
 export type GetHeatmapQueryResult = NonNullable<Awaited<ReturnType<typeof getHeatmap>>>
-export type GetHeatmapQueryError = HTTPValidationError
+export type GetHeatmapQueryError = unknown
 
 
 /**
  * @summary Get Heatmap Data
  */
 
-export function useGetHeatmap<TData = Awaited<ReturnType<typeof getHeatmap>>, TError = HTTPValidationError>(
- params?: GetHeatmapParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHeatmap>>, TError, TData>, }
+export function useGetHeatmap<TData = Awaited<ReturnType<typeof getHeatmap>>, TError = unknown>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHeatmap>>, TError, TData>, }
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetHeatmapQueryOptions(params,options)
+  const queryOptions = getGetHeatmapQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

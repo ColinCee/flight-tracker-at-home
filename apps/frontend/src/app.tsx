@@ -1,17 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useGetHeatmap } from '@/api/generated';
+import { getGetHeatmapQueryKey, useGetHeatmap } from '@/api/generated';
 import { useAircraftData } from '@/api/use-aircraft-data';
 import { useWeatherData } from '@/api/use-weather-data';
 import { KpiStrip } from '@/features/kpi/KpiStrip';
 import { MapView } from '@/features/map/MapView';
 import { TopBar, type ViewMode } from '@/features/navigation/TopBar';
 import type { AircraftFilter } from '@/shared/filters';
-
-interface HexagonData {
-  hex_id: string;
-  total_volume: number;
-  avg_altitude: number;
-}
 
 export function App() {
   const { aircraft, kpis } = useAircraftData();
@@ -46,7 +40,12 @@ export function App() {
     setSelectedAirportIcao(null);
   }, []);
 
-  const { data: heatmapData } = useGetHeatmap();
+  const { data: heatmapData } = useGetHeatmap({
+    query: {
+      queryKey: getGetHeatmapQueryKey(),
+      enabled: viewMode === 'heatmap',
+    },
+  });
 
   return (
     <main className="relative h-screen w-screen bg-background text-foreground">
@@ -55,11 +54,7 @@ export function App() {
       {/* Render a single MapView and let it handle the ViewMode switching inside */}
       <MapView
         viewMode={viewMode}
-        heatmapData={
-          Array.isArray(heatmapData)
-            ? heatmapData
-            : ((heatmapData as { data?: HexagonData[] })?.data ?? [])
-        }
+        heatmapData={heatmapData?.data ?? []}
         aircraft={aircraft ?? []}
         selectedAircraft={selectedAircraft}
         airports={airports ?? []}

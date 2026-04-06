@@ -88,10 +88,7 @@ test.describe('frontend heatmap view', () => {
     await heatmapButton.click();
 
     // The tooltip has an X button to close it
-    const closeButton = page
-      .locator('button')
-      .filter({ has: page.locator('svg') })
-      .nth(1);
+    const closeButton = page.getByRole('button', { name: /close/i });
     await expect(closeButton).toBeVisible();
   });
 
