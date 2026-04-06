@@ -288,4 +288,4 @@ The OpenAPI spec is always available at `/docs` (Swagger UI) and `/openapi.json`
 | API contract | Pydantic → OpenAPI → Orval               | Typed React Query hooks + TypeScript types from FastAPI spec             |
 | Monorepo     | Nx + Bun + mise                          | Polyglot task orchestration (JS + Python)                                |
 | Deploy (FE)  | Cloudflare Pages                         | Fastest CDN, unlimited free bandwidth, auto-deploy from GitHub           |
-| Deploy (BE)  | Self-hosted (Docker + Cloudflare Tunnel) | Always-on, no cold starts, residential IP                                |
+| Deploy (BE)  | Dokploy (Beelink) + Cloudflare Tunnel  | Always-on, no cold starts, auto-deploy from CI via Tailscale             |

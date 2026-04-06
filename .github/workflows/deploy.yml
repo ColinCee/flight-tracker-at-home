@@ -50,3 +50,24 @@ jobs:
             | **Branch** | `${{ github.head_ref }}` |
 
             > Deployed to [Cloudflare Pages](https://pages.dev) via GitHub Actions
+
+  deploy-backend:
+    name: Deploy Backend (Dokploy)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [deploy-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Trigger Dokploy deploy
+        run: |
+          curl -sf -X POST 'http://beelink:3000/api/trpc/application.deploy' \
+            -H 'x-api-key: ${{ secrets.DOKPLOY_API_KEY }}' \
+            -H 'Content-Type: application/json' \
+            -d '{"json":{"applicationId":"lY6Mu4-AFWeasm-SMoJG0"}}'
+          echo "✅ Backend deploy triggered on Dokploy"
