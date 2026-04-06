@@ -2,15 +2,7 @@ import { useEffect, useState } from 'react';
 import type { KPIs } from '@/api/generated';
 import type { AircraftFilter } from '@/shared/filters';
 import { Badge } from '@/shared/ui/badge';
-
-const LOADING_HEALTH = { color: 'bg-zinc-400 animate-pulse', label: 'Connecting' } as const;
-const FALLBACK_HEALTH = { color: 'bg-red-500', label: 'Offline' } as const;
-
-const HEALTH_LABELS: Record<string, { color: string; label: string }> = {
-  live: { color: 'bg-emerald-500', label: 'Live' },
-  stale: { color: 'bg-amber-500', label: 'Stale' },
-  offline: FALLBACK_HEALTH,
-};
+import { computeSecondsLeft, formatCountdown, resolveHealthLabel } from './kpi-helpers';
 
 interface KpiStripProps {
   kpis: KPIs | null;
@@ -53,7 +45,7 @@ export function KpiStrip({
 }: KpiStripProps) {
   const toggle = (id: AircraftFilter) => () => onFilterChange(activeFilter === id ? null : id);
 
-  const health = kpis ? (HEALTH_LABELS[kpis.apiHealth] ?? FALLBACK_HEALTH) : LOADING_HEALTH;
+  const health = resolveHealthLabel(kpis?.apiHealth);
 
   return (
     <div className="no-scrollbar pointer-events-auto absolute bottom-4 left-1/2 z-10 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-lg border border-zinc-600 bg-background/95 px-3 py-1.5 shadow-lg">
@@ -126,8 +118,7 @@ function PollCountdown({
     }
 
     function tick() {
-      const remaining = Math.ceil((dataUpdatedAt + pollIntervalMs - Date.now()) / 1000);
-      setSecondsLeft(Math.max(0, remaining));
+      setSecondsLeft(computeSecondsLeft(dataUpdatedAt, pollIntervalMs, Date.now()));
     }
 
     tick();
@@ -135,13 +126,10 @@ function PollCountdown({
     return () => clearInterval(id);
   }, [dataUpdatedAt, pollIntervalMs]);
 
-  if (secondsLeft == null) return null;
+  const text = formatCountdown(secondsLeft);
+  if (!text) return null;
 
-  return (
-    <span className="text-[10px] tabular-nums text-muted-foreground">
-      {secondsLeft > 0 ? `next ${secondsLeft}s` : 'updating…'}
-    </span>
-  );
+  return <span className="text-[10px] tabular-nums text-muted-foreground">{text}</span>;
 }
 
 function Separator() {
