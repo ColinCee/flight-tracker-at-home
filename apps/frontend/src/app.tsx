@@ -8,7 +8,7 @@ import { TopBar, type ViewMode } from '@/features/navigation/TopBar';
 import type { AircraftFilter } from '@/shared/filters';
 
 export function App() {
-  const { aircraft, kpis } = useAircraftData();
+  const { aircraft, kpis, dataUpdatedAt, pollIntervalMs } = useAircraftData();
   const { airports } = useWeatherData();
   const [selectedIcao24, setSelectedIcao24] = useState<string | null>(null);
   const [selectedAirportIcao, setSelectedAirportIcao] = useState<string | null>(null);
@@ -65,9 +65,14 @@ export function App() {
         onCloseInspector={handleCloseInspector}
       />
 
-      {/* Only render the KPI strip if kpis actually exist */}
-      {viewMode === 'live' && kpis && (
-        <KpiStrip kpis={kpis} activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+      {viewMode === 'live' && (
+        <KpiStrip
+          kpis={kpis}
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+          dataUpdatedAt={dataUpdatedAt}
+          pollIntervalMs={pollIntervalMs}
+        />
       )}
     </main>
   );
