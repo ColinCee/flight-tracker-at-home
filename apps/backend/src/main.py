@@ -1,24 +1,52 @@
 """Flight Tracker at Home API"""
 
+import asyncio
 import logging
 import os
 import time
 from contextlib import asynccontextmanager
 
+import duckdb
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from src.airplanes_live import close_client, get_client, init_client
+from src.airplanes_live import (
+    close_client,
+    get_client,
+    get_current_airspace_state,
+    init_client,
+)
 from src.cache import airspace_cache
 from src.models import AircraftResponse, WeatherResponse
+from src.spatial_snapshot import snapshot_to_parquet
 from src.weather import weather_cache
 
 logger = logging.getLogger(__name__)
 
 
+async def run_etl_pipeline():
+    """Background task to take spatial snapshots every 60 seconds."""
+    while True:
+        await asyncio.sleep(60)  # Wait 60 seconds between snapshots
+
+        try:
+            # Fetch data directly. Don't rely on the frontend to trigger it.
+            aircraft_list = await get_current_airspace_state()
+
+            if aircraft_list:
+                # Run the Pandas/DuckDB code in a background thread
+                await asyncio.to_thread(snapshot_to_parquet, aircraft_list)
+                logger.info("Successfully appended snapshot to Parquet.")
+        except Exception as e:
+            logger.error(f"ETL Snapshot failed: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_client()
+    # Start the background ETL engine when the server starts
+    etl_task = asyncio.create_task(run_etl_pipeline())
     yield
+    etl_task.cancel()  # Cleanly shut down the engine
     await close_client()
 
 
@@ -115,3 +143,24 @@ async def get_weather() -> WeatherResponse:
     Cached for 30 minutes to respect upstream rate limits.
     """
     return await weather_cache.get_weather()
+
+
+@app.get("/heatmap", operation_id="getHeatmap")
+def get_heatmap_data(hours: int = 24):
+    """Query the Parquet file for the aggregated heatmap."""
+
+    # Return a plain array instead of {"data": []}
+    if not os.path.exists("historical_heatmap.parquet"):
+        return []
+
+    query = """
+        SELECT
+            hex_id,
+            SUM(volume) as total_volume,
+            AVG(avg_altitude) as avg_altitude
+        FROM 'historical_heatmap.parquet'
+        GROUP BY hex_id
+    """
+
+    results = duckdb.sql(query).df().to_dict(orient="records")
+    return results

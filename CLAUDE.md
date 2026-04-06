@@ -11,7 +11,7 @@ flight-tracker-at-home/
 │   ├── frontend/              # React + Vite + Tailwind + TanStack Query
 │   │   ├── src/
 │   │   │   ├── api/           # API layer: Orval-generated hooks + fetch client
-│   │   │   ├── features/      # Feature modules (map/, kpi/) with colocated tests
+│   │   │   ├── features/      # Feature modules (map/, kpi/, navigation/) with colocated tests
 │   │   │   └── shared/        # Cross-feature: ui/, filters
 │   │   └── openapi.json       # Exported OpenAPI spec from backend
 │   ├── backend/               # Python FastAPI + Pydantic
@@ -19,6 +19,8 @@ flight-tracker-at-home/
 │   │   ├── src/models.py      # Data contract — source of truth for API schema
 │   │   ├── src/airplanes_live.py # airplanes.live API client (fetch, parse, enrich)
 │   │   ├── src/cache.py       # 10s TTL cache + KPI computation
+│   │   ├── src/spatial_snapshot.py # Async process to store aircraft position 
+│   │   ├── src/weather.py     # Get weather data for airports
 │   │   └── tests/             # Pytest tests
 │   └── e2e/                   # Playwright end-to-end tests
 │       ├── tests/             # Functional specs (health, aircraft, app)

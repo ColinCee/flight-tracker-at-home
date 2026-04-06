@@ -80,3 +80,7 @@ playwright-report/
 
 # Opencode settings
 opencode.json
+
+# Ignore local database and analytical files
+*.parquet
+historical_heatmap.parquet
