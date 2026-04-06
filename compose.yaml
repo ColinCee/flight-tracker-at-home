@@ -29,9 +29,7 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: cloudflared tunnel --no-autoupdate run
-    environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN:?Set TUNNEL_TOKEN env var}
+    command: tunnel run --token ${TUNNEL_TOKEN:?Set TUNNEL_TOKEN env var}
     depends_on:
       - backend
     profiles: [prod]
