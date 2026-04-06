@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import type { KPIs } from '@/api/generated';
 import type { AircraftFilter } from '@/shared/filters';
 import { Badge } from '@/shared/ui/badge';
 
+const LOADING_HEALTH = { color: 'bg-zinc-400 animate-pulse', label: 'Connecting' } as const;
 const FALLBACK_HEALTH = { color: 'bg-red-500', label: 'Offline' } as const;
 
 const HEALTH_LABELS: Record<string, { color: string; label: string }> = {
@@ -14,6 +16,8 @@ interface KpiStripProps {
   kpis: KPIs | null;
   activeFilter: AircraftFilter;
   onFilterChange: (filter: AircraftFilter) => void;
+  dataUpdatedAt: number;
+  pollIntervalMs: number;
 }
 
 interface KpiItemProps {
@@ -40,53 +44,57 @@ function KpiItem({ label, value, isActive, onClick }: KpiItemProps) {
   );
 }
 
-export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) {
-  if (!kpis) return null;
-
+export function KpiStrip({
+  kpis,
+  activeFilter,
+  onFilterChange,
+  dataUpdatedAt,
+  pollIntervalMs,
+}: KpiStripProps) {
   const toggle = (id: AircraftFilter) => () => onFilterChange(activeFilter === id ? null : id);
 
-  const health = HEALTH_LABELS[kpis.apiHealth] ?? FALLBACK_HEALTH;
+  const health = kpis ? (HEALTH_LABELS[kpis.apiHealth] ?? FALLBACK_HEALTH) : LOADING_HEALTH;
 
   return (
     <div className="no-scrollbar pointer-events-auto absolute bottom-4 left-1/2 z-10 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-lg border border-zinc-600 bg-background/95 px-3 py-1.5 shadow-lg">
       <KpiItem
         label="Tracked"
-        value={kpis.trackedAircraft}
+        value={kpis?.trackedAircraft ?? '—'}
         isActive={activeFilter === null}
         onClick={() => onFilterChange(null)}
       />
       <Separator />
       <KpiItem
         label="Airborne"
-        value={kpis.airborneAircraft}
+        value={kpis?.airborneAircraft ?? '—'}
         isActive={activeFilter === 'airborne'}
         onClick={toggle('airborne')}
       />
       <Separator />
       <KpiItem
         label="Inbound London"
-        value={kpis.inboundLondonAircraft}
+        value={kpis?.inboundLondonAircraft ?? '—'}
         isActive={activeFilter === 'inbound-london'}
         onClick={toggle('inbound-london')}
       />
       <Separator />
       <KpiItem
         label="Climbing"
-        value={kpis.climbingAircraft}
+        value={kpis?.climbingAircraft ?? '—'}
         isActive={activeFilter === 'climbing'}
         onClick={toggle('climbing')}
       />
       <Separator />
       <KpiItem
         label="Descending"
-        value={kpis.descendingAircraft}
+        value={kpis?.descendingAircraft ?? '—'}
         isActive={activeFilter === 'descending'}
         onClick={toggle('descending')}
       />
       <Separator />
       <KpiItem
         label="Avg Alt"
-        value={kpis.avgAltitudeFt != null ? `${kpis.avgAltitudeFt.toLocaleString()} ft` : '—'}
+        value={kpis?.avgAltitudeFt != null ? `${kpis.avgAltitudeFt.toLocaleString()} ft` : '—'}
       />
       <Separator />
       <div className="flex shrink-0 flex-col items-center gap-0.5 px-3 py-1">
@@ -96,8 +104,43 @@ export function KpiStrip({ kpis, activeFilter, onFilterChange }: KpiStripProps) 
             {health.label}
           </Badge>
         </div>
+        <PollCountdown dataUpdatedAt={dataUpdatedAt} pollIntervalMs={pollIntervalMs} />
       </div>
     </div>
+  );
+}
+
+function PollCountdown({
+  dataUpdatedAt,
+  pollIntervalMs,
+}: {
+  dataUpdatedAt: number;
+  pollIntervalMs: number;
+}) {
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (dataUpdatedAt === 0) {
+      setSecondsLeft(null);
+      return;
+    }
+
+    function tick() {
+      const remaining = Math.ceil((dataUpdatedAt + pollIntervalMs - Date.now()) / 1000);
+      setSecondsLeft(Math.max(0, remaining));
+    }
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [dataUpdatedAt, pollIntervalMs]);
+
+  if (secondsLeft == null) return null;
+
+  return (
+    <span className="text-[10px] tabular-nums text-muted-foreground">
+      {secondsLeft > 0 ? `next ${secondsLeft}s` : 'updating…'}
+    </span>
   );
 }
 
