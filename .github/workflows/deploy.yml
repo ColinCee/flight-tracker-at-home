@@ -66,8 +66,8 @@ jobs:
 
       - name: Trigger Dokploy deploy
         run: |
-          curl -sf -X POST 'http://beelink:3000/api/trpc/application.deploy' \
+          curl -sf -X POST 'http://beelink:3000/api/trpc/compose.deploy' \
             -H 'x-api-key: ${{ secrets.DOKPLOY_API_KEY }}' \
             -H 'Content-Type: application/json' \
-            -d '{"json":{"applicationId":"lY6Mu4-AFWeasm-SMoJG0"}}'
+            -d '{"json":{"composeId":"AknAsbGhmqMVkITBaVXHF"}}'
           echo "✅ Backend deploy triggered on Dokploy"
