@@ -1,3 +1,8 @@
+"""Generate a snapshot of aircraft every 60 seconds. This data will be stored using duckdb in a parquet file.
+It is used to represent the heatmap data for the frontend of where aircraft travel and altitude data.
+Data older than the current day - 1 day will be deleted. This happens at midnight daily when the data increments.
+"""
+
 import os
 
 import duckdb
@@ -58,16 +63,34 @@ def snapshot_to_parquet(aircraft_list: list[AircraftState]):
             if os.path.exists(DB_PATH):
                 # Merge existing data with new snapshot
                 # DB_PATH is a controlled constant, so f-string interpolation is safe here
-                con.sql(f"""
-                    COPY (
-                        SELECT * FROM '{DB_PATH}'
-                        UNION ALL
-                        SELECT * FROM aggregated
-                    ) TO '{DB_PATH}' (FORMAT PARQUET)
-                """)
+
+                # Check if the schema has snapshot_time
+                res = con.execute(f"DESCRIBE SELECT * FROM '{DB_PATH}' LIMIT 1")
+                cols = [row[0] for row in res.fetchall()]
+
+                if "snapshot_time" not in cols:
+                    # Old format: overwrite it so we don't carry over dataless timestamps
+                    con.sql(f"""
+                        COPY (
+                            SELECT *, CURRENT_TIMESTAMP::TIMESTAMP AS snapshot_time FROM aggregated
+                        ) TO '{DB_PATH}' (FORMAT PARQUET)
+                    """)
+                else:
+                    con.sql(f"""
+                        COPY (
+                            SELECT * FROM '{DB_PATH}'
+                            WHERE snapshot_time >= CURRENT_DATE - INTERVAL 1 DAY
+                            UNION ALL
+                            SELECT *, CURRENT_TIMESTAMP::TIMESTAMP AS snapshot_time FROM aggregated
+                        ) TO '{DB_PATH}' (FORMAT PARQUET)
+                    """)
             else:
                 # Create the file for the first time
-                con.sql(f"COPY aggregated TO '{DB_PATH}' (FORMAT PARQUET)")
+                con.sql(f"""
+                    COPY (
+                        SELECT *, CURRENT_TIMESTAMP::TIMESTAMP AS snapshot_time FROM aggregated
+                    ) TO '{DB_PATH}' (FORMAT PARQUET)
+                """)
         finally:
             con.close()
 

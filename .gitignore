@@ -82,4 +82,4 @@ playwright-report/
 opencode.json
 
 # Ignore local database and analytical files
-historical_heatmap.parquet
+*.parquet

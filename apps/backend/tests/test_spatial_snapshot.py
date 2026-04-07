@@ -211,4 +211,66 @@ class TestSnapshotToParquet:
         snapshot_to_parquet(aircraft_list)
 
         df = self._read_parquet()
-        assert list(df[0].keys()) == ["hex_id", "total_volume", "avg_altitude"]
+        assert list(df[0].keys()) == [
+            "hex_id",
+            "total_volume",
+            "avg_altitude",
+            "snapshot_time",
+        ]
+
+    def test_snapshot_drops_data_older_than_one_day(self):
+        """Test that data older than CURRENT_DATE - 1 DAY is deleted on new snapshots."""
+        db_path = os.environ["HEATMAP_DB_PATH"]
+        con = duckdb.connect()
+        try:
+            # Insert a record from 2 days ago and a record from today
+            con.execute("""
+                CREATE TABLE t AS 
+                SELECT 'old_hex' AS hex_id, 1::BIGINT AS total_volume, 1000.0 AS avg_altitude, (CURRENT_DATE - INTERVAL 2 DAY)::TIMESTAMP AS snapshot_time
+                UNION ALL
+                SELECT 'new_hex', 2, 2000.0, CURRENT_TIMESTAMP::TIMESTAMP
+            """)
+            con.sql(f"COPY t TO '{db_path}' (FORMAT PARQUET)")
+        finally:
+            con.close()
+
+        # Add a new snapshot
+        aircraft_list = [create_mock_aircraft("111111", 51.47, -0.50, 3000)]
+        snapshot_to_parquet(aircraft_list)
+
+        df = self._read_parquet()
+        hex_ids = [row["hex_id"] for row in df]
+        assert "old_hex" not in hex_ids
+        assert "new_hex" in hex_ids
+        # And the new one just added should be there
+        new_snapshot_hex = h3.latlng_to_cell(51.47, -0.50, 8)
+        assert new_snapshot_hex in hex_ids
+
+    def test_snapshot_overwrites_legacy_schema(self):
+        """Test that existing data without snapshot_time is completely overwritten."""
+        db_path = os.environ["HEATMAP_DB_PATH"]
+        con = duckdb.connect()
+        try:
+            # Create a file with old schema (no snapshot_time)
+            con.execute(
+                "CREATE TABLE t AS SELECT 'legacy_hex' AS hex_id, 1::BIGINT AS total_volume, 1000.0 AS avg_altitude"
+            )
+            con.sql(f"COPY t TO '{db_path}' (FORMAT PARQUET)")
+        finally:
+            con.close()
+
+        # Add a new snapshot
+        aircraft_list = [create_mock_aircraft("111111", 51.47, -0.50, 3000)]
+        snapshot_to_parquet(aircraft_list)
+
+        df = self._read_parquet()
+        hex_ids = [row["hex_id"] for row in df]
+        assert "legacy_hex" not in hex_ids
+        new_snapshot_hex = h3.latlng_to_cell(51.47, -0.50, 8)
+        assert new_snapshot_hex in hex_ids
+        assert list(df[0].keys()) == [
+            "hex_id",
+            "total_volume",
+            "avg_altitude",
+            "snapshot_time",
+        ]
