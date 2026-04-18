@@ -1,1 +1,3 @@
 [mcp_servers]
+[features]
+codex_hooks = true
