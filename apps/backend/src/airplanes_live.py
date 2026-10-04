@@ -1,10 +1,11 @@
-"""This module handles the extraction and transformation of Airplanes.live API data.
+"""This module handles the extraction and transformation of ADS-B Exchange v2 API data.
 It maps ADSBx v2 format JSON to strict Pydantic contracts and applies
 spatial heuristics to determine Heathrow approach status.
 """
 
 import logging
 import math
+import os
 import time
 from typing import Literal, TypedDict
 
@@ -14,7 +15,9 @@ from src.models import AircraftState, PositionSource
 logger = logging.getLogger(__name__)
 
 # --- Configuration & Constants ---
-AIRPLANES_LIVE_URL = "https://api.airplanes.live/v2/point"
+# Any ADSBx v2-compatible point endpoint. airplanes.live blocked our IP in
+# Oct 2026, so the default is adsb.lol (same response shape, no auth).
+ADSB_API_URL = os.getenv("ADSB_API_URL", "https://api.adsb.lol/v2/point")
 
 # Central London Reference Coordinates
 LONDON_LAT = 51.5072
@@ -99,7 +102,7 @@ def get_client() -> httpx.AsyncClient:
 # --- Phase 1: Extraction ---
 async def fetch_london_airspace() -> list[dict]:
     """Phase 1: Extraction - Fetches aircraft within 60nm of Central London."""
-    url = f"{AIRPLANES_LIVE_URL}/{LONDON_LAT}/{LONDON_LON}/{RADIUS_NM}"
+    url = f"{ADSB_API_URL}/{LONDON_LAT}/{LONDON_LON}/{RADIUS_NM}"
 
     try:
         client = get_client()
@@ -109,7 +112,7 @@ async def fetch_london_airspace() -> list[dict]:
         data = response.json()
         return data.get("ac") or []
     except httpx.HTTPError as e:
-        logger.warning("Error fetching from Airplanes.live: %s", e)
+        logger.warning("Error fetching from ADS-B API: %s", e)
         raise
 
 

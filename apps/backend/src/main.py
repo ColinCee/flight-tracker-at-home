@@ -11,9 +11,9 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from src.airplanes_live import (
+    ADSB_API_URL,
     close_client,
     get_client,
-    get_current_airspace_state,
     init_client,
 )
 from src.cache import airspace_cache
@@ -30,8 +30,10 @@ async def run_etl_pipeline():
         await asyncio.sleep(60)  # Wait 60 seconds between snapshots
 
         try:
-            # Fetch data directly. Don't rely on the frontend to trigger it.
-            aircraft_list = await get_current_airspace_state()
+            # Go through the shared cache so the ETL never adds an extra upstream
+            # call when the frontend is polling. Skip stale (failed-fetch) data.
+            state = await airspace_cache.get_state()
+            aircraft_list = state.aircraft if state.kpis.api_health == "live" else []
 
             if aircraft_list:
                 # Run the Pandas/DuckDB code in a background thread
@@ -100,7 +102,7 @@ async def get_aircraft() -> AircraftResponse:
         # Specifically handle upstream API failure when no cache is available
         raise HTTPException(
             status_code=503,
-            detail=f"Airplanes.live API is currently unreachable: {e!s}",
+            detail=f"ADS-B API is currently unreachable: {e!s}",
         ) from e
 
 
@@ -112,7 +114,7 @@ async def get_aircraft() -> AircraftResponse:
 async def debug_airplanes_live():
     """Diagnose Airplanes.live API connectivity from this server."""
     # We test the exact bounding box for Heathrow
-    api_url = "https://api.airplanes.live/v2/point/51.47/-0.4543/30"
+    api_url = f"{ADSB_API_URL}/51.47/-0.4543/30"
 
     results = {
         "authenticated": False,  # Airplanes.live is public, no auth required

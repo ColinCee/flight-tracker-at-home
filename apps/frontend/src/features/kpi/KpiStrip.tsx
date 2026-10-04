@@ -6,6 +6,7 @@ import { computeSecondsLeft, formatCountdown, resolveHealthLabel } from './kpi-h
 
 interface KpiStripProps {
   kpis: KPIs | null;
+  isError: boolean;
   activeFilter: AircraftFilter;
   onFilterChange: (filter: AircraftFilter) => void;
   dataUpdatedAt: number;
@@ -38,6 +39,7 @@ function KpiItem({ label, value, isActive, onClick }: KpiItemProps) {
 
 export function KpiStrip({
   kpis,
+  isError,
   activeFilter,
   onFilterChange,
   dataUpdatedAt,
@@ -45,7 +47,7 @@ export function KpiStrip({
 }: KpiStripProps) {
   const toggle = (id: AircraftFilter) => () => onFilterChange(activeFilter === id ? null : id);
 
-  const health = resolveHealthLabel(kpis?.apiHealth);
+  const health = resolveHealthLabel(kpis?.apiHealth, isError);
 
   return (
     <div className="no-scrollbar pointer-events-auto absolute bottom-4 left-1/2 z-10 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-lg border border-zinc-600 bg-background/95 px-3 py-1.5 shadow-lg">
