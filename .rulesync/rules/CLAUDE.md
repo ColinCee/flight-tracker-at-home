@@ -26,7 +26,7 @@ flight-tracker-at-home/
 │   ├── backend/               # Python FastAPI + Pydantic
 │   │   ├── src/main.py        # FastAPI app + endpoints (/health, /aircraft)
 │   │   ├── src/models.py      # Data contract — source of truth for API schema
-│   │   ├── src/airplanes_live.py # airplanes.live API client (fetch, parse, enrich)
+│   │   ├── src/airplanes_live.py # ADS-B API client (adsb.lol by default; fetch, parse, enrich)
 │   │   ├── src/cache.py       # 10s TTL cache + KPI computation
 │   │   ├── src/spatial_snapshot.py # Async process to store aircraft position 
 │   │   ├── src/weather.py     # Get weather data for airports
@@ -68,8 +68,8 @@ flight-tracker-at-home/
 
 ### Backend (apps/backend)
 
-- **main.py** — FastAPI app with endpoints: `/health`, `/aircraft`, `/weather`, `/heatmap`, `/debug/airplanes_live`; background ETL task runs every 60s to capture spatial snapshots
-- **airplanes_live.py** — 3-phase ETL: fetch London airspace from airplanes.live point endpoint (30nm radius) → parse JSON aircraft objects into `AircraftState` → enrich with `is_approaching_lhr` heuristic (haversine distance, altitude, heading, descent rate), `is_climbing`, and `is_descending`. No authentication needed — free public API.
+- **main.py** — FastAPI app with endpoints: `/health`, `/aircraft`, `/weather`, `/heatmap`, `/debug/airplanes_live`; background ETL task snapshots the shared cache every 60s
+- **airplanes_live.py** — 3-phase ETL: fetch London airspace from an ADSBx v2 point endpoint (adsb.lol by default, `ADSB_API_URL`; 60nm radius) → parse JSON aircraft objects into `AircraftState` → enrich with `is_approaching_lhr` heuristic (haversine distance, altitude, heading, descent rate), `is_climbing`, and `is_descending`. No authentication needed — free public API.
 - **cache.py** — `AirspaceCache` singleton with 10s TTL lazy refresh; tracks rolling 60-min throughput for KPIs. On upstream failure (rate limit, timeout), serves stale cached data instead of losing aircraft.
 - **weather.py** — Fetches MET Norway weather for London airports; `WeatherCache` with 30-min TTL
 - **spatial_snapshot.py** — H3 hexagon binning (resolution 8) + DuckDB parquet storage for historical heatmap data
@@ -91,7 +91,7 @@ flight-tracker-at-home/
 
 ```
 # Live Radar View
-airplanes.live API (10s cache TTL)
+adsb.lol API (10s cache TTL)
   → airplanes_live.py (fetch + parse + enrich)
   → cache.py (TTL + KPIs + stale fallback)
   → GET /aircraft (AircraftResponse JSON)
@@ -104,7 +104,7 @@ GET /heatmap (reads from historical_heatmap.parquet)
   → Click hexagon → Popup with sector stats
 
 # Background ETL (every 60s)
-get_current_airspace_state()
+airspace_cache.get_state() (shared 10s cache, live data only)
   → snapshot_to_parquet (H3 binning + DuckDB append)
   → historical_heatmap.parquet (persistent)
 ```
@@ -170,7 +170,7 @@ mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
 | Map       | MapLibre GL JS + react-map-gl + Deck.gl |
 | State     | TanStack Query (auto-polling 10s)       |
 | Backend   | Python 3.12 / FastAPI                   |
-| Data      | airplanes.live REST API                 |
+| Data      | adsb.lol REST API (ADSBx v2 format)     |
 | E2E Tests | Playwright (Chromium)                   |
 | Profiling | ps RSS sampling + CDP JS heap           |
 | Monorepo  | Nx + Bun + mise                         |

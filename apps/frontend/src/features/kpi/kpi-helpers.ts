@@ -9,8 +9,8 @@ const HEALTH_LABELS: Record<string, { color: string; label: string }> = {
 
 export type HealthLabel = { color: string; label: string };
 
-export function resolveHealthLabel(apiHealth: string | undefined): HealthLabel {
-  if (!apiHealth) return LOADING_HEALTH;
+export function resolveHealthLabel(apiHealth: string | undefined, isError = false): HealthLabel {
+  if (!apiHealth) return isError ? FALLBACK_HEALTH : LOADING_HEALTH;
   return HEALTH_LABELS[apiHealth] ?? FALLBACK_HEALTH;
 }
 

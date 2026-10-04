@@ -26,6 +26,12 @@ describe('resolveHealthLabel', () => {
     expect(result.color).toContain('animate-pulse');
   });
 
+  it('returns "Offline" when the request failed before any data arrived', () => {
+    const result = resolveHealthLabel(undefined, true);
+    expect(result.label).toBe('Offline');
+    expect(result.color).toContain('red');
+  });
+
   it('falls back to "Offline" for unknown status values', () => {
     const result = resolveHealthLabel('something-unexpected');
     expect(result.label).toBe('Offline');

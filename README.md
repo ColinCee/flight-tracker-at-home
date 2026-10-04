@@ -25,7 +25,7 @@ Real-time aviation dashboard showing aircraft around the London airspace with Lo
 | Map | MapLibre GL JS, react-map-gl, Deck.gl |
 | State | TanStack Query (auto-polling) |
 | Backend | Python 3.12, FastAPI |
-| Data | [airplanes.live](https://airplanes.live/) REST API |
+| Data | [adsb.lol](https://adsb.lol/) REST API (ODbL) |
 | E2E Tests | Playwright |
 | Monorepo | Nx + Bun + mise |
 | Deploy (FE) | Cloudflare Pages |
@@ -34,10 +34,10 @@ Real-time aviation dashboard showing aircraft around the London airspace with Lo
 ## Architecture
 
 ```
-airplanes.live API → Backend (FastAPI + 10s cache) → Frontend (React + Deck.gl)
+adsb.lol API → Backend (FastAPI + 10s cache) → Frontend (React + Deck.gl)
 ```
 
-The backend fetches aircraft positions from airplanes.live, enriches them with a Heathrow approach heuristic, and caches results with a 10-second TTL. The frontend polls the backend and renders aircraft on a map with real-time KPIs.
+The backend fetches aircraft positions from adsb.lol (any ADSBx v2 endpoint via `ADSB_API_URL`), enriches them with a Heathrow approach heuristic, and caches results with a 10-second TTL. The frontend polls the backend and renders aircraft on a map with real-time KPIs.
 
 See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for deep dives into the data contract, caching strategy, and design decisions.
 

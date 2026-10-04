@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import time
+from typing import Any
 
 import httpx
 from src.models import AirportWeather, WeatherResponse
@@ -71,7 +72,7 @@ class WeatherCache:
             return self._fallback_or_empty(now, cache_age)
 
     async def _fetch_and_parse_airport(
-        self, client: httpx.AsyncClient, airport: dict
+        self, client: httpx.AsyncClient, airport: dict[str, Any]
     ) -> AirportWeather | None:
         """Fetches and transforms MET Norway data for a single airport."""
         params = {"lat": airport["lat"], "lon": airport["lon"]}
