@@ -7,7 +7,7 @@ import logging
 import math
 import os
 import time
-from typing import Literal, TypedDict
+from typing import Any, Literal, TypedDict
 
 import httpx
 from src.models import AircraftState, PositionSource
@@ -100,7 +100,7 @@ def get_client() -> httpx.AsyncClient:
 
 
 # --- Phase 1: Extraction ---
-async def fetch_london_airspace() -> list[dict]:
+async def fetch_london_airspace() -> list[dict[str, Any]]:
     """Phase 1: Extraction - Fetches aircraft within 60nm of Central London."""
     url = f"{ADSB_API_URL}/{LONDON_LAT}/{LONDON_LON}/{RADIUS_NM}"
 
@@ -116,7 +116,7 @@ async def fetch_london_airspace() -> list[dict]:
         raise
 
 
-def parse_aircraft(ac: dict) -> AircraftState | None:
+def parse_aircraft(ac: dict[str, Any]) -> AircraftState | None:
     """Phase 2: Transformation - Maps airplanes.live dict to AircraftState.
 
     All aviation units are preserved as-is (feet, knots, fpm).
