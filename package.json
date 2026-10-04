@@ -59,7 +59,7 @@
       "uvx ruff check --fix"
     ],
     "*.{ts,tsx,js,jsx,json,css}": [
-      "bunx @biomejs/biome check --write --no-errors-on-unmatched"
+      "bunx @biomejs/biome@2.4.10 check --write --no-errors-on-unmatched"
     ]
   }
 }

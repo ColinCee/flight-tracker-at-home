@@ -35,8 +35,8 @@ description = "Format all code (ruff + biome)"
 run = """
 uvx ruff format apps/backend/
 uvx ruff check --fix apps/backend/ || true
-bunx @biomejs/biome format --write .
-bunx @biomejs/biome lint --fix . || true
+bunx @biomejs/biome@2.4.10 format --write .
+bunx @biomejs/biome@2.4.10 lint --fix . || true
 """
 
 [tasks.check]
@@ -44,7 +44,7 @@ description = "Lint, format, and type check (no modifications)"
 run = """
 uvx ruff check apps/backend/
 uvx ruff format --check apps/backend/
-bunx @biomejs/biome check .
+bunx @biomejs/biome@2.4.10 check .
 cd apps/backend && uvx ty check
 cd -
 bunx tsc --build
@@ -98,13 +98,13 @@ echo "Generated API types are in sync"
 
 [tasks."rules:sync"]
 description = "Regenerate AI config files from .rulesync/"
-run = "npx rulesync generate"
+run = "npx rulesync@26.0.0 generate"
 
 [tasks."rules:check"]
 description = "Check AI config files are in sync with .rulesync/"
 run = """
 bash scripts/check-mise-docs-sync.sh
-npx rulesync generate
+npx rulesync@26.0.0 generate
 if ! git diff --quiet; then
   echo "ERROR: AI config files are out of sync with .rulesync/"
   echo "Run: mise run rules:sync"
