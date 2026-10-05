@@ -1,13 +1,13 @@
 # ✈️ Flight Tracker at Home
 
-[![CI](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/ci.yml/badge.svg)](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/ci.yml)
-[![Deploy](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/deploy.yml/badge.svg)](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/deploy.yml)
+**▶ Live demo: [flight-tracker-at-home.pages.dev](https://flight-tracker-at-home.pages.dev)**
+
+[![Live demo](https://img.shields.io/website?url=https%3A%2F%2Fflight-tracker-at-home.pages.dev&label=live%20demo&up_message=online&down_message=offline)](https://flight-tracker-at-home.pages.dev)
+[![API](https://img.shields.io/website?url=https%3A%2F%2Fapi.colincheung.dev%2Fhealth&label=api&up_message=online&down_message=offline)](https://api.colincheung.dev/health)
+[![CI](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/ci.yml?query=branch%3Amain)
+[![Deploy](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/deploy.yml/badge.svg?branch=main&event=push)](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/deploy.yml?query=branch%3Amain)
 
 Real-time aviation dashboard showing aircraft around the London airspace with London airport arrival tracking.
-
-**[▶ Live Demo](https://flight-tracker-at-home.pages.dev)**
-&nbsp;·&nbsp;
-**[API Health](https://api.colincheung.dev/health)**
 
 ## What it does
 
