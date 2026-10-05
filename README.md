@@ -1,23 +1,25 @@
 # ✈️ Flight Tracker at Home
 
-**▶ Live demo: [flight-tracker-at-home.pages.dev](https://flight-tracker-at-home.pages.dev)**
+Real-time aviation dashboard showing aircraft around the London airspace with London airport arrival tracking.
 
-[![Live demo](https://img.shields.io/website?url=https%3A%2F%2Fflight-tracker-at-home.pages.dev&label=live%20demo&up_message=online&down_message=offline)](https://flight-tracker-at-home.pages.dev)
-[![API](https://img.shields.io/website?url=https%3A%2F%2Fapi.colincheung.dev%2Fhealth&label=api&up_message=online&down_message=offline)](https://api.colincheung.dev/health)
+**▶ Live: [flight-tracker-at-home.pages.dev](https://flight-tracker-at-home.pages.dev)**
+
 [![CI](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/ci.yml?query=branch%3Amain)
 [![Deploy](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/deploy.yml/badge.svg?branch=main&event=push)](https://github.com/ColinCee/flight-tracker-at-home/actions/workflows/deploy.yml?query=branch%3Amain)
+[![Live](https://img.shields.io/website?url=https%3A%2F%2Fflight-tracker-at-home.pages.dev&label=live&up_message=online&down_message=offline)](https://flight-tracker-at-home.pages.dev)
+[![API](https://img.shields.io/website?url=https%3A%2F%2Fapi.colincheung.dev%2Fhealth&label=api&up_message=online&down_message=offline)](https://api.colincheung.dev/health)
 
-Real-time aviation dashboard showing aircraft around the London airspace with London airport arrival tracking.
+![Screenshot](docs/screenshot.png)
 
 ## What it does
 
-- Plots live aircraft on a dark-themed interactive map (OpenFreeMap tiles)
+- Plots live aircraft on a dark-themed interactive map (OpenFreeMap tiles), with emergency squawks highlighted
 - Highlights planes approaching an airport in orange (heading + altitude + "ILS check")
-- Real-time KPIs: tracked, airborne, inbound airport, climbing, descending, avg altitude
-- Rolling 60-minute London Airport arrival throughput counter
-- Click any aircraft for callsign, altitude, speed, heading, and squawk
+- Real-time KPIs: tracked, airborne, inbound airport, climbing, descending, avg altitude, plus a rolling 60-minute arrival throughput counter
+- Click any aircraft for callsign, altitude, speed, heading, and squawk; click an airport for current weather (MET Norway)
+- 3D heatmap view of historical traffic, binned into H3 hexagons
 
-## Tech Stack
+## Stack
 
 | Layer | Tech |
 |-------|------|
@@ -29,9 +31,19 @@ Real-time aviation dashboard showing aircraft around the London airspace with Lo
 | E2E Tests | Playwright |
 | Monorepo | Nx + Bun + mise |
 | Deploy (FE) | Cloudflare Pages |
-| Deploy (BE) | Dokploy (Beelink) + Cloudflare Tunnel |
+| Deploy (BE) | Docker image on a self-hosted mini-PC + Cloudflare Tunnel |
 
-## Architecture
+## Run locally
+
+Requires [mise](https://mise.jdx.dev), which manages all tool versions (Bun, Node, Python, uv).
+
+```sh
+mise install        # install runtimes
+mise run setup      # install all dependencies + git hooks
+mise run dev        # start frontend (localhost:4200) + backend (localhost:8000)
+```
+
+## How it works
 
 ```
 adsb.lol API → Backend (FastAPI + 10s cache) → Frontend (React + Deck.gl)
@@ -40,20 +52,6 @@ adsb.lol API → Backend (FastAPI + 10s cache) → Frontend (React + Deck.gl)
 The backend fetches aircraft positions from adsb.lol (any ADSBx v2 endpoint via `ADSB_API_URL`), enriches them with a Heathrow approach heuristic, and caches results with a 10-second TTL. The frontend polls the backend and renders aircraft on a map with real-time KPIs.
 
 See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for deep dives into the data contract, caching strategy, and design decisions.
-
-## Getting Started
-
-### Prerequisites
-
-- [mise](https://mise.jdx.dev) — manages all tool versions (Bun, Node, Python, uv)
-
-### Setup
-
-```sh
-mise install        # install runtimes
-mise run setup      # install all dependencies + git hooks
-mise run dev        # start frontend (localhost:4200) + backend (localhost:8000)
-```
 
 ## Commands
 
@@ -70,26 +68,27 @@ mise run codegen      # Regenerate frontend types from backend schema
 
 ```
 apps/
-├── frontend/         # React + Vite + Tailwind
-├── backend/          # Python FastAPI
-└── e2e/              # Playwright tests
+├── frontend/              # React + Vite + Tailwind
+├── backend/               # Python FastAPI
+└── e2e/                   # Playwright tests
 docs/
-├── ARCHITECTURE.md   # Technical reference
-└── MVP.md            # Product requirements
+├── ARCHITECTURE.md        # Technical reference
+├── PRODUCT-FEATURES.md    # Product requirements
+└── SELF-HOST.md           # Self-hosting the backend
 ```
 
 ## Docs
 
 - **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — Technical decisions, data contract, and stack
-- **[docs/MVP.md](docs/PRODUCT-FEATURES.md)** — Product spec and scope
+- **[docs/PRODUCT-FEATURES.md](./docs/PRODUCT-FEATURES.md)** — Product spec and scope
 - **[docs/SELF-HOST.md](./docs/SELF-HOST.md)** — Self-hosting the backend with Dokploy + Cloudflare Tunnel
 
 ## Deployment
 
 | Component | Platform | Trigger |
 |-----------|----------|---------|
-| Frontend | Cloudflare Pages | Auto-deploy on merge to `main` |
-| Backend | [Dokploy](https://dokploy.com/) on Beelink | CI → Tailscale → Dokploy API on merge to `main` |
-| Networking | Cloudflare Tunnel (via Dokploy) | `api.colincheung.dev` → Dokploy backend service |
+| Frontend | Cloudflare Pages | Auto-deploy on merge to `main`; preview deploys on PRs |
+| Backend | Docker image on GHCR | Built and pushed on merge to `main`; run by [homelab](https://github.com/ColinCee/homelab) |
+| Networking | Cloudflare Tunnel | `api.colincheung.dev` → backend container |
 
-The two workflow badges at the top show current CI and deploy status.
+The workflow badges at the top show current CI and deploy status.
