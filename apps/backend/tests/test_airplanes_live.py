@@ -1,9 +1,11 @@
 import time
 from unittest.mock import patch
 
+import httpx
 import pytest
 from src.airplanes_live import (
     calculate_distance_km,
+    fetch_london_airspace,
     get_current_airspace_state,
     get_destination,
     parse_aircraft,
@@ -600,3 +602,58 @@ def test_get_destination_parallel_south():
     )
     # Fails because the bearing from LHR is ~240 deg, not the required 270 deg
     assert get_destination(aircraft) is None
+
+
+# --- Upstream fallback ---
+class _FakeResponse:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._payload
+
+
+class _FakeClient:
+    def __init__(self, primary_error=None, fallback_error=None):
+        self.primary_error = primary_error
+        self.fallback_error = fallback_error
+        self.urls = []
+
+    async def get(self, url):
+        self.urls.append(url)
+        error = self.primary_error if len(self.urls) == 1 else self.fallback_error
+        if error:
+            raise error
+        return _FakeResponse({"ac": [{"hex": "p" if len(self.urls) == 1 else "f"}]})
+
+
+@pytest.mark.asyncio
+async def test_fetch_uses_primary_when_healthy():
+    client = _FakeClient()
+    with patch("src.airplanes_live.get_client", return_value=client):
+        assert await fetch_london_airspace() == [{"hex": "p"}]
+    assert len(client.urls) == 1
+
+
+@pytest.mark.asyncio
+async def test_fetch_falls_back_on_primary_timeout():
+    client = _FakeClient(primary_error=httpx.ReadTimeout(""))
+    with patch("src.airplanes_live.get_client", return_value=client):
+        assert await fetch_london_airspace() == [{"hex": "f"}]
+    assert "adsb.fi" in client.urls[1]
+    assert "/lat/51.5072/lon/-0.1276/dist/60" in client.urls[1]
+
+
+@pytest.mark.asyncio
+async def test_fetch_raises_when_both_fail():
+    client = _FakeClient(
+        primary_error=httpx.ConnectTimeout(""), fallback_error=httpx.ConnectTimeout("")
+    )
+    with (
+        patch("src.airplanes_live.get_client", return_value=client),
+        pytest.raises(httpx.HTTPError),
+    ):
+        await fetch_london_airspace()

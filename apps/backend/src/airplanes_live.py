@@ -18,6 +18,12 @@ logger = logging.getLogger(__name__)
 # Any ADSBx v2-compatible point endpoint. airplanes.live blocked our IP in
 # Oct 2026, so the default is adsb.lol (same response shape, no auth).
 ADSB_API_URL = os.getenv("ADSB_API_URL", "https://api.adsb.lol/v2/point")
+# Tried when the primary fails (adsb.lol times out several times a day). A URL
+# template with {lat}, {lon} and {radius}; set it empty to disable.
+ADSB_FALLBACK_URL = os.getenv(
+    "ADSB_FALLBACK_URL",
+    "https://opendata.adsb.fi/api/v3/lat/{lat}/lon/{lon}/dist/{radius}",
+)
 
 # Central London Reference Coordinates
 LONDON_LAT = 51.5072
@@ -100,19 +106,33 @@ def get_client() -> httpx.AsyncClient:
 
 
 # --- Phase 1: Extraction ---
+async def _fetch_aircraft(url: str) -> list[dict[str, Any]]:
+    response = await get_client().get(url)
+    response.raise_for_status()
+    data = response.json()
+    # ADSBx v2 uses "ac"; some mirrors' older endpoints use "aircraft".
+    return data.get("ac") or data.get("aircraft") or []
+
+
 async def fetch_london_airspace() -> list[dict[str, Any]]:
     """Phase 1: Extraction - Fetches aircraft within 60nm of Central London."""
     url = f"{ADSB_API_URL}/{LONDON_LAT}/{LONDON_LON}/{RADIUS_NM}"
 
     try:
-        client = get_client()
-        response = await client.get(url)
-        response.raise_for_status()
-
-        data = response.json()
-        return data.get("ac") or []
+        return await _fetch_aircraft(url)
     except httpx.HTTPError as e:
-        logger.warning("Error fetching from ADS-B API: %s", e)
+        if not ADSB_FALLBACK_URL:
+            logger.warning("Error fetching from ADS-B API: %s", e)
+            raise
+        logger.warning("Error fetching from ADS-B API, trying fallback: %r", e)
+
+    fallback = ADSB_FALLBACK_URL.format(
+        lat=LONDON_LAT, lon=LONDON_LON, radius=RADIUS_NM
+    )
+    try:
+        return await _fetch_aircraft(fallback)
+    except httpx.HTTPError as e:
+        logger.warning("Error fetching from fallback ADS-B API: %s", e)
         raise
 
 
