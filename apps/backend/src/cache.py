@@ -20,7 +20,7 @@ _MOCK_MODE = os.getenv("MOCK_DATA", "").lower() in ("true", "1", "yes")
 
 def get_effective_ttl() -> float:
     """Return the cache TTL in seconds. Defaults to 10.0."""
-    env_ttl = os.getenv("CACHE_TTL")
+    env_ttl = os.getenv("CACHE_TTL", "")
     if not env_ttl:
         return 10.0
     try:
