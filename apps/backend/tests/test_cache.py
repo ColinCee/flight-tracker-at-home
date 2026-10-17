@@ -168,3 +168,46 @@ async def test_cache_throughput_pruning(mock_get_state):
     assert response.kpis.throughput_last_60min == 1
     assert "A111" not in cache.seen_arrivals
     assert "B222" in cache.seen_arrivals
+
+
+@pytest.mark.asyncio
+@patch("src.cache.get_current_airspace_state")
+async def test_cache_allow_stale_returns_at_once_and_refreshes(mock_get_state):
+    """With allow_stale, an expired cache is served without waiting on upstream."""
+    mock_get_state.return_value = [create_mock_aircraft("A111", destination=None)]
+    cache = AirspaceCache()
+    await cache.get_state()
+
+    release = asyncio.Event()
+
+    async def slow_fetch():
+        await release.wait()
+        return [create_mock_aircraft("B222", destination=None)]
+
+    mock_get_state.side_effect = slow_fetch
+    cache.last_update = 0.0
+
+    response = await asyncio.wait_for(cache.get_state(allow_stale=True), timeout=1)
+    assert response.aircraft[0].icao24 == "A111"
+    assert response.kpis.api_health == "live"
+
+    # A second request while the refresh is in flight starts no second fetch
+    await cache.get_state(allow_stale=True)
+    release.set()
+    assert cache._refresh_task is not None
+    await cache._refresh_task
+    assert mock_get_state.call_count == 2
+
+    response = await cache.get_state(allow_stale=True)
+    assert response.aircraft[0].icao24 == "B222"
+
+
+@pytest.mark.asyncio
+@patch("src.cache.get_current_airspace_state")
+async def test_cache_allow_stale_waits_when_empty(mock_get_state):
+    """With no cache yet, allow_stale still waits for the first fetch."""
+    mock_get_state.return_value = [create_mock_aircraft("A111", destination=None)]
+    cache = AirspaceCache()
+
+    response = await cache.get_state(allow_stale=True)
+    assert response.kpis.tracked_aircraft == 1
