@@ -42,13 +42,15 @@ class AirspaceCache:
 
         # Initialize as None! We will create the lock lazily
         self._lock: asyncio.Lock | None = None
+        self._refresh_task: asyncio.Task[None] | None = None
 
-    async def get_state(self) -> AircraftResponse:
-        """The main entry point for the API route."""
+    async def get_state(self, allow_stale: bool = False) -> AircraftResponse:
+        """The main entry point for the API route.
 
-        # Ensure the lock is created strictly inside the active Event Loop
-        if self._lock is None:
-            self._lock = asyncio.Lock()
+        With allow_stale, an expired cache is returned at once while a background
+        task refreshes it, so a slow upstream (a 10s timeout, then the fallback)
+        never holds up the response. Without it, the caller waits for fresh data.
+        """
 
         now = time.time()
         cache_age = now - self.last_update
@@ -58,6 +60,26 @@ class AirspaceCache:
         if self.cached_response and cache_age < ttl:
             self.cached_response.cache_age_seconds = round(cache_age, 1)
             return self.cached_response
+
+        if allow_stale and self.cached_response:
+            if self._refresh_task is None or self._refresh_task.done():
+                self._refresh_task = asyncio.create_task(self._background_refresh())
+            self.cached_response.cache_age_seconds = round(cache_age, 1)
+            return self.cached_response
+
+        return await self._refresh(ttl)
+
+    async def _background_refresh(self) -> None:
+        try:
+            await self._refresh(get_effective_ttl())
+        except Exception:
+            # _refresh only raises when there is no cache to fall back on
+            logger.exception("Background refresh failed")
+
+    async def _refresh(self, ttl: float) -> AircraftResponse:
+        # Ensure the lock is created strictly inside the active Event Loop
+        if self._lock is None:
+            self._lock = asyncio.Lock()
 
         # 2. Cache is stale: Acquire the lock to fetch safely
         async with self._lock:

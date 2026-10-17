@@ -96,7 +96,7 @@ async def get_aircraft() -> AircraftResponse:
     """
     # This single call handles the 10s TTL, Airplanes.live fetching, and KPI math.
     try:
-        state = await airspace_cache.get_state()
+        state = await airspace_cache.get_state(allow_stale=True)
         return state
     except (httpx.RequestError, httpx.HTTPStatusError) as e:
         # Specifically handle upstream API failure when no cache is available
