@@ -1,0 +1,28 @@
+name: Security
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, to catch new CVEs in an image that hasn't changed.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  scan-backend:
+    name: Scan Backend Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t backend:scan apps/backend
+      # Fails only on HIGH/CRITICAL CVEs that already have a fix, so it never
+      # goes red on something we can't act on.
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: backend:scan
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
