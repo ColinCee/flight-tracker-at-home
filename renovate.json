@@ -1,10 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    "docker:enableMajor",
-    "helpers:pinGitHubActionDigests"
-  ],
+  "extends": ["config:recommended", "docker:enableMajor", "helpers:pinGitHubActionDigests"],
   "automerge": true,
   "automergeType": "pr",
   "platformAutomerge": false,
