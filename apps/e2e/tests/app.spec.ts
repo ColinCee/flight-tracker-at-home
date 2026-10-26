@@ -20,7 +20,8 @@ test.describe('frontend app', () => {
 
     await page.goto('/');
     const res = await aircraftRequest;
-    const data = await res.json();
+    // Chromium can evict the page's response body before we read it, so re-fetch.
+    const data = await (await page.request.get(res.url())).json();
 
     expect(data.aircraft.length).toBeGreaterThanOrEqual(0);
   });
@@ -32,7 +33,8 @@ test.describe('frontend app', () => {
 
     await page.goto('/');
     const res = await weatherRequest;
-    const data = await res.json();
+    // Chromium can evict the page's response body before we read it, so re-fetch.
+    const data = await (await page.request.get(res.url())).json();
 
     expect(data.weather.length).toBeGreaterThanOrEqual(0);
   });
