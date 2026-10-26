@@ -31,7 +31,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "4.151.3"
+          wranglerVersion: "4.152.0"
           command: pages deploy apps/frontend/dist --project-name=flight-tracker-at-home --branch=${{ github.head_ref || 'main' }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
       - name: Comment preview URL on PR
