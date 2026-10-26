@@ -27,7 +27,7 @@ services:
     profiles: [prod]
 
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:latest@sha256:faa8e0a1475f137c910be6025f43c8e4092fdd35461b31e19fd1390657a1ff39
     restart: unless-stopped
     command: tunnel run --token ${TUNNEL_TOKEN:?Set TUNNEL_TOKEN env var}
     depends_on:
