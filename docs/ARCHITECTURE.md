@@ -184,6 +184,6 @@ The OpenAPI spec is always available at `/docs` (Swagger UI) and `/openapi.json`
 | Backend      | Python 3.14 / FastAPI                    | Auto-generates OpenAPI spec from Pydantic models                         |
 | Data source  | adsb.lol (`/v2/point/...`)               | Free, no auth, aviation-native units, rich aircraft metadata             |
 | API contract | Pydantic → OpenAPI → Orval               | Typed React Query hooks + TypeScript types from FastAPI spec             |
-| Monorepo     | Nx + Bun + mise                          | Polyglot task orchestration (JS + Python)                                |
+| Monorepo     | Bun workspaces + mise tasks              | One task runner for JS and Python, no extra build-system layer           |
 | Deploy (FE)  | Cloudflare Pages                         | Fastest CDN, unlimited free bandwidth, auto-deploy from GitHub           |
 | Deploy (BE)  | GHCR image on the homelab + Cloudflare Tunnel | Always-on, no cold starts; the homelab pins the image digest             |

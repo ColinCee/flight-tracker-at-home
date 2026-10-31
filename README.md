@@ -29,7 +29,7 @@ Real-time aviation dashboard showing aircraft around the London airspace with Lo
 | Backend | Python 3.14, FastAPI |
 | Data | [adsb.lol](https://adsb.lol/) REST API (ODbL) |
 | E2E Tests | Playwright |
-| Monorepo | Nx + Bun + mise |
+| Monorepo | Bun workspaces + mise tasks |
 | Deploy (FE) | Cloudflare Pages |
 | Deploy (BE) | Docker image on a self-hosted mini-PC + Cloudflare Tunnel |
 

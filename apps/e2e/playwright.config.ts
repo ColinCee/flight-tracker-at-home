@@ -14,13 +14,15 @@ export default defineConfig({
     : {
         webServer: [
           {
-            command:
-              'cd ../backend && MOCK_DATA=true uv run uvicorn src.main:app --host 0.0.0.0 --port 8000',
+            command: 'uv run uvicorn src.main:app --host 0.0.0.0 --port 8000',
+            cwd: '../backend',
+            env: { ...process.env, MOCK_DATA: 'true' },
             port: 8000,
             reuseExistingServer: !process.env.CI,
           },
           {
-            command: 'cd .. && bunx nx serve frontend',
+            command: 'bunx vite',
+            cwd: '../frontend',
             port: 4200,
             reuseExistingServer: !process.env.CI,
           },

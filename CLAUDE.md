@@ -35,7 +35,6 @@ flight-tracker-at-home/
 │   └── plans/                 # Design & implementation plans
 ├── .rulesync/                 # AI config source of truth → generates CLAUDE.md etc.
 ├── .githooks/                 # Pre-commit hook (lint-staged: ruff + biome)
-├── nx.json                    # Nx monorepo config (generators + caching)
 ├── biome.json                 # JS/TS/CSS linting + formatting config
 ├── ruff.toml                  # Python linting + formatting config
 ├── orval.config.ts            # Pydantic → OpenAPI → TypeScript codegen
@@ -108,6 +107,8 @@ mise run setup:backend      # Install backend dependencies only
 
 # Development
 mise run dev                # Run frontend and backend together
+mise run dev:frontend       # Vite dev server only (port 4200)
+mise run dev:backend        # API only, auto-reload (port 8000)
 
 # Quality
 mise run format             # Format all code (ruff + biome), auto-fix
@@ -160,7 +161,7 @@ mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
 | Data      | adsb.lol REST API (ADSBx v2 format)     |
 | E2E Tests | Playwright (Chromium)                   |
 | Profiling | ps RSS sampling + CDP JS heap           |
-| Monorepo  | Nx + Bun + mise                         |
+| Monorepo  | Bun workspaces + mise tasks             |
 | CI        | GitHub Actions                          |
 | Deploy FE | Cloudflare Pages                        |
 | Deploy BE | Self-hosted (Docker + Cloudflare Tunnel)|
@@ -170,7 +171,7 @@ mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
 Tool versions are managed by [mise](https://mise.jdx.dev/) (see `.mise.toml`):
 
 - **bun** 1.4 — JS package manager + runtime
-- **node** 24 — Required by Nx
+- **node** 24 — Runs the JS CLIs that `bunx` starts (Vite, Playwright, Orval)
 - **python** 3.14 — Backend runtime
 - **uv** — Python package/project manager
 - **ruff** — Python linting + formatting (config: `ruff.toml`)

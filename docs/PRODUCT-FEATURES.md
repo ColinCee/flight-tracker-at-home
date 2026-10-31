@@ -39,7 +39,7 @@ conditions.
 | State mgmt  | TanStack Query (React Query)             |
 | Backend     | Python / FastAPI                         |
 | Data source | adsb.lol REST API + MET Norway     |
-| Monorepo    | Nx + Bun + mise                          |
+| Monorepo    | Bun workspaces + mise tasks              |
 | Deploy (FE) | Cloudflare Pages                         |
 | Deploy (BE) | Self-hosted (Docker + Cloudflare Tunnel) |
 
