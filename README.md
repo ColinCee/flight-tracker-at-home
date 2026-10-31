@@ -71,17 +71,14 @@ apps/
 ├── frontend/              # React + Vite + Tailwind
 ├── backend/               # Python FastAPI
 └── e2e/                   # Playwright tests
-docs/
-├── ARCHITECTURE.md        # Technical reference
-├── PRODUCT-FEATURES.md    # Product requirements
-└── SELF-HOST.md           # Self-hosting the backend
+docs/                      # See Docs below
 ```
 
 ## Docs
 
 - **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — Technical decisions, data contract, and stack
 - **[docs/PRODUCT-FEATURES.md](./docs/PRODUCT-FEATURES.md)** — Product spec and scope
-- **[docs/SELF-HOST.md](./docs/SELF-HOST.md)** — Self-hosting the backend with Dokploy + Cloudflare Tunnel
+- **[docs/SELF-HOST.md](./docs/SELF-HOST.md)** — Self-hosting the backend with Docker Compose + Cloudflare Tunnel
 
 ## Deployment
 
