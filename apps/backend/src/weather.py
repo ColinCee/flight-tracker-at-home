@@ -37,6 +37,7 @@ class WeatherCache:
         self.cached_response: WeatherResponse | None = None
         self.last_update: float = 0.0
         self.retry_at: float = 0.0
+        self.fetched_at: dict[str, float] = {}
         self._lock = asyncio.Lock()
 
     async def get_weather(self) -> WeatherResponse:
@@ -73,11 +74,17 @@ class WeatherCache:
                     self.retry_at = now + WEATHER_RETRY_S
                     return self._fallback_or_empty(now, cache_age)
 
-                # An airport that failed this time keeps its last good reading.
+                # An airport that failed this time keeps its last good reading,
+                # for up to two refreshes, so it never shows day-old weather.
+                for w in valid_weather:
+                    self.fetched_at[w.icao] = now
                 fetched = {w.icao for w in valid_weather}
                 if self.cached_response:
                     valid_weather += [
-                        w for w in self.cached_response.weather if w.icao not in fetched
+                        w
+                        for w in self.cached_response.weather
+                        if w.icao not in fetched
+                        and now - self.fetched_at.get(w.icao, 0) < 2 * WEATHER_CACHE_TTL
                     ]
 
                 self.cached_response = WeatherResponse(
