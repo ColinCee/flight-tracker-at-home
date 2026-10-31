@@ -61,7 +61,11 @@ async function measure() {
   await page.mouse.down();
   while (Date.now() - panStart < 5000) {
     const t = (Date.now() - panStart) / 5000;
-    await page.mouse.move(cx + Math.sin(t * Math.PI * 4) * 120, cy + Math.cos(t * Math.PI * 4) * 120, { steps: 2 });
+    await page.mouse.move(
+      cx + Math.sin(t * Math.PI * 4) * 120,
+      cy + Math.cos(t * Math.PI * 4) * 120,
+      { steps: 2 },
+    );
   }
   await page.mouse.up();
   await page.waitForTimeout(500);
@@ -89,5 +93,8 @@ for (let i = 0; i < runs; i++) {
   results.push(r);
   console.log(JSON.stringify(r));
 }
-const median = (k) => results.map((r) => r[k]).sort((a, b) => a - b)[Math.floor(results.length / 2)];
-console.log(`median ${JSON.stringify(Object.fromEntries(Object.keys(results[0]).map((k) => [k, median(k)])))}`);
+const median = (k) =>
+  results.map((r) => r[k]).sort((a, b) => a - b)[Math.floor(results.length / 2)];
+console.log(
+  `median ${JSON.stringify(Object.fromEntries(Object.keys(results[0]).map((k) => [k, median(k)])))}`,
+);
