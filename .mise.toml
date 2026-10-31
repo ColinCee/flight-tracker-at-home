@@ -110,24 +110,6 @@ fi
 echo "Generated API types are in sync"
 """
 
-[tasks."rules:sync"]
-description = "Regenerate AI config files from .rulesync/"
-run = "npx rulesync@26.0.0 generate"
-
-[tasks."rules:check"]
-description = "Check AI config files are in sync with .rulesync/"
-run = """
-bash scripts/check-mise-docs-sync.sh
-npx rulesync@26.0.0 generate
-if ! git diff --quiet; then
-  echo "ERROR: AI config files are out of sync with .rulesync/"
-  echo "Run: mise run rules:sync"
-  git diff --stat
-  exit 1
-fi
-echo "AI config files are in sync"
-"""
-
 [tasks."deploy:frontend"]
 description = "Build and deploy frontend to Cloudflare Pages"
 dir = "apps/frontend"

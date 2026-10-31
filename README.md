@@ -31,7 +31,7 @@ Real-time aviation dashboard showing aircraft around the London airspace with Lo
 | E2E Tests | Playwright |
 | Monorepo | Bun workspaces + mise tasks |
 | Deploy (FE) | Cloudflare Pages |
-| Deploy (BE) | Docker image on a self-hosted mini-PC + Cloudflare Tunnel |
+| Deploy (BE) | Docker image on the homelab + Cloudflare Tunnel |
 
 ## Run locally
 
@@ -43,42 +43,17 @@ mise run setup      # install all dependencies + git hooks
 mise run dev        # start frontend (localhost:4200) + backend (localhost:8000)
 ```
 
+Other commands (tests, checks, codegen) are listed in [AGENTS.md](./AGENTS.md#commands) and by `mise tasks`.
+
 ## How it works
 
 ```
 adsb.lol API → Backend (FastAPI + 10s cache) → Frontend (React + Deck.gl)
 ```
 
-The backend fetches aircraft positions from adsb.lol (any ADSBx v2 endpoint via `ADSB_API_URL`), enriches them with a Heathrow approach heuristic, and caches results with a 10-second TTL. The frontend polls the backend and renders aircraft on a map with real-time KPIs.
+The backend fetches aircraft positions from adsb.lol (any ADSBx v2 endpoint via `ADSB_API_URL`), marks aircraft approaching the five London airports, and caches results with a 10-second TTL. The frontend polls the backend and renders aircraft on a map with real-time KPIs.
 
-See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for deep dives into the data contract, caching strategy, and design decisions.
-
-## Commands
-
-```sh
-mise run dev          # Start frontend + backend
-mise run check        # Lint, format check, type check
-mise run test         # Unit tests (pytest + vitest)
-mise run test:e2e     # E2E tests (Playwright, uses mock data)
-mise run format       # Auto-fix formatting
-mise run codegen      # Regenerate frontend types from backend schema
-```
-
-## Project Structure
-
-```
-apps/
-├── frontend/              # React + Vite + Tailwind
-├── backend/               # Python FastAPI
-└── e2e/                   # Playwright tests
-docs/                      # See Docs below
-```
-
-## Docs
-
-- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — Technical decisions, data contract, and stack
-- **[docs/PRODUCT-FEATURES.md](./docs/PRODUCT-FEATURES.md)** — Product spec and scope
-- **[docs/SELF-HOST.md](./docs/SELF-HOST.md)** — Self-hosting the backend with Docker Compose + Cloudflare Tunnel
+Architecture, configuration and conventions for contributors (and coding agents) are in [AGENTS.md](./AGENTS.md).
 
 ## Deployment
 

@@ -1,188 +1,91 @@
 # Flight Tracker at Home
 
-Real-time aviation dashboard showing aircraft over London with Heathrow arrival tracking.
-Built by Colin & Calvin Cheung as a portfolio/learning project.
+Real-time map of aircraft over London with arrival tracking for the five London airports, plus a 3D heatmap of past traffic.
+Built by Colin & Calvin Cheung as a portfolio and learning project. What it does for users, how to run it and where it is deployed: `README.md`.
 
-## Repository Structure
-
-```
-flight-tracker-at-home/
-├── apps/
-│   ├── frontend/              # React + Vite + Tailwind + TanStack Query
-│   │   ├── src/
-│   │   │   ├── api/           # API layer: Orval-generated hooks + fetch client
-│   │   │   ├── features/      # Feature modules (map/, kpi/, navigation/) with colocated tests
-│   │   │   └── shared/        # Cross-feature: ui/, filters
-│   │   └── openapi.json       # Exported OpenAPI spec from backend
-│   ├── backend/               # Python FastAPI + Pydantic
-│   │   ├── src/main.py        # FastAPI app + endpoints (/health, /aircraft, /weather, /heatmap)
-│   │   ├── src/models.py      # Data contract — source of truth for API schema
-│   │   ├── src/airplanes_live.py # ADS-B API client (adsb.lol by default; fetch, parse, enrich)
-│   │   ├── src/cache.py       # 10s TTL cache + KPI computation
-│   │   ├── src/spatial_snapshot.py # Async process to store aircraft position 
-│   │   ├── src/weather.py     # Get weather data for airports
-│   │   └── tests/             # Pytest tests (test_airplanes_live, test_cache, test_heatmap, test_spatial_snapshot, test_weather, test_integration)
-│   └── e2e/                   # Playwright end-to-end tests
-│       ├── tests/             # Functional specs (health, aircraft, weather, app, heatmap)
-│       ├── profiling/         # Memory profiling spec (separate config)
-│       └── smoke/             # Production-build smoke test (separate config)
-├── scripts/
-│   └── memory-profile.sh      # CI memory profiling (server RSS + browser JS heap)
-├── docs/
-│   ├── ARCHITECTURE.md        # Technical reference, data contract, env vars, design decisions
-│   ├── PRODUCT-FEATURES.md    # Product requirements and scope
-│   ├── SELF-HOST.md           # Running the backend with Docker Compose + Cloudflare Tunnel
-│   └── plans/                 # Design & implementation plans
-├── .rulesync/                 # AI config source of truth → generates CLAUDE.md etc.
-├── .githooks/                 # Pre-commit hook (lint-staged: ruff + biome)
-├── biome.json                 # JS/TS/CSS linting + formatting config
-├── ruff.toml                  # Python linting + formatting config
-├── orval.config.ts            # Pydantic → OpenAPI → TypeScript codegen
-└── .mise.toml                 # Tool versions + tasks (bun, node, python, uv)
-```
-
-## Architecture
-
-### Frontend (apps/frontend)
-
-- **MapView.tsx** — MapLibre GL map with OpenFreeMap dark tiles, centered on London; switches between live radar and 3D heatmap views
-- **AircraftLayer.tsx** — Deck.gl IconLayer rendering aircraft with heading rotation; 4 SVG icons (jet, prop, helicopter, glider) selected by category, category-based coloring, emergency squawk highlighting (red pulsing ring)
-- **HeatmapLayer.tsx** — Deck.gl H3HexagonLayer rendering aggregated flight volume in 3D; extruded hexagons colored by average altitude
-- **AirportLayer.tsx** — Deck.gl IconLayer for airport markers (LHR, LGW, STN, LTN, LCY)
-- **AircraftInspector.tsx** — Popup panel showing selected aircraft details (callsign, altitude, speed, destination)
-- **AirportInspector.tsx** — Popup panel showing airport weather (MET NORWAY API: condition, temperature, wind)
-- **HexagonInspector.tsx** — Popup panel showing heatmap sector stats for a clicked hexagon
-- **AltitudeLegend.tsx** — Map overlay showing altitude color gradient legend
-- **KpiStrip.tsx** — Always-visible bottom bar: filter buttons (Tracked, Inbound London, Airborne, Climbing, Descending) + KPI values + API health badge + poll countdown; shows placeholder '—' values while loading
-- **TopBar.tsx** — Navigation bar with Live Radar / Heatmap toggle; 3D controls onboarding tooltip (persisted to localStorage)
-- **api/use-aircraft-data.ts** — React Query hook wrapping Orval-generated `useGetAircraft`, auto-polls every 10s; exposes `dataUpdatedAt` and `pollIntervalMs` for freshness indicators
-- **api/use-weather-data.ts** — React Query hook for airport weather, cached 30 minutes
-- **icons/jet.svg** — Aircraft silhouette SVGs (plus prop.svg, helicopter.svg, glider.svg), used as IconLayer atlas with `mask: true` for dynamic coloring
-
-### Backend (apps/backend)
-
-- **main.py** — FastAPI app with endpoints: `/health`, `/aircraft`, `/weather`, `/heatmap` (`/debug/airplanes_live` only with `ENABLE_DEBUG_ENDPOINTS=true`); background ETL task snapshots the shared cache every 60s
-- **airplanes_live.py** — 3-phase ETL: fetch London airspace from an ADSBx v2 point endpoint (adsb.lol by default, `ADSB_API_URL`; 60nm radius) → parse JSON aircraft objects into `AircraftState` → enrich with `destination` (ILS-cone approach heuristic for LHR, LGW, STN, LTN, LCY), `is_climbing`, and `is_descending`. No authentication needed — free public API.
-- **cache.py** — `AirspaceCache` singleton with 10s TTL lazy refresh; tracks rolling 60-min throughput for KPIs. On upstream failure (rate limit, timeout), serves stale cached data instead of losing aircraft.
-- **weather.py** — Fetches MET Norway weather for London airports; `WeatherCache` with 30-min TTL
-- **spatial_snapshot.py** — H3 hexagon binning (resolution 8) + DuckDB parquet storage for historical heatmap data
-- **models.py** — Pydantic models (`AircraftState`, `KPIs`, `AircraftResponse`, `WeatherResponse`) with `alias_generator=to_camel`
-- **mock_data.py** — Fixture data for E2E testing when `MOCK_DATA=true`
-
-### Environment variables
-
-See the table in `docs/ARCHITECTURE.md` (Environment Variables).
-
-### Data Flow
+## Layout
 
 ```
-# Live Radar View
-adsb.lol API (10s cache TTL)
-  → airplanes_live.py (fetch + parse + enrich)
-  → cache.py (TTL + KPIs + stale fallback)
-  → GET /aircraft (AircraftResponse JSON)
-  → useAircraftData (React Query, adaptive refetch)
-  → AircraftLayer (Deck.gl IconLayer)
-
-# Heatmap View
-GET /heatmap (reads from historical_heatmap.parquet)
-  → HeatmapLayer (Deck.gl H3HexagonLayer, 3D extruded)
-  → Click hexagon → Popup with sector stats
-
-# Background ETL (every 60s)
-airspace_cache.get_state() (shared 10s cache, live data only)
-  → snapshot_to_parquet (H3 binning + DuckDB append)
-  → historical_heatmap.parquet (persistent)
+apps/
+├── frontend/          React 19 + Vite + Tailwind + TanStack Query, deployed to Cloudflare Pages
+│   ├── src/api/       Orval-generated client (generated.ts) + hooks that poll it
+│   ├── src/features/  map/, kpi/, navigation/, with tests next to the code
+│   ├── src/shared/    Cross-feature UI and filters
+│   └── openapi.json   Backend schema, exported by `mise run codegen`
+├── backend/           Python FastAPI; image pushed to GHCR, run by the homelab repo
+│   ├── src/main.py            Endpoints + 60 s heatmap snapshot task
+│   ├── src/models.py          Pydantic models: the API contract
+│   ├── src/airplanes_live.py  Upstream client: fetch, parse, enrich
+│   ├── src/cache.py           10 s cache, KPIs, stale fallback
+│   ├── src/weather.py         MET Norway weather, 30 min cache
+│   ├── src/spatial_snapshot.py H3 binning + DuckDB parquet history
+│   └── src/mock_data.py       Fixtures served when MOCK_DATA=true (E2E)
+└── e2e/
+    ├── tests/         Playwright specs against the dev servers
+    ├── smoke/         Production-build smoke test (vite build + preview)
+    └── profiling/     mobile-perf.mjs: phone performance snapshot of any URL
 ```
 
-## Essential Commands
+## Commands
 
-All commands are run via [mise](https://mise.jdx.dev/) from the repo root:
+Everything runs through [mise](https://mise.jdx.dev/) from the repo root; `mise tasks` lists them all with descriptions.
 
 ```bash
-# Setup
-mise run setup              # Install all dependencies (JS + Python) + git hooks
-mise run setup:frontend     # Install frontend dependencies only
-mise run setup:backend      # Install backend dependencies only
-
-# Development
-mise run dev                # Run frontend and backend together
-mise run dev:frontend       # Vite dev server only (port 4200)
-mise run dev:backend        # API only, auto-reload (port 8000)
-
-# Quality
-mise run format             # Format all code (ruff + biome), auto-fix
-mise run check              # Lint, format check, and type check (read-only, for CI)
-mise run typecheck          # Type check only (subset of check)
-mise run test               # Run all tests (pytest + vitest)
-mise run test:e2e           # Run Playwright e2e tests
-mise run test:e2e:ui        # Run Playwright with interactive UI
-mise run test:e2e:prod      # Smoke-test a production build (map tiles, no console errors)
-
-# Codegen & config
-mise run rules:sync         # Regenerate AI config files from .rulesync/
-mise run rules:check        # Verify AI config files are in sync (CI)
-mise run codegen            # Regenerate frontend types from backend schema
-mise run codegen:check      # Verify generated types are in sync (CI)
-
-# Deploy
-mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
+mise run setup        # bun install, uv sync, git hooks
+mise run dev          # frontend :4200 + backend :8000 (dev:frontend / dev:backend run one)
+mise run format       # ruff + biome, auto-fix
+mise run check        # ruff, biome, ty, tsc (what CI runs)
+mise run test         # pytest + vitest
+mise run test:e2e     # Playwright against dev servers with mock data
+mise run test:e2e:prod  # Playwright against a production build
+mise run codegen      # backend models -> openapi.json -> frontend types
 ```
 
-## CI (GitHub Actions)
+CI (`.github/workflows/`) runs check, codegen:check, test, both E2E suites, a Trivy scan of the backend image, and the Pages deploy (a preview on every PR). It fails on unformatted code, so run `mise run format` before pushing.
 
-- **Lint, Format & Types** — `mise run check` (ruff, biome, ty, tsc); fails on unformatted code, so run `mise run format` before pushing
-- **Test** — `mise run test` (pytest + vitest)
-- **E2E Tests** — Playwright functional tests against the dev server, then `mise run test:e2e:prod` against a production build (catches bundling bugs the dev server hides)
-- **Memory Profile** — Starts servers, runs e2e + 120s soak test, posts PR comment with:
-  - Peak RSS for backend (uvicorn) and frontend (vite dev server)
-  - JS heap usage from Chromium via CDP `Runtime.getHeapUsage`
-  - Soak trend (stable / growing / shrinking) per process
-- **Deploy** — On merge to main: deploys frontend to Cloudflare Pages; on PRs: creates preview deployments with status checks. The backend image goes to GHCR; the homelab repo pins its digest and Renovate there moves it.
-- **Security** — Builds the backend image (python slim) and fails on fixable HIGH/CRITICAL CVEs (Trivy), on PRs, main and weekly
+## How data flows
 
-## Key Conventions
+```
+adsb.lol (ADSBx v2, 60 nm around central London)
+  -> airplanes_live.py: parse, enrich (destination, climbing, descending)
+  -> cache.py: 10 s TTL, fetched only when a request finds it stale; KPIs; serves stale data on upstream failure
+  -> GET /aircraft (aircraft + KPIs in one response, plus refresh_interval_ms)
+  -> useAircraftData polls at that interval -> AircraftLayer (deck.gl)
 
-- **Pydantic is the schema source of truth** — change `apps/backend/src/models.py`, run `mise run codegen` to update frontend types
-- **camelCase in JSON** — Pydantic `alias_generator=to_camel` handles this automatically; Python stays `snake_case`, TypeScript gets `camelCase`
-- **Generated code is committed** — `apps/frontend/src/api/generated.ts` and `apps/frontend/openapi.json` are checked in so the frontend builds without the backend running
-- **Single `/aircraft` endpoint** — KPIs are derived from the aircraft list and bundled atomically
-- **AI config is managed by rulesync** — edit `.rulesync/` and run `mise run rules:sync`, never edit generated files directly
-- **Pre-commit hook** — lint-staged runs ruff (Python) + biome (JS/TS) on staged files
+every 60 s: cache -> H3 cells (resolution 8) -> historical_heatmap.parquet -> GET /heatmap -> HeatmapLayer
+```
 
-## Stack
+Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/health`, and `/debug/airplanes_live` only when `ENABLE_DEBUG_ENDPOINTS=true` (it calls upstream on every request). Swagger UI is at `/docs`.
 
-| Layer     | Tech                                    |
-| --------- | --------------------------------------- |
-| Frontend  | React 19 + Vite 8 + Tailwind CSS       |
-| Map       | MapLibre GL JS + react-map-gl + Deck.gl |
-| State     | TanStack Query (auto-polling 10s)       |
-| Backend   | Python 3.14 / FastAPI                   |
-| Data      | adsb.lol REST API (ADSBx v2 format)     |
-| E2E Tests | Playwright (Chromium)                   |
-| Profiling | ps RSS sampling + CDP JS heap           |
-| Monorepo  | Bun workspaces + mise tasks             |
-| CI        | GitHub Actions                          |
-| Deploy FE | Cloudflare Pages                        |
-| Deploy BE | Self-hosted (Docker + Cloudflare Tunnel)|
+**Arrival heuristic.** An aircraft counts as inbound to an airport (LHR, LGW, STN, LTN, LCY) when it is within 25 km, below 4,000 ft, level or descending, its track is within 15° of a runway heading, and its bearing from the airport lies inside an 8° cone along the extended centreline. The cone stops aircraft on a parallel downwind leg from counting.
 
-## Tooling
+**Units** stay aviation-native as the feed gives them: feet, knots, ft/min.
 
-Tool versions are managed by [mise](https://mise.jdx.dev/) (see `.mise.toml`):
+**Upstream.** adsb.lol needs no key. If it fails, the backend tries `ADSB_FALLBACK_URL` (adsb.fi) and meanwhile serves its last good data. airplanes.live was the source until it blocked our IP in Oct 2026; the module name is from then.
 
-- **bun** 1.4 — JS package manager + runtime
-- **node** 26 — Runs the JS CLIs that `bunx` starts (Vite, Playwright, Orval)
-- **python** 3.14 — Backend runtime
-- **uv** — Python package/project manager
-- **ruff** — Python linting + formatting (config: `ruff.toml`)
-- **ty** — Python type checking (config: `pyproject.toml [tool.ty]`)
-- **biome** — JS/TS/CSS linting + formatting (config: `biome.json`)
+## Configuration
 
-## Anti-Patterns
+| Variable | Default | Purpose |
+|---|---|---|
+| `CACHE_TTL` | `10` | Aircraft cache TTL, seconds |
+| `CORS_ORIGINS` | `http://localhost:4200` | Comma-separated origins; Pages preview URLs are always allowed |
+| `MOCK_DATA` | off | `true` serves fixtures (E2E) |
+| `ENABLE_DEBUG_ENDPOINTS` | off | `true` adds `/debug/airplanes_live` |
+| `ADSB_API_URL` | adsb.lol `/v2/point` | Any ADSBx v2 point endpoint |
+| `ADSB_FALLBACK_URL` | adsb.fi | Tried when the primary fails; empty disables |
+| `HEATMAP_DB_PATH` | `apps/backend/historical_heatmap.parquet` | Heatmap history file |
+| `VITE_API_BASE_URL` (frontend build) | `http://localhost:8000` | Backend URL; CI sets it from a repo variable |
 
-- Don't edit `apps/frontend/src/api/generated.ts` by hand — it's overwritten by Orval
-- Don't add Python type stubs manually — use ty for type checking
-- Don't install Python deps with pip — use `uv add` in `apps/backend/`
-- Don't install JS deps with npm/yarn — use `bun add` from repo root
-- Don't edit CLAUDE.md / .cursorrules / copilot-instructions.md directly — edit `.rulesync/` and run `mise run rules:sync`
-- Don't put memory profiling specs in `apps/e2e/tests/` — they live in `apps/e2e/profiling/` with their own config
+## Conventions
+
+- **Pydantic is the schema source of truth.** Change `apps/backend/src/models.py`, then `mise run codegen`. Never edit `generated.ts` by hand; it and `openapi.json` are committed so the frontend builds without the backend.
+- **camelCase JSON, snake_case Python.** `alias_generator=to_camel` on the models does the conversion.
+- **One `/aircraft` response** carries aircraft and KPIs together, so they always agree.
+- **Packages:** `bun add` from the repo root for JS, `uv add` in `apps/backend/` for Python. No npm, yarn or pip.
+- **Tooling:** mise for tasks and tool versions, bun for packages, call vite/vitest/playwright directly; no task-runner layer (Nx was removed as unused).
+- **Pre-commit hook** (`.githooks/pre-commit`) runs ruff and Biome on staged files.
+- **Agent instructions** live only in this file; `CLAUDE.md` just imports it.
+
+## Not building (yet)
+
+WebSockets or SSE (10 s polling is enough), user accounts, holding-pattern detection, carbon or wake-spacing estimates.

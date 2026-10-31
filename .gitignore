@@ -63,10 +63,6 @@ __pycache__/
 test-results/
 playwright-report/
 
-# Rulesync — local overrides and caches (never commit)
-.rulesync/skills/.curated/
-.rulesync/rules/*.local.md
-rulesync.local.jsonc
 **/CLAUDE.local.md
 **/AGENTS.local.md
 .claude/memories/

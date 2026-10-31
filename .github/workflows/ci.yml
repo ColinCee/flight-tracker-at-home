@@ -41,37 +41,11 @@ jobs:
       - run: mise run test:e2e
       - run: mise run test:e2e:prod
 
-  memory-profile:
-    name: Memory Profile
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04  # Playwright 1.59 cannot install Chromium on ubuntu-latest (26.04)
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
-      - run: mise run setup
-      - run: bunx playwright install chromium --with-deps
-      - name: Run memory profiling
-        run: scripts/memory-profile.sh
-        env:
-          MEMORY_REPORT_FILE: memory-report.md
-          MEMORY_SOAK_SECONDS: 120
-          MOCK_DATA: "true"
-      - name: Comment memory report on PR
-        if: always()
-        run: |
-          if ! gh pr comment "${{ github.event.number }}" --edit-last --body-file memory-report.md 2>/dev/null; then
-            gh pr comment "${{ github.event.number }}" --body-file memory-report.md
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+  # Keeps the name of a required check in the repo ruleset. Agent
+  # instructions live only in AGENTS.md; CLAUDE.md just imports it.
   rules-sync:
     name: Rules Sync Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
-      - run: mise run rules:check
+      - run: test -s AGENTS.md && test "$(cat CLAUDE.md)" = "@AGENTS.md"
