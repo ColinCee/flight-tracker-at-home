@@ -15,7 +15,7 @@ useful as a portfolio piece and learning project.
 A live 2D map of aircraft over London with callsign / altitude / speed
 datablocks, plus a KPI strip showing inbound arrivals and runway throughput for
 major London airports. Deployed and shareable via a public URL. The map should also display
-major London airports with clickable popups containing real-time METAR weather
+major London airports with clickable popups containing current weather (MET Norway forecast for now)
 conditions.
 
 ## User Flow
@@ -38,20 +38,19 @@ conditions.
 | Map tiles   | OpenFreeMap (dark style)                 |
 | State mgmt  | TanStack Query (React Query)             |
 | Backend     | Python / FastAPI                         |
-| Data source | airplanes.live REST API + MET Norway     |
+| Data source | adsb.lol REST API + MET Norway     |
 | Monorepo    | Nx + Bun + mise                          |
 | Deploy (FE) | Cloudflare Pages                         |
 | Deploy (BE) | Self-hosted (Docker + Cloudflare Tunnel) |
 
 > See [ARCHITECTURE.md](./ARCHITECTURE.md) for technical details, data contract,
-> and implementation guidance. Both files live in `docs/`.
+> and implementation guidance.
 
 ## Not Building (Yet)
 
-- WebSockets / SSE — REST polling matches airplanes.live's ~10s rate limit perfectly
+- WebSockets / SSE — REST polling with a 10 s cache is enough
 - Airspace Pressure Index — future feature
 - Stack debt / holding pattern detection — complex, future
-- Historical persistence / database — in-memory only for MVP
 - Weight-based spacing, carbon estimation
 - Authentication / user accounts
 
@@ -59,7 +58,7 @@ conditions.
 
 | Risk                                    | Impact | Mitigation                                                                       |
 |-----------------------------------------|--------|----------------------------------------------------------------------------------|
-| airplanes.live rate limits (~1 req/10s) | Low    | Lazy caching (zero calls when idle), 10s TTL, single instance                    |
+| Upstream rate limits / blocks           | Low    | Lazy 10s cache, single instance, adsb.fi fallback                                |
 | MET Norway user-agent restrictions      | High   | Send custom User-Agent in headers, aggressive 30m caching                        |
-| airplanes.live data gaps                | Medium | Show "stale data" warning, degrade gracefully                                    |
+| Upstream data gaps                      | Medium | Show "stale data" warning, degrade gracefully                                    |
 | Arrival heuristic false positives       | Low    | Strict ILS cone mathematical filtering prevents parallel traffic false positives |
