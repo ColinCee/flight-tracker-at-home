@@ -171,7 +171,7 @@ mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
 Tool versions are managed by [mise](https://mise.jdx.dev/) (see `.mise.toml`):
 
 - **bun** 1.4 — JS package manager + runtime
-- **node** 24 — Runs the JS CLIs that `bunx` starts (Vite, Playwright, Orval)
+- **node** 26 — Runs the JS CLIs that `bunx` starts (Vite, Playwright, Orval)
 - **python** 3.14 — Backend runtime
 - **uv** — Python package/project manager
 - **ruff** — Python linting + formatting (config: `ruff.toml`)
