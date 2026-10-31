@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 import duckdb
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from src.airplanes_live import (
     ADSB_API_URL,
@@ -106,41 +106,45 @@ async def get_aircraft() -> AircraftResponse:
         ) from e
 
 
-@app.get(
-    "/debug/airplanes_live",
-    operation_id="debugAirplanesLive",
-    summary="Airplanes.live Connectivity Test",
-)
-async def debug_airplanes_live():
-    """Diagnose Airplanes.live API connectivity from this server."""
-    # We test the exact bounding box for Heathrow
-    api_url = f"{ADSB_API_URL}/51.47/-0.4543/30"
+# Each call hits upstream directly, bypassing the cache, so anyone could spend
+# the server's upstream rate budget. Off unless ENABLE_DEBUG_ENDPOINTS is set.
+if os.getenv("ENABLE_DEBUG_ENDPOINTS", "").lower() in ("true", "1", "yes"):
 
-    results = {
-        "authenticated": False,  # Airplanes.live is public, no auth required
-        "tests": {},
-    }
+    @app.get(
+        "/debug/airplanes_live",
+        operation_id="debugAirplanesLive",
+        summary="Airplanes.live Connectivity Test",
+    )
+    async def debug_airplanes_live():
+        """Diagnose Airplanes.live API connectivity from this server."""
+        # We test the exact bounding box for Heathrow
+        api_url = f"{ADSB_API_URL}/51.47/-0.4543/30"
 
-    # Test 1: API endpoint
-    try:
-        start = time.time()
-
-        # Grab our persistent HTTP Keep-Alive client so we don't trigger firewalls
-        client = get_client()
-        resp = await client.get(api_url, timeout=10.0)
-
-        elapsed = round(time.time() - start, 3)
-        results["tests"]["api"] = {
-            "status": resp.status_code,
-            "elapsed_s": elapsed,
-            "ok": resp.status_code in (200, 429),
+        results = {
+            "authenticated": False,  # Airplanes.live is public, no auth required
+            "tests": {},
         }
-    except httpx.TimeoutException:
-        results["tests"]["api"] = {"error": "Request timed out", "ok": False}
-    except httpx.RequestError as e:
-        results["tests"]["api"] = {"error": f"Connection error: {e!s}", "ok": False}
 
-    return results
+        # Test 1: API endpoint
+        try:
+            start = time.time()
+
+            # Grab our persistent HTTP Keep-Alive client so we don't trigger firewalls
+            client = get_client()
+            resp = await client.get(api_url, timeout=10.0)
+
+            elapsed = round(time.time() - start, 3)
+            results["tests"]["api"] = {
+                "status": resp.status_code,
+                "elapsed_s": elapsed,
+                "ok": resp.status_code in (200, 429),
+            }
+        except httpx.TimeoutException:
+            results["tests"]["api"] = {"error": "Request timed out", "ok": False}
+        except httpx.RequestError as e:
+            results["tests"]["api"] = {"error": f"Connection error: {e!s}", "ok": False}
+
+        return results
 
 
 @app.get(
@@ -149,25 +153,42 @@ async def debug_airplanes_live():
     operation_id="getWeather",
     summary="Get London Airport Weather",
 )
-async def get_weather() -> WeatherResponse:
+async def get_weather(response: Response) -> WeatherResponse:
     """
-    Fetches METAR weather for London airports.
+    Fetches current weather (MET Norway forecast) for London airports.
     Cached for 30 minutes to respect upstream rate limits.
     """
-    return await weather_cache.get_weather()
+    weather = await weather_cache.get_weather()
+    # Never let a browser hold an empty answer.
+    if weather.weather:
+        response.headers["Cache-Control"] = "public, max-age=300"
+    return weather
+
+
+# (path, mtime_ns, size) of the file behind the cached result. The file changes
+# once a minute; requests in between reuse the aggregate instead of rescanning.
+_heatmap_cache: tuple[tuple[str, int, int], list[HeatmapHexagon]] | None = None
 
 
 @app.get("/heatmap", response_model=list[HeatmapHexagon], operation_id="getHeatmap")
-def get_heatmap_data() -> list[HeatmapHexagon]:
+def get_heatmap_data(response: Response) -> list[HeatmapHexagon]:
     """
     Query the Parquet file for the aggregated heatmap.
     Note: This is a sync def endpoint because DuckDB's Python API is synchronous.
     FastAPI will run this in a background threadpool to avoid blocking the event loop.
     """
 
+    global _heatmap_cache
+    # A new snapshot lands every 60 s.
+    response.headers["Cache-Control"] = "public, max-age=60"
+
     # Return a plain array instead of {"data": []}
     if not os.path.exists(DB_PATH):
         return []
+    stat = os.stat(DB_PATH)
+    key = (DB_PATH, stat.st_mtime_ns, stat.st_size)
+    if _heatmap_cache and _heatmap_cache[0] == key:
+        return _heatmap_cache[1]
     try:
         query = f"""
             SELECT
@@ -186,7 +207,9 @@ def get_heatmap_data() -> list[HeatmapHexagon]:
         finally:
             con.close()
 
-        return [HeatmapHexagon(**row) for row in results]
+        hexagons = [HeatmapHexagon(**row) for row in results]
+        _heatmap_cache = (key, hexagons)
+        return hexagons
     except duckdb.Error as e:
         logger.error(f"Heatmap query failed: {e}")
         return []

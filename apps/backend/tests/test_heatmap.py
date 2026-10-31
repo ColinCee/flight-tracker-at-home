@@ -56,6 +56,25 @@ class TestHeatmapEndpoint:
         assert data[0]["totalVolume"] == 5
         assert data[0]["avgAltitude"] == 3000
 
+    def test_heatmap_cached_until_file_changes(self):
+        hex_a = h3.latlng_to_cell(51.47, -0.50, 8)
+        hex_b = h3.latlng_to_cell(51.60, -0.10, 8)
+        self._create_parquet_file(
+            [{"hex_id": hex_a, "total_volume": 5, "avg_altitude": 3000}]
+        )
+
+        first = client.get("/heatmap")
+        assert first.headers["cache-control"] == "public, max-age=60"
+        assert [h["hexId"] for h in first.json()] == [hex_a]
+
+        self._create_parquet_file(
+            [
+                {"hex_id": hex_a, "total_volume": 5, "avg_altitude": 3000},
+                {"hex_id": hex_b, "total_volume": 2, "avg_altitude": 8000},
+            ]
+        )
+        assert {h["hexId"] for h in client.get("/heatmap").json()} == {hex_a, hex_b}
+
     def test_heatmap_returns_camel_case(self):
         """Test that response uses camelCase field names (via Pydantic)."""
         lat, lon = 51.47, -0.50
