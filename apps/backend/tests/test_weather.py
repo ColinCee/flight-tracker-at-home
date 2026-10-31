@@ -179,3 +179,55 @@ async def test_get_weather_empty_fallback_on_initial_failure(mock_client_class):
     # Should fallback to empty array
     assert isinstance(response, WeatherResponse)
     assert len(response.weather) == 0
+
+
+def _weather(icao: str, temperature_c: float) -> AirportWeather:
+    return AirportWeather(
+        icao=icao,
+        name=icao,
+        condition="clearsky_day",
+        temperature_c=temperature_c,
+        wind_speed_kts=10.0,
+        wind_direction_deg=180.0,
+    )
+
+
+def _expired_cache(*weather: AirportWeather) -> WeatherCache:
+    cache = WeatherCache()
+    cache.cached_response = WeatherResponse(
+        timestamp=int(time.time() - 3600), cache_age_seconds=0.0, weather=list(weather)
+    )
+    cache.last_update = time.time() - 3600
+    return cache
+
+
+@pytest.mark.asyncio
+@patch("src.weather.WeatherCache._fetch_and_parse_airport", return_value=None)
+async def test_every_airport_failing_keeps_previous_weather(mock_fetch):
+    cache = _expired_cache(_weather("EGLL", 20.0))
+
+    response = await cache.get_weather()
+
+    assert [w.icao for w in response.weather] == ["EGLL"]
+    assert response.cache_age_seconds > 3500
+
+    # The next request inside the retry window does not hit upstream again.
+    mock_fetch.reset_mock()
+    await cache.get_weather()
+    assert mock_fetch.call_count == 0
+
+
+@pytest.mark.asyncio
+@patch("src.weather.WeatherCache._fetch_and_parse_airport")
+async def test_failed_airport_keeps_its_last_reading(mock_fetch):
+    async def only_heathrow(_client, airport):
+        return _weather("EGLL", 25.0) if airport["icao"] == "EGLL" else None
+
+    mock_fetch.side_effect = only_heathrow
+    cache = _expired_cache(_weather("EGLL", 20.0), _weather("EGKK", 18.0))
+
+    response = await cache.get_weather()
+
+    by_icao = {w.icao: w.temperature_c for w in response.weather}
+    assert by_icao == {"EGLL": 25.0, "EGKK": 18.0}
+    assert response.cache_age_seconds == 0.0

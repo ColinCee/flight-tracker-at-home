@@ -2,6 +2,7 @@ import os
 
 import duckdb
 import h3
+import pytest
 from src.models import AircraftState
 from src.spatial_snapshot import snapshot_to_parquet
 
@@ -274,3 +275,22 @@ class TestSnapshotToParquet:
             "avg_altitude",
             "snapshot_time",
         ]
+
+    def test_snapshot_leaves_no_temp_file(self):
+        aircraft_list = [create_mock_aircraft("111111", 51.47, -0.50, 3000)]
+        snapshot_to_parquet(aircraft_list)
+        snapshot_to_parquet(aircraft_list)
+
+        db_path = os.environ["HEATMAP_DB_PATH"]
+        assert not os.path.exists(f"{db_path}.tmp")
+        assert len(self._read_parquet()) == 2
+
+    def test_snapshot_write_failure_raises(self, monkeypatch, tmp_path):
+        # The caller (run_etl_pipeline) must hear about a failed write instead
+        # of logging success.
+        bad_path = tmp_path / "missing_dir" / "heatmap.parquet"
+        monkeypatch.setattr("src.spatial_snapshot.DB_PATH", str(bad_path))
+
+        aircraft_list = [create_mock_aircraft("111111", 51.47, -0.50, 3000)]
+        with pytest.raises((duckdb.Error, OSError)):
+            snapshot_to_parquet(aircraft_list)
