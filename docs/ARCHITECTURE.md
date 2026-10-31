@@ -154,7 +154,7 @@ Run `mise run codegen` to regenerate after backend model changes.
 ### CORS
 
 Frontend on Cloudflare Pages and backend self-hosted are different origins.
-FastAPI's `CORSMiddleware` allows the origins in `CORS_ORIGINS`.
+FastAPI's `CORSMiddleware` allows the origins in `CORS_ORIGINS`, plus this project's Cloudflare Pages preview deploys (`https://<hash-or-branch>.flight-tracker-at-home.pages.dev`).
 `localhost:4200` as default ensures local dev works without env vars.
 
 ## API Contract Pipeline

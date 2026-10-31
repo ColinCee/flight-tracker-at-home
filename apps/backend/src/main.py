@@ -72,6 +72,9 @@ allowed_origins = [origin.strip() for origin in cors_env.split(",")]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    # Cloudflare Pages preview deploys (<hash> or <branch>.flight-tracker-at-home
+    # .pages.dev); only this project can publish under that name.
+    allow_origin_regex=r"https://[a-z0-9-]+\.flight-tracker-at-home\.pages\.dev",
     allow_methods=["GET"],
     allow_headers=["*"],
 )
