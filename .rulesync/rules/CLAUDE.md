@@ -71,7 +71,7 @@ flight-tracker-at-home/
 
 ### Backend (apps/backend)
 
-- **main.py** — FastAPI app with endpoints: `/health`, `/aircraft`, `/weather`, `/heatmap`, `/debug/airplanes_live`; background ETL task snapshots the shared cache every 60s
+- **main.py** — FastAPI app with endpoints: `/health`, `/aircraft`, `/weather`, `/heatmap` (`/debug/airplanes_live` only with `ENABLE_DEBUG_ENDPOINTS=true`); background ETL task snapshots the shared cache every 60s
 - **airplanes_live.py** — 3-phase ETL: fetch London airspace from an ADSBx v2 point endpoint (adsb.lol by default, `ADSB_API_URL`; 60nm radius) → parse JSON aircraft objects into `AircraftState` → enrich with `destination` (ILS-cone approach heuristic for LHR, LGW, STN, LTN, LCY), `is_climbing`, and `is_descending`. No authentication needed — free public API.
 - **cache.py** — `AirspaceCache` singleton with 10s TTL lazy refresh; tracks rolling 60-min throughput for KPIs. On upstream failure (rate limit, timeout), serves stale cached data instead of losing aircraft.
 - **weather.py** — Fetches MET Norway weather for London airports; `WeatherCache` with 30-min TTL

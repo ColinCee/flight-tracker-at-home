@@ -72,7 +72,7 @@ The backend defaults to a **10-second cache TTL** (`CACHE_TTL`).
 | GET    | `/weather`              | `WeatherResponse`  | MET Norway weather for London airports, cached 30 min |
 | GET    | `/heatmap`              | `HeatmapHexagon[]` | H3 hex-binned historical flight volume      |
 | GET    | `/health`               | `{ status: "ok" }` | Health check                                |
-| GET    | `/debug/airplanes_live` | JSON               | Upstream status and latency (debug only)    |
+| GET    | `/debug/airplanes_live` | JSON               | Upstream status and latency; only with `ENABLE_DEBUG_ENDPOINTS` |
 
 ---
 
@@ -143,6 +143,7 @@ Run `mise run codegen` to regenerate after backend model changes.
 | `CACHE_TTL`         | Backend        | No         | `10`                    | Cache TTL in seconds               |
 | `CORS_ORIGINS`      | Backend        | No         | `http://localhost:4200` | Comma-separated allowed origins    |
 | `MOCK_DATA`         | Backend        | No         | —                       | Set to `true` for E2E fixture mode |
+| `ENABLE_DEBUG_ENDPOINTS` | Backend   | No         | —                       | `true` adds `/debug/airplanes_live` (calls upstream on every request) |
 | `ADSB_API_URL`      | Backend        | No         | adsb.lol `/v2/point`    | ADSBx v2 point endpoint            |
 | `ADSB_FALLBACK_URL` | Backend        | No         | adsb.fi                 | Tried when the primary fails; empty disables |
 | `HEATMAP_DB_PATH`   | Backend        | No         | `apps/backend/historical_heatmap.parquet` | Heatmap history file |
