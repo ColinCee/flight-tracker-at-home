@@ -2,19 +2,16 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 import { type MapStyleDataEvent, setWorkerUrl } from 'maplibre-gl';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AttributionControl, Map as MapGL, Popup } from 'react-map-gl/maplibre';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { AttributionControl, Map as MapGL } from 'react-map-gl/maplibre';
 import type { AircraftState, HeatmapHexagon } from '@/api/generated';
 import type { EnrichedAirportWeather } from '@/api/use-weather-data';
 import type { ViewMode } from '@/features/navigation/TopBar';
 import type { AircraftFilter } from '@/shared/filters';
-import { AircraftInspector } from './AircraftInspector';
 import { AircraftLayer } from './AircraftLayer';
-import { AirportInspector } from './AirportInspector';
 import { AirportLayer } from './AirportLayer';
 import { AltitudeLegend } from './AltitudeLegend';
 import { HeatmapLayer } from './HeatmapLayer';
-import { HexagonInspector } from './HexagonInspector';
 
 // maplibre v6 finds its worker next to its own module, but Vite bundles that
 // module and never emits the worker, so the map stays blank. Ship it as an asset.
@@ -32,40 +29,40 @@ interface MapViewProps {
   viewMode: ViewMode;
   heatmapData?: HeatmapHexagon[];
   aircraft: AircraftState[];
-  selectedAircraft?: AircraftState | null;
+  selectedIcao24?: string | null;
   airports: EnrichedAirportWeather[];
-  selectedAirport?: EnrichedAirportWeather | null;
+  selectedAirportIcao?: string | null;
   activeFilter?: AircraftFilter;
   onAircraftClick?: (icao24: string) => void;
   onAirportClick?: (icao: string) => void;
+  onHexagonClick?: (data: HeatmapHexagon, lngLat: [number, number]) => void;
   onCloseInspector: () => void;
+  /** Inspectors; rendered inside the map so they can use react-map-gl's Popup. */
+  children?: ReactNode;
 }
 
 export function MapView({
   viewMode,
   heatmapData,
   aircraft,
-  selectedAircraft,
+  selectedIcao24,
   airports,
-  selectedAirport,
+  selectedAirportIcao,
   activeFilter,
   onAircraftClick,
   onAirportClick,
+  onHexagonClick,
   onCloseInspector,
+  children,
 }: MapViewProps) {
   const [isHoveringAircraft, setIsHoveringAircraft] = useState(false);
   const [isHoveringAirport, setIsHoveringAirport] = useState(false);
   const deckClickedRef = useRef(false);
-  const [selectedHexagon, setSelectedHexagon] = useState<{
-    data: HeatmapHexagon;
-    lngLat: [number, number];
-  } | null>(null);
 
   useEffect(() => {
     // Reset selection and hover states when switching views
     setIsHoveringAircraft(false);
     setIsHoveringAirport(false);
-    setSelectedHexagon(null);
     onCloseInspector();
   }, [viewMode, onCloseInspector]);
 
@@ -109,14 +106,16 @@ export function MapView({
       deckClickedRef.current = false;
       return;
     }
-    setSelectedHexagon(null); // Clear the hexagon popup on background click
     onCloseInspector();
   }, [onCloseInspector]);
 
-  const handleHexagonClick = useCallback((data: HeatmapHexagon, lngLat: [number, number]) => {
-    deckClickedRef.current = true; // Tell the map not to dismiss this click
-    setSelectedHexagon({ data, lngLat });
-  }, []);
+  const handleHexagonClick = useCallback(
+    (data: HeatmapHexagon, lngLat: [number, number]) => {
+      deckClickedRef.current = true; // Tell the map not to dismiss this click
+      onHexagonClick?.(data, lngLat);
+    },
+    [onHexagonClick],
+  );
 
   return (
     <MapGL
@@ -135,7 +134,7 @@ export function MapView({
       {viewMode === 'live' ? (
         <AircraftLayer
           aircraft={aircraft}
-          selectedIcao24={selectedAircraft?.icao24}
+          selectedIcao24={selectedIcao24}
           activeFilter={activeFilter}
           onAircraftClick={handleAircraftClick}
           onHoverChange={setIsHoveringAircraft}
@@ -145,49 +144,11 @@ export function MapView({
       )}
       <AirportLayer
         airports={airports}
-        selectedIcao={selectedAirport?.icao}
+        selectedIcao={selectedAirportIcao}
         onAirportClick={handleAirportClick}
         onHoverChange={setIsHoveringAirport}
       />
-      {selectedAircraft && (
-        <Popup
-          longitude={selectedAircraft.longitude}
-          latitude={selectedAircraft.latitude}
-          closeButton={false}
-          closeOnClick={false}
-          className="map-popup"
-          offset={20}
-          maxWidth="none"
-        >
-          <AircraftInspector aircraft={selectedAircraft} onClose={onCloseInspector} />
-        </Popup>
-      )}
-      {selectedAirport && (
-        <Popup
-          longitude={selectedAirport.longitude}
-          latitude={selectedAirport.latitude}
-          closeButton={false}
-          closeOnClick={false}
-          className="map-popup"
-          offset={20}
-          maxWidth="none"
-        >
-          <AirportInspector airport={selectedAirport} onClose={onCloseInspector} />
-        </Popup>
-      )}
-      {viewMode === 'heatmap' && selectedHexagon && (
-        <Popup
-          longitude={selectedHexagon.lngLat[0]}
-          latitude={selectedHexagon.lngLat[1]}
-          closeButton={false}
-          closeOnClick={false}
-          className="map-popup"
-          offset={10}
-          maxWidth="none"
-        >
-          <HexagonInspector hexagon={selectedHexagon} onClose={() => setSelectedHexagon(null)} />
-        </Popup>
-      )}
+      {children}
     </MapGL>
   );
 }

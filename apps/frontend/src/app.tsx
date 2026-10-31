@@ -1,8 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { getGetHeatmapQueryKey, useGetHeatmap } from '@/api/generated';
+import { Popup } from 'react-map-gl/maplibre';
+import { getGetHeatmapQueryKey, type HeatmapHexagon, useGetHeatmap } from '@/api/generated';
 import { useAircraftData } from '@/api/use-aircraft-data';
 import { useWeatherData } from '@/api/use-weather-data';
 import { KpiStrip } from '@/features/kpi/KpiStrip';
+import { AircraftInspector } from '@/features/map/AircraftInspector';
+import { AirportInspector } from '@/features/map/AirportInspector';
+import { HexagonInspector } from '@/features/map/HexagonInspector';
 import { MapView } from '@/features/map/MapView';
 import { TopBar, type ViewMode } from '@/features/navigation/TopBar';
 import type { AircraftFilter } from '@/shared/filters';
@@ -14,6 +18,10 @@ export function App() {
   const [selectedAirportIcao, setSelectedAirportIcao] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<AircraftFilter>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('live');
+  const [selectedHexagon, setSelectedHexagon] = useState<{
+    data: HeatmapHexagon;
+    lngLat: [number, number];
+  } | null>(null);
 
   const selectedAircraft = useMemo(
     () => aircraft?.find((a) => a.icao24 === selectedIcao24) ?? null,
@@ -35,9 +43,14 @@ export function App() {
     setSelectedIcao24(null);
   }, []);
 
+  const handleHexagonClick = useCallback((data: HeatmapHexagon, lngLat: [number, number]) => {
+    setSelectedHexagon({ data, lngLat });
+  }, []);
+
   const handleCloseInspector = useCallback(() => {
     setSelectedIcao24(null);
     setSelectedAirportIcao(null);
+    setSelectedHexagon(null);
   }, []);
 
   const { data: heatmapData } = useGetHeatmap({
@@ -56,14 +69,55 @@ export function App() {
         viewMode={viewMode}
         heatmapData={heatmapData?.data ?? []}
         aircraft={aircraft ?? []}
-        selectedAircraft={selectedAircraft}
+        selectedIcao24={selectedAircraft?.icao24}
         airports={airports ?? []}
-        selectedAirport={selectedAirport}
+        selectedAirportIcao={selectedAirport?.icao}
         activeFilter={activeFilter}
         onAircraftClick={handleAircraftClick}
         onAirportClick={handleAirportClick}
+        onHexagonClick={handleHexagonClick}
         onCloseInspector={handleCloseInspector}
-      />
+      >
+        {selectedAircraft && (
+          <Popup
+            longitude={selectedAircraft.longitude}
+            latitude={selectedAircraft.latitude}
+            closeButton={false}
+            closeOnClick={false}
+            className="map-popup"
+            offset={20}
+            maxWidth="none"
+          >
+            <AircraftInspector aircraft={selectedAircraft} onClose={handleCloseInspector} />
+          </Popup>
+        )}
+        {selectedAirport && (
+          <Popup
+            longitude={selectedAirport.longitude}
+            latitude={selectedAirport.latitude}
+            closeButton={false}
+            closeOnClick={false}
+            className="map-popup"
+            offset={20}
+            maxWidth="none"
+          >
+            <AirportInspector airport={selectedAirport} onClose={handleCloseInspector} />
+          </Popup>
+        )}
+        {viewMode === 'heatmap' && selectedHexagon && (
+          <Popup
+            longitude={selectedHexagon.lngLat[0]}
+            latitude={selectedHexagon.lngLat[1]}
+            closeButton={false}
+            closeOnClick={false}
+            className="map-popup"
+            offset={10}
+            maxWidth="none"
+          >
+            <HexagonInspector hexagon={selectedHexagon} onClose={() => setSelectedHexagon(null)} />
+          </Popup>
+        )}
+      </MapView>
 
       {viewMode === 'live' && (
         <KpiStrip
