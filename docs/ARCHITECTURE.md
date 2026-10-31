@@ -70,9 +70,9 @@ The backend defaults to a **10-second cache TTL** (`CACHE_TTL`).
 |--------|-------------------------|--------------------|---------------------------------------------|
 | GET    | `/aircraft`             | `AircraftResponse` | Aircraft + KPIs in a single atomic response |
 | GET    | `/weather`              | `WeatherResponse`  | MET Norway weather for London airports, cached 30 min |
-| GET    | `/heatmap`              | `HeatmapCell[]`    | H3 hex-binned historical flight volume      |
+| GET    | `/heatmap`              | `HeatmapHexagon[]` | H3 hex-binned historical flight volume      |
 | GET    | `/health`               | `{ status: "ok" }` | Health check                                |
-| GET    | `/debug/airplanes_live` | Raw JSON           | Raw upstream response (debug only)          |
+| GET    | `/debug/airplanes_live` | JSON               | Upstream status and latency (debug only)    |
 
 ---
 
