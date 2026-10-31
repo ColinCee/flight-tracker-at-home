@@ -285,7 +285,7 @@ The OpenAPI spec is always available at `/docs` (Swagger UI) and `/openapi.json`
 | Data overlay | Deck.gl (IconLayer)                      | GPU-rendered aircraft icons with heading rotation + smooth interpolation |
 | Map tiles    | OpenFreeMap (dark style)                 | Free, no API key, no rate limits                                         |
 | State mgmt   | TanStack Query (React Query)             | Auto-polling via `refetchInterval`, caching, loading states              |
-| Backend      | Python 3.12 / FastAPI                    | Auto-generates OpenAPI spec from Pydantic models                         |
+| Backend      | Python 3.14 / FastAPI                    | Auto-generates OpenAPI spec from Pydantic models                         |
 | Data source  | airplanes.live (`/v2/point/...`)         | Free, no auth, aviation-native units, rich aircraft metadata             |
 | API contract | Pydantic → OpenAPI → Orval               | Typed React Query hooks + TypeScript types from FastAPI spec             |
 | Monorepo     | Nx + Bun + mise                          | Polyglot task orchestration (JS + Python)                                |
