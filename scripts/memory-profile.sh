@@ -29,7 +29,7 @@ BACKEND_PID=$!
 cd - > /dev/null
 
 echo "Starting frontend..."
-bunx nx serve frontend &
+(cd apps/frontend && exec bunx vite) &
 FRONTEND_PID=$!
 
 # --- Wait for servers ---

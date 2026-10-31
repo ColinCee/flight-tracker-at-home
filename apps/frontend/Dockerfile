@@ -10,10 +10,10 @@ COPY apps/frontend/package.json ./apps/frontend/
 RUN bun install --frozen-lockfile
 
 # Copy source needed for build
-COPY tsconfig.base.json tsconfig.json nx.json ./
+COPY tsconfig.base.json tsconfig.json ./
 COPY apps/frontend/ ./apps/frontend/
 
-RUN bunx nx build frontend
+RUN cd apps/frontend && bunx vite build
 
 # --- Runtime stage ---
 FROM caddy:2-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
