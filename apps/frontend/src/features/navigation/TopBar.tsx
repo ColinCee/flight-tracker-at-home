@@ -1,4 +1,4 @@
-import { Info, Map as MapIcon, MousePointer2, Radar, X } from 'lucide-react';
+import { Hand, Info, Map as MapIcon, MousePointer2, Radar, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { cn } from '@/shared/utils';
 
@@ -6,115 +6,135 @@ export type ViewMode = 'live' | 'heatmap';
 
 const SEEN_3D_TIP_KEY = 'hasSeen3DTip';
 
+// Storage throws when blocked (Safari private mode, some in-app browsers); then the tip shows each visit.
+function hasSeenTip(): boolean {
+  try {
+    return localStorage.getItem(SEEN_3D_TIP_KEY) != null;
+  } catch {
+    return false;
+  }
+}
+
+function markTipSeen() {
+  try {
+    localStorage.setItem(SEEN_3D_TIP_KEY, 'true');
+  } catch {
+    // Not remembered; harmless.
+  }
+}
+
 interface TopBarProps {
   activeView: ViewMode;
   onViewChange: (view: ViewMode) => void;
 }
 
+const TAB =
+  'flex h-11 items-center gap-2 rounded-full px-4 text-xs font-semibold tracking-wider whitespace-nowrap uppercase transition-colors sm:h-8';
+
 export function TopBar({ activeView, onViewChange }: TopBarProps) {
   const [showTooltip, setShowTooltip] = useState(false);
 
-  // Automatically show the tooltip the first time they switch to the Heatmap
+  // Show the tip automatically the first time they open the heatmap.
   useEffect(() => {
-    if (activeView === 'heatmap') {
-      const hasSeenTip = localStorage.getItem(SEEN_3D_TIP_KEY);
-      if (!hasSeenTip) {
-        setShowTooltip(true);
-      }
-    } else {
-      // Hide it if they switch back to the live radar
-      setShowTooltip(false);
-    }
+    setShowTooltip(activeView === 'heatmap' && !hasSeenTip());
   }, [activeView]);
 
   const handleDismiss = () => {
     setShowTooltip(false);
-    localStorage.setItem(SEEN_3D_TIP_KEY, 'true');
+    markTipSeen();
   };
 
   return (
-    // We changed this wrapper to a flex-col so the tooltip drops down neatly below the bar
-    <div className="absolute left-1/2 top-6 z-50 flex -translate-x-1/2 flex-col items-center gap-3">
-      {/* 1. The Main Navigation Bar */}
-      <div className="flex items-center gap-1 rounded-full border border-zinc-700/60 bg-zinc-900/80 p-1 opacity-90 backdrop-blur-md transition-all duration-300 hover:shadow-xl sm:opacity-80 sm:hover:opacity-100">
+    <div className="pointer-events-none absolute top-[max(env(safe-area-inset-top),0.75rem)] left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-3 sm:top-6">
+      <nav
+        aria-label="View"
+        className="pointer-events-auto flex items-center gap-1 rounded-full border border-zinc-700/60 bg-zinc-900 p-1 shadow-lg sm:bg-zinc-900/80 sm:backdrop-blur-md"
+      >
         <button
           type="button"
           onClick={() => onViewChange('live')}
+          aria-pressed={activeView === 'live'}
           className={cn(
-            'flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all',
+            TAB,
             activeView === 'live'
               ? 'bg-zinc-700 text-zinc-100 shadow-sm'
-              : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200',
+              : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 active:bg-zinc-800',
           )}
         >
-          <Radar className="h-3.5 w-3.5" />
+          <Radar className="size-3.5" />
           Live Radar
         </button>
 
-        <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => onViewChange('heatmap')}
+          aria-pressed={activeView === 'heatmap'}
+          className={cn(
+            TAB,
+            activeView === 'heatmap'
+              ? 'bg-zinc-700 text-zinc-100 shadow-sm'
+              : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 active:bg-zinc-800',
+          )}
+        >
+          <MapIcon className="size-3.5" />
+          Heatmap
+        </button>
+
+        {activeView === 'heatmap' && (
           <button
             type="button"
-            onClick={() => onViewChange('heatmap')}
+            onClick={() => setShowTooltip(!showTooltip)}
+            aria-label="3D controls help"
+            aria-expanded={showTooltip}
             className={cn(
-              'flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all',
-              activeView === 'heatmap'
-                ? 'bg-zinc-700 text-zinc-100 shadow-sm'
-                : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200',
+              'grid size-11 place-items-center rounded-full transition-colors sm:size-8',
+              showTooltip
+                ? 'bg-zinc-600 text-zinc-100'
+                : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 active:bg-zinc-800',
             )}
           >
-            <MapIcon className="h-3.5 w-3.5" />
-            Heatmap
+            <Info className="size-4" />
           </button>
+        )}
+      </nav>
 
-          {/* Persistent Info Button (Only visible in Heatmap mode) */}
-          {activeView === 'heatmap' && (
-            <button
-              type="button"
-              onClick={() => setShowTooltip(!showTooltip)}
-              className={cn(
-                'ml-1 rounded-full p-1.5 transition-colors',
-                showTooltip
-                  ? 'bg-zinc-600 text-zinc-100'
-                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200',
-              )}
-              title="3D Controls Info"
-            >
-              <Info className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 2. The 3D Onboarding Tooltip */}
       {showTooltip && (
-        <div className="flex animate-in slide-in-from-top-2 fade-in duration-300 w-72 flex-col overflow-hidden rounded-xl border border-blue-500/30 bg-zinc-950/95 shadow-2xl backdrop-blur-md">
-          <div className="flex items-start justify-between border-b border-zinc-800 bg-blue-500/10 p-3">
-            <div className="flex items-center gap-2 text-blue-400">
-              <MousePointer2 className="h-4 w-4" />
-              <span className="text-sm font-bold uppercase tracking-widest">3D Map Controls</span>
-            </div>
+        <div
+          role="note"
+          className="pointer-events-auto flex w-[min(20rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-sky-500/30 bg-zinc-950 shadow-2xl tip-in"
+        >
+          <div className="flex items-center justify-between border-b border-zinc-800 bg-sky-500/10 py-1 pr-1 pl-3">
+            <span className="text-sm font-bold tracking-widest text-sky-300 uppercase">
+              3D Map Controls
+            </span>
             <button
               type="button"
               onClick={handleDismiss}
-              className="text-zinc-500 transition-colors hover:text-zinc-300"
+              className="grid size-11 place-items-center rounded-lg text-zinc-400 transition-colors hover:text-zinc-200 sm:size-8"
               aria-label="Close"
             >
-              <X className="h-4 w-4" />
+              <X className="size-4" />
             </button>
           </div>
-          <div className="p-4 text-sm text-zinc-300 leading-relaxed">
-            This heatmap is fully rendered in 3D space.
-            <br />
-            <br />
-            For PC users, hold down{' '}
-            <kbd className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-xs text-zinc-200">
-              Right-Click
-            </kbd>{' '}
-            +{' '}
-            <kbd className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-xs text-zinc-200">
-              Ctrl
-            </kbd>{' '}
-            and drag your mouse to pitch the camera and explore the cityscape of flight volumes.
+          <div className="flex flex-col gap-3 p-4 text-sm leading-relaxed text-zinc-300">
+            <p>Column height is traffic volume. Tilt the map to see it in 3D.</p>
+            <p className="flex gap-2.5">
+              <Hand className="mt-0.5 size-4 shrink-0 text-sky-300" />
+              <span>
+                <span className="font-semibold text-zinc-100">Touch:</span> drag two fingers up or
+                down to tilt, pinch to zoom, twist to rotate.
+              </span>
+            </p>
+            <p className="flex gap-2.5">
+              <MousePointer2 className="mt-0.5 size-4 shrink-0 text-sky-300" />
+              <span>
+                <span className="font-semibold text-zinc-100">Mouse:</span> right-drag, or hold{' '}
+                <kbd className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-xs text-zinc-200">
+                  Ctrl
+                </kbd>{' '}
+                and drag, to tilt and rotate.
+              </span>
+            </p>
           </div>
         </div>
       )}
