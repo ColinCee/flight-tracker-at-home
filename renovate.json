@@ -24,7 +24,7 @@
       "enabled": false
     },
     {
-      "description": "Playwright 1.59 cannot install Chromium on Ubuntu 26.04, so the E2E and Memory Profile jobs stay on ubuntu-24.04. Remove once a Playwright release supports 26.04.",
+      "description": "Playwright 1.59 cannot install Chromium on Ubuntu 26.04, so the E2E job stays on ubuntu-24.04. Remove once a Playwright release supports 26.04.",
       "matchDatasources": ["github-runners"],
       "matchDepNames": ["ubuntu"],
       "enabled": false

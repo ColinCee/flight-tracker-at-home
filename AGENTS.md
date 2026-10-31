@@ -23,7 +23,7 @@ apps/
 └── e2e/
     ├── tests/         Playwright specs against the dev servers
     ├── smoke/         Production-build smoke test (vite build + preview)
-    └── profiling/     Memory soak and mobile performance scripts
+    └── profiling/     mobile-perf.mjs: phone performance snapshot of any URL
 ```
 
 ## Commands
@@ -84,7 +84,6 @@ Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/health`, and `/debug/airplanes
 - **Packages:** `bun add` from the repo root for JS, `uv add` in `apps/backend/` for Python. No npm, yarn or pip.
 - **Tooling:** mise for tasks and tool versions, bun for packages, call vite/vitest/playwright directly; no task-runner layer (Nx was removed as unused).
 - **Pre-commit hook** (`.githooks/pre-commit`) runs ruff and Biome on staged files.
-- **Profiling specs** live in `apps/e2e/profiling/` with their own config, not in `apps/e2e/tests/`.
 - **Agent instructions** live only in this file; `CLAUDE.md` just imports it.
 
 ## Not building (yet)
