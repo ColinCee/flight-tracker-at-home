@@ -21,11 +21,12 @@ LONDON_AIRPORTS = [
 
 MET_NORWAY_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
 WEATHER_CACHE_TTL = 1800.0  # 30-minute cache
+# After a fetch where every airport failed, wait this long before trying again.
+WEATHER_RETRY_S = 60.0
 
 # STRICT REQUIREMENT: MET Norway will block generic User-Agents (like "python-httpx")
-# Update this with a real contact email in production if possible.
 HEADERS = {
-    "User-Agent": "FlightTrackerAtHome/1.0 (github.com/colin/flight-tracker-at-home)"
+    "User-Agent": "FlightTrackerAtHome/1.0 (github.com/ColinCee/flight-tracker-at-home)"
 }
 
 
@@ -35,8 +36,15 @@ class WeatherCache:
     def __init__(self):
         self.cached_response: WeatherResponse | None = None
         self.last_update: float = 0.0
+        self.retry_at: float = 0.0
+        self._lock = asyncio.Lock()
 
     async def get_weather(self) -> WeatherResponse:
+        # One refresh at a time; requests that waited get its result.
+        async with self._lock:
+            return await self._get_weather()
+
+    async def _get_weather(self) -> WeatherResponse:
         now = time.time()
         cache_age = now - self.last_update
 
@@ -44,6 +52,8 @@ class WeatherCache:
         if self.cached_response and cache_age < WEATHER_CACHE_TTL:
             self.cached_response.cache_age_seconds = round(cache_age, 1)
             return self.cached_response
+        if now < self.retry_at:
+            return self._fallback_or_empty(now, cache_age)
 
         # 2. Fetch fresh data concurrently
         try:
@@ -58,6 +68,17 @@ class WeatherCache:
 
                 # Filter out any airports that failed to fetch (returned None)
                 valid_weather = [w for w in parsed_weather if w is not None]
+                if not valid_weather:
+                    # Keep the last good answer rather than caching an empty one.
+                    self.retry_at = now + WEATHER_RETRY_S
+                    return self._fallback_or_empty(now, cache_age)
+
+                # An airport that failed this time keeps its last good reading.
+                fetched = {w.icao for w in valid_weather}
+                if self.cached_response:
+                    valid_weather += [
+                        w for w in self.cached_response.weather if w.icao not in fetched
+                    ]
 
                 self.cached_response = WeatherResponse(
                     timestamp=int(now),
@@ -69,6 +90,7 @@ class WeatherCache:
 
         except Exception as e:
             logger.warning("Failed to orchestrate weather fetch: %r", e)
+            self.retry_at = now + WEATHER_RETRY_S
             return self._fallback_or_empty(now, cache_age)
 
     async def _fetch_and_parse_airport(
