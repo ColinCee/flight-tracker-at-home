@@ -41,27 +41,10 @@
         }
       }
     },
-    "/debug/airplanes_live": {
-      "get": {
-        "summary": "Airplanes.live Connectivity Test",
-        "description": "Diagnose Airplanes.live API connectivity from this server.",
-        "operationId": "debugAirplanesLive",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
     "/weather": {
       "get": {
         "summary": "Get London Airport Weather",
-        "description": "Fetches METAR weather for London airports.\nCached for 30 minutes to respect upstream rate limits.",
+        "description": "Fetches current weather (MET Norway forecast) for London airports.\nCached for 30 minutes to respect upstream rate limits.",
         "operationId": "getWeather",
         "responses": {
           "200": {
