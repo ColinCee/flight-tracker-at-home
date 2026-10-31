@@ -39,6 +39,7 @@ jobs:
       - run: mise run setup
       - run: bunx playwright install chromium --with-deps
       - run: mise run test:e2e
+      - run: mise run test:e2e:prod
 
   memory-profile:
     name: Memory Profile
