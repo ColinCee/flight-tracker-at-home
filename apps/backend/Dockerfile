@@ -14,7 +14,10 @@ COPY src/ ./src/
 # --- Runtime stage ---
 FROM python:3.14-slim@sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8
 
-RUN useradd --create-home --shell /bin/false appuser \
+# The app never installs packages at runtime; pip's vendored copies of
+# urllib3, msgpack and setuptools only add CVEs to the scan.
+RUN python3 -m pip uninstall --yes pip \
+    && useradd --create-home --shell /bin/false appuser \
     && mkdir -p /app/data && chown appuser:appuser /app/data
 USER appuser
 
