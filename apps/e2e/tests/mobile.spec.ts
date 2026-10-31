@@ -74,5 +74,13 @@ test.describe('phone layout', () => {
 
     await sheet.getByRole('button', { name: 'Close' }).tap();
     await expect(sheet).toBeHidden();
+
+    // Tapping empty map closes it too. (Wait out the double-tap-zoom window between taps.)
+    await page.waitForTimeout(500);
+    await page.touchscreen.tap(x, y);
+    await expect(sheet).toBeVisible();
+    await page.waitForTimeout(500);
+    await page.touchscreen.tap(40, 360);
+    await expect(sheet).toBeHidden();
   });
 });
