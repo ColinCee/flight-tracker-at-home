@@ -84,7 +84,15 @@ async function measure() {
   });
 
   await browser.close();
-  return { loadMs, tilesMs, loadBlockingMs, panBlockingMs, ...page_, errors: errors.length };
+  return {
+    loadMs,
+    tilesMs,
+    loadBlockingMs,
+    panBlockingMs,
+    ...page_,
+    errors: errors.length,
+    errorSamples: [...new Set(errors.map((e) => e.slice(0, 120)))].slice(0, 3),
+  };
 }
 
 const results = [];
@@ -96,5 +104,11 @@ for (let i = 0; i < runs; i++) {
 const median = (k) =>
   results.map((r) => r[k]).sort((a, b) => a - b)[Math.floor(results.length / 2)];
 console.log(
-  `median ${JSON.stringify(Object.fromEntries(Object.keys(results[0]).map((k) => [k, median(k)])))}`,
+  `median ${JSON.stringify(
+    Object.fromEntries(
+      Object.keys(results[0])
+        .filter((k) => k !== 'errorSamples')
+        .map((k) => [k, median(k)]),
+    ),
+  )}`,
 );
