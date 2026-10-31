@@ -75,6 +75,21 @@ def test_full_aircraft_pipeline(mock_get):
     assert baw1["isDescending"] is True
 
 
+@pytest.mark.parametrize(
+    ("origin", "allowed"),
+    [
+        ("https://a1b2c3d4.flight-tracker-at-home.pages.dev", True),
+        ("https://ci-prod-smoke.flight-tracker-at-home.pages.dev", True),
+        ("https://evil.com", False),
+        ("https://x.flight-tracker-at-home.pages.dev.evil.com", False),
+        ("https://a.b.flight-tracker-at-home.pages.dev", False),
+    ],
+)
+def test_cors_allows_pages_previews_only(origin, allowed):
+    headers = client.get("/health", headers={"Origin": origin}).headers
+    assert (headers.get("access-control-allow-origin") == origin) is allowed
+
+
 def test_debug_endpoint_off_by_default():
     assert client.get("/debug/airplanes_live").status_code == 404
 
