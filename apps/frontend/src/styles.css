@@ -95,11 +95,12 @@
 
 /* MapLibre's attribution sits top-left, where it collides with the view switcher on
    phones before it collapses. Drop it below the switcher and the altitude legend.
-   (Two classes, to beat maplibre-gl.css, which loads after this file.) */
+   Move only the attribution: deck.gl's canvas lives in the same top-left container.
+   (Extra classes to beat maplibre-gl.css, which loads after this file.) */
 @media (width < 40rem) {
-  .maplibregl-map .maplibregl-ctrl-top-left {
-    top: calc(max(env(safe-area-inset-top), 0.75rem) + 7.5rem);
-    left: env(safe-area-inset-left);
+  .maplibregl-map .maplibregl-ctrl-top-left .maplibregl-ctrl-attrib {
+    margin-top: calc(max(env(safe-area-inset-top), 0.75rem) + 9rem);
+    margin-left: max(env(safe-area-inset-left), 0.75rem);
   }
 }
 
@@ -113,8 +114,9 @@
 }
 
 /* MapLibre popup overrides for dark theme */
+/* Above the KPI strip and the view switcher: a popup the user just opened is never cut off. */
 .map-popup {
-  z-index: 10;
+  z-index: 40;
 }
 
 .map-popup .maplibregl-popup-content {

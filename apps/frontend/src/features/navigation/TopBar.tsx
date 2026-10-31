@@ -45,7 +45,7 @@ export function TopBar({ activeView, onViewChange }: TopBarProps) {
   };
 
   return (
-    <div className="pointer-events-none absolute top-[max(env(safe-area-inset-top),0.75rem)] left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-3 sm:top-6">
+    <div className="pointer-events-none absolute top-[max(env(safe-area-inset-top),0.75rem)] left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-3 sm:top-6">
       <nav
         aria-label="View"
         className="pointer-events-auto flex items-center gap-1 rounded-full border border-zinc-700/60 bg-zinc-900 p-1 shadow-lg sm:bg-zinc-900/80 sm:backdrop-blur-md"

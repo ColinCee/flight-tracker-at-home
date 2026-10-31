@@ -30,7 +30,7 @@ export function AirportInspector({ airport, onClose }: AirportInspectorProps) {
       />
 
       <FieldGrid>
-        <Field icon={Cloud} label="Condition" value={formatCondition(airport.condition)} />
+        <Field icon={Cloud} label="Condition" value={formatCondition(airport.condition)} wide />
         <Field
           icon={Thermometer}
           label="Temp"
