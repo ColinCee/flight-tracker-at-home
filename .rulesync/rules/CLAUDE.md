@@ -24,7 +24,7 @@ flight-tracker-at-home/
 │   │   │   └── shared/        # Cross-feature: ui/, filters
 │   │   └── openapi.json       # Exported OpenAPI spec from backend
 │   ├── backend/               # Python FastAPI + Pydantic
-│   │   ├── src/main.py        # FastAPI app + endpoints (/health, /aircraft)
+│   │   ├── src/main.py        # FastAPI app + endpoints (/health, /aircraft, /weather, /heatmap)
 │   │   ├── src/models.py      # Data contract — source of truth for API schema
 │   │   ├── src/airplanes_live.py # ADS-B API client (adsb.lol by default; fetch, parse, enrich)
 │   │   ├── src/cache.py       # 10s TTL cache + KPI computation
@@ -37,8 +37,9 @@ flight-tracker-at-home/
 ├── scripts/
 │   └── memory-profile.sh      # CI memory profiling (server RSS + browser JS heap)
 ├── docs/
-│   ├── ARCHITECTURE.md        # Technical reference, data contract, design decisions
-│   ├── MVP.md                 # Product requirements and scope
+│   ├── ARCHITECTURE.md        # Technical reference, data contract, env vars, design decisions
+│   ├── PRODUCT-FEATURES.md    # Product requirements and scope
+│   ├── SELF-HOST.md           # Running the backend with Docker Compose + Cloudflare Tunnel
 │   └── plans/                 # Design & implementation plans
 ├── .rulesync/                 # AI config source of truth → generates CLAUDE.md etc.
 ├── .githooks/                 # Pre-commit hook (lint-staged: ruff + biome)
@@ -59,11 +60,12 @@ flight-tracker-at-home/
 - **AirportLayer.tsx** — Deck.gl IconLayer for airport markers (LHR, LGW, STN, LTN, LCY)
 - **AircraftInspector.tsx** — Popup panel showing selected aircraft details (callsign, altitude, speed, destination)
 - **AirportInspector.tsx** — Popup panel showing airport weather (MET NORWAY API: condition, temperature, wind)
+- **HexagonInspector.tsx** — Popup panel showing heatmap sector stats for a clicked hexagon
 - **AltitudeLegend.tsx** — Map overlay showing altitude color gradient legend
 - **KpiStrip.tsx** — Always-visible bottom bar: filter buttons (Tracked, Inbound London, Airborne, Climbing, Descending) + KPI values + API health badge + poll countdown; shows placeholder '—' values while loading
 - **TopBar.tsx** — Navigation bar with Live Radar / Heatmap toggle; 3D controls onboarding tooltip (persisted to localStorage)
-- **useAircraftData.ts** — React Query hook wrapping Orval-generated `useGetAircraft`, auto-polls every 10s; exposes `dataUpdatedAt` and `pollIntervalMs` for freshness indicators
-- **useWeatherData.ts** — React Query hook for airport weather, cached 30 minutes
+- **api/use-aircraft-data.ts** — React Query hook wrapping Orval-generated `useGetAircraft`, auto-polls every 10s; exposes `dataUpdatedAt` and `pollIntervalMs` for freshness indicators
+- **api/use-weather-data.ts** — React Query hook for airport weather, cached 30 minutes
 - **icons/jet.svg** — Aircraft silhouette SVGs (plus prop.svg, helicopter.svg, glider.svg), used as IconLayer atlas with `mask: true` for dynamic coloring
 
 ### Backend (apps/backend)
@@ -76,16 +78,9 @@ flight-tracker-at-home/
 - **models.py** — Pydantic models (`AircraftState`, `KPIs`, `AircraftResponse`, `WeatherResponse`) with `alias_generator=to_camel`
 - **mock_data.py** — Fixture data for E2E testing when `MOCK_DATA=true`
 
-### Production environment variables
+### Environment variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `CACHE_TTL` | No | `10` | Cache TTL in seconds |
-| `CORS_ORIGINS` | No | `http://localhost:4200` | Comma-separated allowed origins |
-| `MOCK_DATA` | No | — | Set to `true` for E2E fixture mode |
-| `VITE_API_BASE_URL` | No | `http://localhost:8000` | Backend URL (set at frontend build time) |
-| `TUNNEL_TOKEN` | Yes (prod) | — | Cloudflare Tunnel token |
-| `COMPOSE_PROFILES` | No | — | Set to `prod` for production |
+See the table in `docs/ARCHITECTURE.md` (Environment Variables).
 
 ### Data Flow
 
@@ -143,14 +138,14 @@ mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
 ## CI (GitHub Actions)
 
 - **Lint, Format & Types** — `mise run check` (ruff, biome, ty, tsc); fails on unformatted code, so run `mise run format` before pushing
-- **Test** — `mise run test` (pytest)
+- **Test** — `mise run test` (pytest + vitest)
 - **E2E Tests** — Playwright functional tests
 - **Memory Profile** — Starts servers, runs e2e + 120s soak test, posts PR comment with:
   - Peak RSS for backend (uvicorn) and frontend (vite dev server)
   - JS heap usage from Chromium via CDP `Runtime.getHeapUsage`
   - Soak trend (stable / growing / shrinking) per process
-- **Deploy** — On merge to main: deploys frontend to Cloudflare Pages; on PRs: creates preview deployments with status checks. Backend auto-deploys via Tugtainer (pulls new GHCR images).
-- **Docker** — Builds backend (distroless Python) image, pushes to GHCR on main
+- **Deploy** — On merge to main: deploys frontend to Cloudflare Pages; on PRs: creates preview deployments with status checks. The backend image goes to GHCR; the homelab repo pins its digest and Renovate there moves it.
+- **Security** — Builds the backend image (python slim) and fails on fixable HIGH/CRITICAL CVEs (Trivy), on PRs, main and weekly
 
 ## Key Conventions
 
@@ -181,7 +176,7 @@ mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
 
 Tool versions are managed by [mise](https://mise.jdx.dev/) (see `.mise.toml`):
 
-- **bun** 1.3 — JS package manager + runtime
+- **bun** 1.4 — JS package manager + runtime
 - **node** 24 — Required by Nx
 - **python** 3.14 — Backend runtime
 - **uv** — Python package/project manager
