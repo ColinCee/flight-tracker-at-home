@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Phones, and landscape phones too short for the vertical legend. */
+@custom-variant legend-compact (@media (width < 40rem) or (height < 32rem));
+
 @theme inline {
   --color-background: oklch(0.145 0 0);
   --color-foreground: oklch(0.985 0 0);
@@ -49,8 +52,54 @@
   * {
     @apply border-border;
   }
+  html,
   body {
     @apply bg-background text-foreground;
+    /* The map owns every gesture: no pull-to-refresh or rubber-band scrolling. */
+    overscroll-behavior: none;
+  }
+  ::selection {
+    background: oklch(0.45 0.12 230);
+    color: oklch(0.985 0 0);
+  }
+  :focus-visible {
+    outline: 2px solid oklch(0.78 0.12 230);
+    outline-offset: 2px;
+  }
+}
+
+/* Entrances: the inspector sheet rises, the 3D tip drops in. Both off for reduced motion. */
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+}
+.sheet-in {
+  animation: sheet-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tip-in {
+  animation: tip-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-in,
+  .tip-in {
+    animation: none;
+  }
+}
+
+/* MapLibre's attribution sits top-left, where it collides with the view switcher on
+   phones before it collapses. Drop it below the switcher and the altitude legend.
+   (Two classes, to beat maplibre-gl.css, which loads after this file.) */
+@media (width < 40rem) {
+  .maplibregl-map .maplibregl-ctrl-top-left {
+    top: calc(max(env(safe-area-inset-top), 0.75rem) + 7.5rem);
+    left: env(safe-area-inset-left);
   }
 }
 
@@ -69,6 +118,7 @@
 }
 
 .map-popup .maplibregl-popup-content {
+  width: 16.5rem;
   background: oklch(0.16 0 0 / 0.92);
   color: oklch(0.985 0 0);
   border: 1px solid oklch(0.35 0 0);
