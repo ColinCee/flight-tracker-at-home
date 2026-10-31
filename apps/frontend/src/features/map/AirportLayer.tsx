@@ -1,31 +1,16 @@
 import type { PickingInfo } from '@deck.gl/core';
 import { ScatterplotLayer, TextLayer } from '@deck.gl/layers';
-import { MapboxOverlay, type MapboxOverlayProps } from '@deck.gl/mapbox';
-import { useCallback, useMemo, useState } from 'react';
-import { useControl } from 'react-map-gl/maplibre';
+import { useCallback, useMemo } from 'react';
 import type { EnrichedAirportWeather } from '@/api/use-weather-data';
-
-function DeckGLOverlay(props: MapboxOverlayProps & { pickingRadius?: number }) {
-  const overlay = useControl(() => new MapboxOverlay(props));
-  overlay.setProps(props);
-  return null;
-}
+import { useDeckLayers } from './deck-overlay';
 
 interface AirportLayerProps {
   airports: EnrichedAirportWeather[];
   selectedIcao?: string | null;
   onAirportClick?: (icao: string) => void;
-  onHoverChange?: (isHovering: boolean) => void;
 }
 
-export function AirportLayer({
-  airports,
-  selectedIcao,
-  onAirportClick,
-  onHoverChange,
-}: AirportLayerProps) {
-  const [hoveredIcao, setHoveredIcao] = useState<string | null>(null);
-
+export function AirportLayer({ airports, selectedIcao, onAirportClick }: AirportLayerProps) {
   const handleClick = useCallback(
     (info: PickingInfo<EnrichedAirportWeather>) => {
       if (info.object) {
@@ -33,15 +18,6 @@ export function AirportLayer({
       }
     },
     [onAirportClick],
-  );
-
-  const handleHover = useCallback(
-    (info: PickingInfo<EnrichedAirportWeather>) => {
-      const icao = info.object?.icao ?? null;
-      setHoveredIcao(icao);
-      onHoverChange?.(icao != null);
-    },
-    [onHoverChange],
   );
 
   const layers = useMemo(
@@ -53,17 +29,16 @@ export function AirportLayer({
         getFillColor: (d) =>
           d.icao === selectedIcao ? [100, 200, 255, 255] : [255, 255, 255, 180],
         getLineColor: [0, 0, 0, 255],
-        getRadius: (d) => (d.icao === selectedIcao || d.icao === hoveredIcao ? 12 : 8),
+        getRadius: (d) => (d.icao === selectedIcao ? 12 : 8),
         radiusUnits: 'pixels',
         lineWidthUnits: 'pixels',
         getLineWidth: 2,
         pickable: true,
         autoHighlight: true,
         onClick: handleClick,
-        onHover: handleHover,
         updateTriggers: {
           getFillColor: [selectedIcao],
-          getRadius: [selectedIcao, hoveredIcao],
+          getRadius: [selectedIcao],
         },
       }),
       new TextLayer<EnrichedAirportWeather>({
@@ -78,8 +53,9 @@ export function AirportLayer({
         fontFamily: 'monospace',
       }),
     ],
-    [airports, selectedIcao, hoveredIcao, handleClick, handleHover],
+    [airports, selectedIcao, handleClick],
   );
 
-  return <DeckGLOverlay layers={layers} pickingRadius={5} />;
+  useDeckLayers('airports', layers);
+  return null;
 }
