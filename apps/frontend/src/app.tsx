@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react';
 import { Popup } from 'react-map-gl/maplibre';
 import { getGetHeatmapQueryKey, type HeatmapHexagon, useGetHeatmap } from '@/api/generated';
 import { useAircraftData } from '@/api/use-aircraft-data';
@@ -7,9 +7,20 @@ import { KpiStrip } from '@/features/kpi/KpiStrip';
 import { AircraftInspector } from '@/features/map/AircraftInspector';
 import { AirportInspector } from '@/features/map/AirportInspector';
 import { HexagonInspector } from '@/features/map/HexagonInspector';
+import { KeepClearOfSheet } from '@/features/map/KeepClearOfSheet';
 import { MapView } from '@/features/map/MapView';
 import { TopBar, type ViewMode } from '@/features/navigation/TopBar';
 import type { AircraftFilter } from '@/shared/filters';
+import { BottomSheet } from '@/shared/ui/bottom-sheet';
+import { PHONE_QUERY, useMediaQuery } from '@/shared/use-media-query';
+
+interface Selection {
+  key: string;
+  label: string;
+  lngLat: [number, number];
+  popupOffset: number;
+  inspector: ReactNode;
+}
 
 export function App() {
   const { aircraft, kpis, isError, dataUpdatedAt, pollIntervalMs } = useAircraftData();
@@ -60,8 +71,39 @@ export function App() {
     },
   });
 
+  // Phones get a bottom sheet fixed to the screen; larger screens a popup on the map.
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  const sheetRef = useRef<HTMLElement>(null);
+
+  let selection: Selection | null = null;
+  if (selectedAircraft) {
+    selection = {
+      key: `aircraft:${selectedAircraft.icao24}`,
+      label: 'Aircraft details',
+      lngLat: [selectedAircraft.longitude, selectedAircraft.latitude],
+      popupOffset: 20,
+      inspector: <AircraftInspector aircraft={selectedAircraft} onClose={handleCloseInspector} />,
+    };
+  } else if (selectedAirport) {
+    selection = {
+      key: `airport:${selectedAirport.icao}`,
+      label: 'Airport weather',
+      lngLat: [selectedAirport.longitude, selectedAirport.latitude],
+      popupOffset: 20,
+      inspector: <AirportInspector airport={selectedAirport} onClose={handleCloseInspector} />,
+    };
+  } else if (viewMode === 'heatmap' && selectedHexagon) {
+    selection = {
+      key: `hexagon:${selectedHexagon.data.hexId}`,
+      label: 'Sector traffic',
+      lngLat: selectedHexagon.lngLat,
+      popupOffset: 10,
+      inspector: <HexagonInspector hexagon={selectedHexagon} onClose={handleCloseInspector} />,
+    };
+  }
+
   return (
-    <main className="relative h-screen w-screen bg-background text-foreground">
+    <main className="relative h-dvh w-full overflow-hidden bg-background text-foreground">
       <TopBar activeView={viewMode} onViewChange={setViewMode} />
 
       {/* Render a single MapView and let it handle the ViewMode switching inside */}
@@ -78,44 +120,27 @@ export function App() {
         onHexagonClick={handleHexagonClick}
         onCloseInspector={handleCloseInspector}
       >
-        {selectedAircraft && (
-          <Popup
-            longitude={selectedAircraft.longitude}
-            latitude={selectedAircraft.latitude}
-            closeButton={false}
-            closeOnClick={false}
-            className="map-popup"
-            offset={20}
-            maxWidth="none"
-          >
-            <AircraftInspector aircraft={selectedAircraft} onClose={handleCloseInspector} />
-          </Popup>
-        )}
-        {selectedAirport && (
-          <Popup
-            longitude={selectedAirport.longitude}
-            latitude={selectedAirport.latitude}
-            closeButton={false}
-            closeOnClick={false}
-            className="map-popup"
-            offset={20}
-            maxWidth="none"
-          >
-            <AirportInspector airport={selectedAirport} onClose={handleCloseInspector} />
-          </Popup>
-        )}
-        {viewMode === 'heatmap' && selectedHexagon && (
-          <Popup
-            longitude={selectedHexagon.lngLat[0]}
-            latitude={selectedHexagon.lngLat[1]}
-            closeButton={false}
-            closeOnClick={false}
-            className="map-popup"
-            offset={10}
-            maxWidth="none"
-          >
-            <HexagonInspector hexagon={selectedHexagon} onClose={() => setSelectedHexagon(null)} />
-          </Popup>
+        {isPhone ? (
+          <KeepClearOfSheet
+            selectionKey={selection?.key ?? null}
+            lngLat={selection?.lngLat ?? null}
+            sheetRef={sheetRef}
+          />
+        ) : (
+          selection && (
+            <Popup
+              key={selection.key}
+              longitude={selection.lngLat[0]}
+              latitude={selection.lngLat[1]}
+              closeButton={false}
+              closeOnClick={false}
+              className="map-popup"
+              offset={selection.popupOffset}
+              maxWidth="none"
+            >
+              {selection.inspector}
+            </Popup>
+          )
         )}
       </MapView>
 
@@ -128,6 +153,12 @@ export function App() {
           dataUpdatedAt={dataUpdatedAt}
           pollIntervalMs={pollIntervalMs}
         />
+      )}
+
+      {isPhone && selection && (
+        <BottomSheet ref={sheetRef} label={selection.label} onClose={handleCloseInspector}>
+          {selection.inspector}
+        </BottomSheet>
       )}
     </main>
   );
