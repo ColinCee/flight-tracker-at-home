@@ -1,6 +1,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-import type { MapStyleDataEvent } from 'maplibre-gl';
+import { type MapStyleDataEvent, setWorkerUrl } from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AttributionControl, Map as MapGL, Popup } from 'react-map-gl/maplibre';
 import type { AircraftState, HeatmapHexagon } from '@/api/generated';
@@ -14,6 +15,10 @@ import { AirportLayer } from './AirportLayer';
 import { AltitudeLegend } from './AltitudeLegend';
 import { HeatmapLayer } from './HeatmapLayer';
 import { HexagonInspector } from './HexagonInspector';
+
+// maplibre v6 finds its worker next to its own module, but Vite bundles that
+// module and never emits the worker, so the map stays blank. Ship it as an asset.
+setWorkerUrl(maplibreWorkerUrl);
 
 const INITIAL_VIEW_STATE = {
   longitude: -0.12,
