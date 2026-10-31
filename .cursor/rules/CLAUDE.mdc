@@ -29,7 +29,8 @@ flight-tracker-at-home/
 │   │   └── tests/             # Pytest tests (test_airplanes_live, test_cache, test_heatmap, test_spatial_snapshot, test_weather, test_integration)
 │   └── e2e/                   # Playwright end-to-end tests
 │       ├── tests/             # Functional specs (health, aircraft, weather, app, heatmap)
-│       └── profiling/         # Memory profiling spec (separate config)
+│       ├── profiling/         # Memory profiling spec (separate config)
+│       └── smoke/             # Production-build smoke test (separate config)
 ├── scripts/
 │   └── memory-profile.sh      # CI memory profiling (server RSS + browser JS heap)
 ├── docs/
@@ -125,6 +126,7 @@ mise run typecheck          # Type check only (subset of check)
 mise run test               # Run all tests (pytest + vitest)
 mise run test:e2e           # Run Playwright e2e tests
 mise run test:e2e:ui        # Run Playwright with interactive UI
+mise run test:e2e:prod      # Smoke-test a production build (map tiles, no console errors)
 
 # Codegen & config
 mise run rules:sync         # Regenerate AI config files from .rulesync/
@@ -140,7 +142,7 @@ mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
 
 - **Lint, Format & Types** — `mise run check` (ruff, biome, ty, tsc); fails on unformatted code, so run `mise run format` before pushing
 - **Test** — `mise run test` (pytest)
-- **E2E Tests** — Playwright functional tests
+- **E2E Tests** — Playwright functional tests against the dev server, then `mise run test:e2e:prod` against a production build (catches bundling bugs the dev server hides)
 - **Memory Profile** — Starts servers, runs e2e + 120s soak test, posts PR comment with:
   - Peak RSS for backend (uvicorn) and frontend (vite dev server)
   - JS heap usage from Chromium via CDP `Runtime.getHeapUsage`
