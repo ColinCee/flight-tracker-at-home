@@ -1,61 +1,36 @@
-import { Clock, Cloud, MapPin, Navigation, Thermometer, Wind, X } from 'lucide-react';
+import { Clock, Cloud, MapPin, Navigation, Thermometer, Wind } from 'lucide-react';
 import type { EnrichedAirportWeather } from '@/api/use-weather-data';
+import { Field, FieldGrid, InspectorHeader } from './InspectorParts';
 
 interface AirportInspectorProps {
   airport: EnrichedAirportWeather;
   onClose: () => void;
 }
 
-function Field({
-  icon: Icon,
-  label,
-  value,
-  accent,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  accent?: string;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <Icon className={`h-3.5 w-3.5 shrink-0 ${accent ?? 'text-zinc-500'}`} />
-      <span className="text-[11px] text-zinc-400">{label}</span>
-      <span className="ml-auto font-mono text-xs text-zinc-200">{value}</span>
-    </div>
-  );
+/** MET Norway symbol codes ("partlycloudy_night") to plain words ("Partly cloudy"). */
+export function formatCondition(code: string | null | undefined): string {
+  if (!code) return '—';
+  const words = code
+    .replace(/_(day|night|polartwilight)$/, '')
+    .replace(/(light|heavy|partly|clear|and)(?=[a-z])/g, '$1 ')
+    .replace(/(rain|sleet|snow)(?=showers|and)/g, '$1 ')
+    .replace(/showers(?=and)/g, 'showers ')
+    .trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export function AirportInspector({ airport, onClose }: AirportInspectorProps) {
   return (
-    <div className="w-60">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 border-b border-zinc-700/60 pb-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-700/60">
-            <MapPin className="h-4 w-4 text-zinc-300" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm leading-tight font-semibold text-zinc-100">
-              {airport.name}
-            </span>
-            <span className="font-mono text-[10px] leading-tight text-zinc-500">
-              {airport.icao}
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="-mr-1 -mt-0.5 rounded p-0.5 text-zinc-500 transition-colors hover:bg-zinc-700/50 hover:text-zinc-300"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </div>
+    <div>
+      <InspectorHeader
+        icon={MapPin}
+        title={airport.name}
+        subtitle={airport.icao}
+        onClose={onClose}
+      />
 
-      {/* Fields */}
-      <div className="flex flex-col gap-1.5 pt-3 pb-1">
-        <Field icon={Cloud} label="Condition" value={airport.condition || '—'} />
+      <FieldGrid>
+        <Field icon={Cloud} label="Condition" value={formatCondition(airport.condition)} />
         <Field
           icon={Thermometer}
           label="Temp"
@@ -83,7 +58,7 @@ export function AirportInspector({ airport, onClose }: AirportInspectorProps) {
               : '—'
           }
         />
-      </div>
+      </FieldGrid>
     </div>
   );
 }
