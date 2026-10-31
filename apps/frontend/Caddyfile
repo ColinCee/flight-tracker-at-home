@@ -1,13 +1,6 @@
 :8080 {
-	handle /health {
-		reverse_proxy {$BACKEND_URL:localhost:8000}
-	}
-
-	handle /aircraft {
-		reverse_proxy {$BACKEND_URL:localhost:8000}
-	}
-
-	handle /debug/* {
+	@api path /health /aircraft /weather /heatmap /debug/*
+	handle @api {
 		reverse_proxy {$BACKEND_URL:localhost:8000}
 	}
 

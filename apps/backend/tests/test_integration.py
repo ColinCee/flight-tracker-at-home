@@ -1,9 +1,10 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 from src.cache import airspace_cache
 from src.main import app
+from src.models import AirportWeather, WeatherResponse
 
 client = TestClient(app)
 
@@ -72,3 +73,44 @@ def test_full_aircraft_pipeline(mock_get):
     assert baw1["aircraftType"] is None  # Mock doesn't include "t" field
     assert baw1["isClimbing"] is False
     assert baw1["isDescending"] is True
+
+
+@pytest.mark.parametrize(
+    ("origin", "allowed"),
+    [
+        ("https://a1b2c3d4.flight-tracker-at-home.pages.dev", True),
+        ("https://ci-prod-smoke.flight-tracker-at-home.pages.dev", True),
+        ("https://evil.com", False),
+        ("https://x.flight-tracker-at-home.pages.dev.evil.com", False),
+        ("https://a.b.flight-tracker-at-home.pages.dev", False),
+    ],
+)
+def test_cors_allows_pages_previews_only(origin, allowed):
+    headers = client.get("/health", headers={"Origin": origin}).headers
+    assert (headers.get("access-control-allow-origin") == origin) is allowed
+
+
+def test_debug_endpoint_off_by_default():
+    assert client.get("/debug/airplanes_live").status_code == 404
+
+
+def _get_weather_headers(weather: list[AirportWeather]):
+    response = WeatherResponse(timestamp=0, cache_age_seconds=0.0, weather=weather)
+    with patch("src.main.weather_cache.get_weather", AsyncMock(return_value=response)):
+        return client.get("/weather").headers
+
+
+def test_weather_is_browser_cacheable():
+    heathrow = AirportWeather(
+        icao="EGLL",
+        name="Heathrow",
+        condition="fog",
+        temperature_c=None,
+        wind_speed_kts=None,
+        wind_direction_deg=None,
+    )
+    assert _get_weather_headers([heathrow])["cache-control"] == "public, max-age=300"
+
+
+def test_empty_weather_is_not_browser_cacheable():
+    assert "cache-control" not in _get_weather_headers([])
