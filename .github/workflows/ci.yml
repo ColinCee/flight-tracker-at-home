@@ -68,10 +68,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # Keeps the name of a required check in the repo ruleset. Agent
+  # instructions live only in AGENTS.md; CLAUDE.md just imports it.
   rules-sync:
     name: Rules Sync Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
-      - run: mise run rules:check
+      - run: test -s AGENTS.md && test "$(cat CLAUDE.md)" = "@AGENTS.md"

@@ -7,6 +7,4 @@ __pycache__/
 .ruff_cache/
 dist/
 .claude/
-.cursor/
-.codex/
 .vscode/
