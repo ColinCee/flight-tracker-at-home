@@ -16,6 +16,12 @@
     {
       "matchUpdateTypes": ["major"],
       "automerge": false
+    },
+    {
+      "description": "A new Python minor needs wheels for every backend dependency (3.15 broke watchfiles). Move Python by hand after checking them.",
+      "matchDepNames": ["python"],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false
     }
   ]
 }

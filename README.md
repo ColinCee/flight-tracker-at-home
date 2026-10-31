@@ -26,7 +26,7 @@ Real-time aviation dashboard showing aircraft around the London airspace with Lo
 | Frontend | React 19, Vite 8, Tailwind CSS |
 | Map | MapLibre GL JS, react-map-gl, Deck.gl |
 | State | TanStack Query (auto-polling) |
-| Backend | Python 3.12, FastAPI |
+| Backend | Python 3.14, FastAPI |
 | Data | [adsb.lol](https://adsb.lol/) REST API (ODbL) |
 | E2E Tests | Playwright |
 | Monorepo | Nx + Bun + mise |

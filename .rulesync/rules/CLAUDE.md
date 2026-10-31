@@ -168,7 +168,7 @@ mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
 | Frontend  | React 19 + Vite 8 + Tailwind CSS       |
 | Map       | MapLibre GL JS + react-map-gl + Deck.gl |
 | State     | TanStack Query (auto-polling 10s)       |
-| Backend   | Python 3.12 / FastAPI                   |
+| Backend   | Python 3.14 / FastAPI                   |
 | Data      | adsb.lol REST API (ADSBx v2 format)     |
 | E2E Tests | Playwright (Chromium)                   |
 | Profiling | ps RSS sampling + CDP JS heap           |
@@ -183,7 +183,7 @@ Tool versions are managed by [mise](https://mise.jdx.dev/) (see `.mise.toml`):
 
 - **bun** 1.3 — JS package manager + runtime
 - **node** 24 — Required by Nx
-- **python** 3.12 — Backend runtime
+- **python** 3.14 — Backend runtime
 - **uv** — Python package/project manager
 - **ruff** — Python linting + formatting (config: `ruff.toml`)
 - **ty** — Python type checking (config: `pyproject.toml [tool.ty]`)

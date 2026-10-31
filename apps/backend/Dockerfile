@@ -1,4 +1,4 @@
-FROM python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 AS builder
+FROM python:3.14-slim@sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8 AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:latest@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff /uv /usr/local/bin/uv
 
@@ -12,16 +12,19 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY src/ ./src/
 
 # --- Runtime stage ---
-FROM python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
+FROM python:3.14-slim@sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8
 
-RUN useradd --create-home --shell /bin/false appuser \
+# The app never installs packages at runtime; pip's vendored copies of
+# urllib3, msgpack and setuptools only add CVEs to the scan.
+RUN python3 -m pip uninstall --yes pip \
+    && useradd --create-home --shell /bin/false appuser \
     && mkdir -p /app/data && chown appuser:appuser /app/data
 USER appuser
 
 WORKDIR /app
 
 # Copy installed packages and source
-COPY --from=builder /app/.venv/lib/python3.12/site-packages /app/site-packages
+COPY --from=builder /app/.venv/lib/python3.14/site-packages /app/site-packages
 COPY --from=builder /app/src /app/src
 
 ENV PYTHONPATH="/app/site-packages:/app"
