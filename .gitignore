@@ -39,8 +39,8 @@ testem.log
 .DS_Store
 Thumbs.db
 
-.nx/cache
-.nx/workspace-data
+# Leftover cache from the removed Nx task runner
+.nx/
 .claude/worktrees
 .claude/settings.local.json
 

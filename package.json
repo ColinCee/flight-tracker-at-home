@@ -13,10 +13,8 @@
     "@deck.gl/geo-layers": "^9.2.11",
     "@deck.gl/layers": "^9.2.11",
     "@deck.gl/mapbox": "^9.2.11",
-    "@deck.gl/react": "^9.2.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "h3-js": "^4.4.0",
     "lucide-react": "^1.7.0",
     "maplibre-gl": "^6.0.0",
     "react": "^19.0.0",
@@ -25,16 +23,8 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
-    "@nx/js": "22.7.12",
-    "@nx/react": "^22.6.4",
-    "@nx/vite": "^22.6.4",
-    "@nx/vitest": "^22.6.4",
-    "@nx/web": "22.7.12",
-    "@nx/workspace": "22.7.12",
+    "@biomejs/biome": "2.4.10",
     "@playwright/test": "^1.59.1",
-    "@swc-node/register": "~1.12.0",
-    "@swc/core": "~1.16.0",
-    "@swc/helpers": "~0.5.18",
     "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.14",
@@ -44,10 +34,8 @@
     "jiti": "^2.6.1",
     "jsdom": "^30.0.0",
     "lint-staged": "^17.0.0",
-    "nx": "22.7.12",
     "orval": "^8.6.2",
     "tailwindcss": "^4.2.2",
-    "tslib": "^2.3.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.0",
     "vitest": "~4.1.0",
@@ -59,7 +47,7 @@
       "uvx ruff check --fix"
     ],
     "*.{ts,tsx,js,jsx,json,css}": [
-      "bunx @biomejs/biome@2.4.10 check --write --no-errors-on-unmatched"
+      "bunx biome check --write --no-errors-on-unmatched"
     ]
   }
 }
