@@ -49,7 +49,8 @@ test.describe('frontend app', () => {
     // KPI labels should be present
     await expect(page.getByRole('button', { name: 'Inbound London' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Airborne' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Avg Alt' })).toBeVisible();
+    // Average altitude is a reading, not a filter, so it is not a button.
+    await expect(page.getByText('Avg Alt')).toBeVisible();
   });
 
   test('shows API health indicator', async ({ page }) => {

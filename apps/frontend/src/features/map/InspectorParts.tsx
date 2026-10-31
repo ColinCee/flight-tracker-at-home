@@ -58,14 +58,17 @@ export function Field({
   label,
   value,
   accent,
+  wide,
 }: {
   icon: Icon;
   label: string;
   value: string;
   accent?: string;
+  /** Spans both columns, for values longer than a number. */
+  wide?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className={`flex min-w-0 items-center gap-2 ${wide ? '@xs:col-span-2' : ''}`}>
       <FieldIcon className={`size-3.5 shrink-0 ${accent ?? 'text-zinc-500'}`} />
       <span className="text-xs text-zinc-400 sm:text-[11px]">{label}</span>
       <span className="ml-auto truncate font-mono text-sm text-zinc-100 tabular-nums sm:text-xs sm:text-zinc-200">
