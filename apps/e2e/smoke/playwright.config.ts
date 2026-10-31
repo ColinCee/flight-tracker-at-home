@@ -12,6 +12,10 @@ export default defineConfig({
   retries: 0,
   use: {
     baseURL: `http://localhost:${PREVIEW_PORT}`,
+    // Without these, headless Chromium's default WebGL path loses a context
+    // created very early in page load, giving a blank map that real browsers
+    // do not show.
+    launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
   },
   webServer: [
     {
