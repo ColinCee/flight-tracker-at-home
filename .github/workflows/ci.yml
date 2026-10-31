@@ -11,41 +11,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  format:
-    name: Auto-format
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
-      - run: mise run setup
-      - run: mise run format
-      - name: Commit formatting fixes
-        run: |
-          git config user.name "ci-format-bot"
-          git config user.email "ci-format-bot@users.noreply.github.com"
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "style: auto-format"
-            git push
-          else
-            echo "No formatting changes needed"
-          fi
-
   check:
     name: Lint, Format & Types
-    needs: [format]
-    if: always() && !cancelled()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
       - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
       - run: mise run setup
       - run: mise run check
