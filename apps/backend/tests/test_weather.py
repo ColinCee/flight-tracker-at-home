@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 from src.models import AirportWeather, WeatherResponse
-from src.weather import WeatherCache
+from src.weather import WEATHER_CACHE_TTL, WeatherCache
 
 
 @pytest.fixture
@@ -195,9 +195,10 @@ def _weather(icao: str, temperature_c: float) -> AirportWeather:
 def _expired_cache(*weather: AirportWeather) -> WeatherCache:
     cache = WeatherCache()
     cache.cached_response = WeatherResponse(
-        timestamp=int(time.time() - 3600), cache_age_seconds=0.0, weather=list(weather)
+        timestamp=int(time.time() - 2000), cache_age_seconds=0.0, weather=list(weather)
     )
-    cache.last_update = time.time() - 3600
+    cache.last_update = time.time() - 2000  # expired (TTL 1800 s)
+    cache.fetched_at = {w.icao: cache.last_update for w in weather}
     return cache
 
 
@@ -209,7 +210,7 @@ async def test_every_airport_failing_keeps_previous_weather(mock_fetch):
     response = await cache.get_weather()
 
     assert [w.icao for w in response.weather] == ["EGLL"]
-    assert response.cache_age_seconds > 3500
+    assert response.cache_age_seconds > WEATHER_CACHE_TTL
 
     # The next request inside the retry window does not hit upstream again.
     mock_fetch.reset_mock()
@@ -231,3 +232,9 @@ async def test_failed_airport_keeps_its_last_reading(mock_fetch):
     by_icao = {w.icao: w.temperature_c for w in response.weather}
     assert by_icao == {"EGLL": 25.0, "EGKK": 18.0}
     assert response.cache_age_seconds == 0.0
+
+    # Two refreshes later Gatwick's reading is too old to carry forward.
+    cache.last_update = 0.0
+    cache.fetched_at["EGKK"] = time.time() - 2 * WEATHER_CACHE_TTL
+    response = await cache.get_weather()
+    assert [w.icao for w in response.weather] == ["EGLL"]
