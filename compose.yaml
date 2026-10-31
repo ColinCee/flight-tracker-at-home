@@ -1,39 +1,8 @@
-# Flight Tracker Docker Compose
-#
-# Production (COMPOSE_PROFILES=prod): builds the backend from source and
-#   runs it behind cloudflared. See docs/SELF-HOST.md. The live site runs the
-#   GHCR image from the homelab repo instead.
-#
-# Local development:
-#   docker compose --profile dev up
-#   Builds and runs the backend locally on port 8000
+# Runs the backend and a production frontend build in containers:
+#   docker compose up
+# Production runs the GHCR backend image from the homelab repo instead.
 
 services:
-  # --- Production services ---
-  backend:
-    build:
-      context: apps/backend
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    expose:
-      - "8000"
-    volumes:
-      - heatmap_data:/app/data
-    environment:
-      - CORS_ORIGINS=${CORS_ORIGINS:-https://flight-tracker-at-home.pages.dev}
-      - CACHE_TTL=${CACHE_TTL:-10}
-      - HEATMAP_DB_PATH=/app/data/historical_heatmap.parquet
-    profiles: [prod]
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest@sha256:faa8e0a1475f137c910be6025f43c8e4092fdd35461b31e19fd1390657a1ff39
-    restart: unless-stopped
-    command: tunnel run --token ${TUNNEL_TOKEN:?Set TUNNEL_TOKEN env var}
-    depends_on:
-      - backend
-    profiles: [prod]
-
-  # --- Local development ---
   backend-dev:
     build:
       context: apps/backend
@@ -41,7 +10,6 @@ services:
       - "8000:8000"
     env_file:
       - apps/backend/.env
-    profiles: [dev]
 
   frontend-dev:
     build:
@@ -53,7 +21,3 @@ services:
       BACKEND_URL: backend-dev:8000
     depends_on:
       - backend-dev
-    profiles: [dev]
-
-volumes:
-  heatmap_data:
