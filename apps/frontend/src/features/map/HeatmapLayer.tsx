@@ -1,14 +1,7 @@
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
-import { MapboxOverlay, type MapboxOverlayProps } from '@deck.gl/mapbox';
 import { useMemo } from 'react';
-import { useControl } from 'react-map-gl/maplibre';
 import type { HeatmapHexagon } from '@/api/generated';
-
-function DeckGLOverlay(props: MapboxOverlayProps) {
-  const overlay = useControl(() => new MapboxOverlay(props));
-  overlay.setProps(props);
-  return null;
-}
+import { useDeckLayers } from './deck-overlay';
 
 // Magic constants for the hybrid piecewise curve and color ramp
 const ELEVATION_SCALE_SMALL = 200;
@@ -21,12 +14,14 @@ const COLOR_PURPLE_TO_RED_MAX = 200;
 const COLOR_PURPLE_TO_RED_MIN = 100;
 const COLOR_ALPHA = 230;
 
+const NO_DATA: HeatmapHexagon[] = [];
+
 interface HeatmapLayerProps {
   data?: HeatmapHexagon[];
   onHexagonClick?: (data: HeatmapHexagon, lngLat: [number, number]) => void;
 }
 
-export function HeatmapLayer({ data = [], onHexagonClick }: HeatmapLayerProps) {
+export function HeatmapLayer({ data = NO_DATA, onHexagonClick }: HeatmapLayerProps) {
   const layers = useMemo(() => {
     return [
       new H3HexagonLayer({
@@ -83,5 +78,6 @@ export function HeatmapLayer({ data = [], onHexagonClick }: HeatmapLayerProps) {
     ];
   }, [data, onHexagonClick]);
 
-  return <DeckGLOverlay layers={layers} />;
+  useDeckLayers('heatmap', layers);
+  return null;
 }

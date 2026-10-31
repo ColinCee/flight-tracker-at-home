@@ -1,10 +1,9 @@
 import type { PickingInfo } from '@deck.gl/core';
 import { IconLayer } from '@deck.gl/layers';
-import { MapboxOverlay, type MapboxOverlayProps } from '@deck.gl/mapbox';
-import { useCallback, useMemo, useState } from 'react';
-import { useControl } from 'react-map-gl/maplibre';
+import { useCallback, useMemo } from 'react';
 import type { AircraftState } from '@/api/generated';
 import { type AircraftFilter, matchesFilter } from '@/shared/filters';
+import { useDeckLayers } from './deck-overlay';
 import gliderUrl from './icons/glider.svg';
 import helicopterUrl from './icons/helicopter.svg';
 import jetUrl from './icons/jet.svg';
@@ -41,20 +40,12 @@ const COLOR_SELECTED: [number, number, number, number] = [100, 200, 255, 255];
 const COLOR_DIMMED: [number, number, number, number] = [255, 255, 255, 40];
 const COLOR_EMERGENCY: [number, number, number, number] = [255, 60, 60, 255];
 const COLOR_ROTORCRAFT: [number, number, number, number] = [80, 220, 120, 210];
-const PICKING_RADIUS = 5;
-
-function DeckGLOverlay(props: MapboxOverlayProps & { pickingRadius?: number }) {
-  const overlay = useControl(() => new MapboxOverlay(props));
-  overlay.setProps(props);
-  return null;
-}
 
 interface AircraftLayerProps {
   aircraft: AircraftState[];
   selectedIcao24?: string | null;
   activeFilter?: AircraftFilter;
   onAircraftClick?: (icao24: string) => void;
-  onHoverChange?: (isHovering: boolean) => void;
 }
 
 function getAltitudeColor(alt: number | null | undefined): [number, number, number, number] {
@@ -77,10 +68,7 @@ export function AircraftLayer({
   selectedIcao24,
   activeFilter,
   onAircraftClick,
-  onHoverChange,
 }: AircraftLayerProps) {
-  const [hoveredIcao24, setHoveredIcao24] = useState<string | null>(null);
-
   const handleClick = useCallback(
     (info: PickingInfo<AircraftState>) => {
       if (info.object) {
@@ -90,15 +78,6 @@ export function AircraftLayer({
     [onAircraftClick],
   );
 
-  const handleHover = useCallback(
-    (info: PickingInfo<AircraftState>) => {
-      const icao = info.object?.icao24 ?? null;
-      setHoveredIcao24(icao);
-      onHoverChange?.(icao != null);
-    },
-    [onHoverChange],
-  );
-
   const layers = useMemo(
     () => [
       new IconLayer<AircraftState>({
@@ -106,11 +85,10 @@ export function AircraftLayer({
         data: aircraft,
         getIcon: (d) => getIconForCategory(d.category),
         getPosition: (d) => [d.longitude, d.latitude],
-        getSize: (d) => {
-          if (d.icao24 === selectedIcao24) return 30;
-          if (d.icao24 === hoveredIcao24) return 27;
-          return 24;
-        },
+        getSize: (d) => (d.icao24 === selectedIcao24 ? 30 : 24),
+        // Lie flat on the map so the heading stays true when the map is
+        // rotated or pitched (a billboard rotates relative to the screen).
+        billboard: false,
         getAngle: (d) => -(d.trueTrack ?? 0),
         getColor: (d) => {
           if (d.icao24 === selectedIcao24) return COLOR_SELECTED;
@@ -130,15 +108,15 @@ export function AircraftLayer({
         pickable: true,
         autoHighlight: true,
         onClick: handleClick,
-        onHover: handleHover,
         updateTriggers: {
-          getSize: [selectedIcao24, hoveredIcao24],
+          getSize: [selectedIcao24],
           getColor: [selectedIcao24, activeFilter],
         },
       }),
     ],
-    [aircraft, selectedIcao24, hoveredIcao24, activeFilter, handleClick, handleHover],
+    [aircraft, selectedIcao24, activeFilter, handleClick],
   );
 
-  return <DeckGLOverlay layers={layers} pickingRadius={PICKING_RADIUS} />;
+  useDeckLayers('aircraft', layers);
+  return null;
 }
