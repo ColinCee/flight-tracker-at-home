@@ -179,12 +179,13 @@ def get_heatmap_data(response: Response) -> list[HeatmapHexagon]:
     """
 
     global _heatmap_cache
-    # A new snapshot lands every 60 s.
-    response.headers["Cache-Control"] = "public, max-age=60"
 
     # Return a plain array instead of {"data": []}
     if not os.path.exists(DB_PATH):
         return []
+    # A new snapshot lands every 60 s. Set only on a real answer, so a browser
+    # never holds an empty one.
+    response.headers["Cache-Control"] = "public, max-age=60"
     stat = os.stat(DB_PATH)
     key = (DB_PATH, stat.st_mtime_ns, stat.st_size)
     if _heatmap_cache and _heatmap_cache[0] == key:
@@ -212,4 +213,5 @@ def get_heatmap_data(response: Response) -> list[HeatmapHexagon]:
         return hexagons
     except duckdb.Error as e:
         logger.error(f"Heatmap query failed: {e}")
+        del response.headers["Cache-Control"]
         return []

@@ -80,7 +80,8 @@ def snapshot_to_parquet(aircraft_list: list[AircraftState]):
                 """
         con.sql(f"COPY ({new_rows}) TO '{tmp_path}' (FORMAT PARQUET)")
     finally:
-        # Close before the swap: an open handle on DB_PATH blocks os.replace
-        # on Windows.
+        # Close before the swap: on Windows an open handle on DB_PATH makes
+        # os.replace fail, which also happens (losing that minute) if a
+        # /heatmap read is in progress. Linux, where it runs, is unaffected.
         con.close()
     os.replace(tmp_path, DB_PATH)

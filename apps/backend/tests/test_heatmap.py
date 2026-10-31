@@ -67,6 +67,10 @@ class TestHeatmapEndpoint:
         assert first.headers["cache-control"] == "public, max-age=60"
         assert [h["hexId"] for h in first.json()] == [hex_a]
 
+        # Unchanged file: served without opening DuckDB.
+        with patch("src.main.duckdb.connect", side_effect=AssertionError):
+            assert client.get("/heatmap").json() == first.json()
+
         self._create_parquet_file(
             [
                 {"hex_id": hex_a, "total_volume": 5, "avg_altitude": 3000},
