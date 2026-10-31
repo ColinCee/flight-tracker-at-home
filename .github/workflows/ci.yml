@@ -32,7 +32,7 @@ jobs:
 
   test-e2e:
     name: E2E Tests
-    runs-on: ubuntu-24.04  # Playwright 1.59 cannot install Chromium on ubuntu-latest (26.04)
+    runs-on: ubuntu-26.04  # Playwright 1.59 cannot install Chromium on ubuntu-latest (26.04)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
@@ -43,7 +43,7 @@ jobs:
   memory-profile:
     name: Memory Profile
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04  # Playwright 1.59 cannot install Chromium on ubuntu-latest (26.04)
+    runs-on: ubuntu-26.04  # Playwright 1.59 cannot install Chromium on ubuntu-latest (26.04)
     permissions:
       contents: read
       pull-requests: write
