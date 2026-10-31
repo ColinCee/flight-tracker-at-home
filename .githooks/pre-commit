@@ -1,3 +1,6 @@
 #!/usr/bin/env bash
-eval "$(mise activate bash)" 2>/dev/null
+# lint-staged calls bunx and uvx directly, so mise is optional here.
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate bash)"
+fi
 bunx lint-staged

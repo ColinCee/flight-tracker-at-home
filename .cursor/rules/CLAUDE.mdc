@@ -138,8 +138,7 @@ mise run deploy:frontend    # Build + deploy frontend to Cloudflare Pages
 
 ## CI (GitHub Actions)
 
-- **Auto-format** — On PRs, commits formatting fixes as `ci-format-bot`
-- **Lint, Format & Types** — `mise run check` (ruff, biome, ty, tsc)
+- **Lint, Format & Types** — `mise run check` (ruff, biome, ty, tsc); fails on unformatted code, so run `mise run format` before pushing
 - **Test** — `mise run test` (pytest)
 - **E2E Tests** — Playwright functional tests
 - **Memory Profile** — Starts servers, runs e2e + 120s soak test, posts PR comment with:
