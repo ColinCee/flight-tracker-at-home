@@ -1,8 +1,12 @@
-import { useRef } from 'react';
-import type { AircraftState, KPIs } from '@/api/generated';
+import type { AircraftResponse, AircraftState, KPIs } from '@/api/generated';
 import { getGetAircraftQueryKey, useGetAircraft } from '@/api/generated';
 
 const DEFAULT_POLL_INTERVAL_MS = 10_000;
+
+/** The backend says how often to poll; fall back until it has answered. */
+export function pollIntervalFor(response: AircraftResponse | undefined): number {
+  return response?.refreshIntervalMs || DEFAULT_POLL_INTERVAL_MS;
+}
 
 interface AircraftData {
   aircraft: AircraftState[];
@@ -14,22 +18,15 @@ interface AircraftData {
 }
 
 export function useAircraftData(): AircraftData {
-  const intervalRef = useRef(DEFAULT_POLL_INTERVAL_MS);
-  const activeIntervalMs = intervalRef.current;
-
   const { data, isLoading, isError, dataUpdatedAt } = useGetAircraft({
     query: {
       queryKey: getGetAircraftQueryKey(),
-      refetchInterval: activeIntervalMs,
+      // Read from the latest response, so a new interval applies to the very next poll.
+      refetchInterval: (query) => pollIntervalFor(query.state.data?.data),
     },
   });
 
   const response = data?.data;
-
-  // Sync poll rate with backend on each successful response
-  if (response?.refreshIntervalMs) {
-    intervalRef.current = response.refreshIntervalMs;
-  }
 
   return {
     aircraft: response?.aircraft ?? [],
@@ -37,6 +34,6 @@ export function useAircraftData(): AircraftData {
     isLoading,
     isError,
     dataUpdatedAt,
-    pollIntervalMs: activeIntervalMs,
+    pollIntervalMs: pollIntervalFor(response),
   };
 }
