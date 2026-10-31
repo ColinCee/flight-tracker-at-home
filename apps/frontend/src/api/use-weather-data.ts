@@ -4,7 +4,7 @@ import { getGetWeatherQueryKey, useGetWeather } from '@/api/generated';
 
 const WEATHER_POLL_INTERVAL_MS = 60_000; // Poll every 1 minute since backend caches for 30m
 
-export const LONDON_AIRPORTS_COORDS: Record<string, { lat: number; lon: number }> = {
+const LONDON_AIRPORTS_COORDS: Record<string, { lat: number; lon: number }> = {
   EGLL: { lat: 51.47, lon: -0.4543 },
   EGLC: { lat: 51.5053, lon: 0.0553 },
   EGKK: { lat: 51.1481, lon: -0.1903 },
