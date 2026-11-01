@@ -82,6 +82,25 @@
           }
         }
       }
+    },
+    "/heatmap/hourly": {
+      "get": {
+        "summary": "Traffic per hour over the last 24 hours",
+        "description": "Aircraft-minutes per H3 cell in each of the last 24 complete hours, and the\naverage number of aircraft over the whole area in each hour. An hour with\nno snapshots has `snapshots: 0`; with no history at all, `cells` is empty.",
+        "operationId": "getHourlyHeatmap",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HourlyHeatmap"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -394,6 +413,83 @@
         ],
         "title": "HeatmapHexagon",
         "description": "Aggregated heatmap data for a single H3 hexagon."
+      },
+      "HeatmapHour": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "aircraft": {
+            "type": "number",
+            "title": "Aircraft"
+          },
+          "snapshots": {
+            "type": "integer",
+            "title": "Snapshots"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "aircraft",
+          "snapshots"
+        ],
+        "title": "HeatmapHour",
+        "description": "One clock hour of the last 24."
+      },
+      "HourlyHeatmap": {
+        "properties": {
+          "resolution": {
+            "type": "integer",
+            "title": "Resolution"
+          },
+          "hours": {
+            "items": {
+              "$ref": "#/components/schemas/HeatmapHour"
+            },
+            "type": "array",
+            "title": "Hours"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/HourlyHeatmapCell"
+            },
+            "type": "array",
+            "title": "Cells"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resolution",
+          "hours",
+          "cells"
+        ],
+        "title": "HourlyHeatmap",
+        "description": "Traffic of the last 24 complete hours, per hour and per cell."
+      },
+      "HourlyHeatmapCell": {
+        "properties": {
+          "hexId": {
+            "type": "string",
+            "title": "Hexid"
+          },
+          "counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hexId",
+          "counts"
+        ],
+        "title": "HourlyHeatmapCell",
+        "description": "Traffic in one H3 cell, hour by hour."
       },
       "KPIs": {
         "properties": {
