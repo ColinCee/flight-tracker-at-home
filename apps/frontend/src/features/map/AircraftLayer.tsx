@@ -35,12 +35,19 @@ function iconFor(category: string) {
 
 type RGBA = [number, number, number, number];
 
+// Overflights above this are just passing over: drawn smaller and fainter so
+// the planes arriving and leaving London stand out.
+const CRUISE_ABOVE_FT = 20_000;
+const isCruising = (d: AircraftState) =>
+  phaseOf(d) === 'other' && (d.baroAltitudeFt ?? 0) > CRUISE_ABOVE_FT;
+
 // Aircraft are the only colour on the map: amber landing, teal taking off,
 // pale grey everything else, blue for the one you picked.
 const COLOUR = {
   landing: [255, 179, 71, 245],
   departing: [79, 214, 196, 240],
   other: [228, 230, 233, 225],
+  cruise: [228, 230, 233, 110],
   selected: [90, 169, 255, 255],
   emergency: [255, 92, 92, 255],
   hidden: [140, 143, 148, 60],
@@ -76,7 +83,7 @@ export function AircraftLayer({ aircraft, isShown, selectedId, onPick }: Aircraf
         data: aircraft,
         getIcon: (d) => iconFor(d.category),
         getPosition: (d) => [d.longitude, d.latitude],
-        getSize: (d) => (d.icao24 === selectedId ? 30 : 22),
+        getSize: (d) => (d.icao24 === selectedId ? 30 : isCruising(d) ? 15 : 22),
         // Lie flat on the map so the heading stays true.
         billboard: false,
         getAngle: (d) => -(d.trueTrack ?? 0),
@@ -85,7 +92,7 @@ export function AircraftLayer({ aircraft, isShown, selectedId, onPick }: Aircraf
           if (d.squawk && d.squawk in EMERGENCY_SQUAWKS) return COLOUR.emergency;
           if (d.onGround) return COLOUR.ground;
           if (!isShown(d)) return COLOUR.hidden;
-          return COLOUR[phaseOf(d)];
+          return isCruising(d) ? COLOUR.cruise : COLOUR[phaseOf(d)];
         },
         sizeUnits: 'pixels',
         pickable: true,
