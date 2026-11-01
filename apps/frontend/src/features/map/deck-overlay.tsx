@@ -1,7 +1,7 @@
 import type { Layer } from '@deck.gl/core';
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from 'react';
-import { useControl, useMap } from 'react-map-gl/maplibre';
+import { createContext, type ReactNode, useContext, useEffect, useRef } from 'react';
+import { useControl } from 'react-map-gl/maplibre';
 
 // One deck.gl overlay for the whole map. Each layer component registers its
 // layers under a slot; slots draw in this order (later ones on top).
@@ -12,6 +12,11 @@ type SetLayers = (slot: Slot, layers: Layer[]) => void;
 const DeckLayersContext = createContext<SetLayers | null>(null);
 
 interface DeckOverlayProps {
+  /**
+   * The map's style has arrived. deck reads the style on every setProps, and
+   * maplibre v6 has no style object until then, so layers wait for it.
+   */
+  styleReady: boolean;
   pickingRadius: number;
   /** Same cap as the map's pixel ratio, so phones do not draw at 3x. */
   pixelRatio: number;
@@ -23,6 +28,7 @@ interface DeckOverlayProps {
 }
 
 export function DeckOverlay({
+  styleReady,
   pickingRadius,
   pixelRatio,
   hover,
@@ -50,24 +56,6 @@ export function DeckOverlay({
           : undefined,
       }),
   );
-
-  // deck reads the map's style on every setProps, and maplibre v6 has no
-  // style object until the style has arrived, so hold the layers until then.
-  const { current: map } = useMap();
-  const [styleReady, setStyleReady] = useState(false);
-  useEffect(() => {
-    const m = map?.getMap();
-    if (!m) return;
-    if (m.isStyleLoaded()) {
-      setStyleReady(true);
-      return;
-    }
-    const onStyle = () => setStyleReady(true);
-    m.once('style.load', onStyle);
-    return () => {
-      m.off('style.load', onStyle);
-    };
-  }, [map]);
 
   useEffect(() => {
     if (styleReady) overlay.setProps({ pickingRadius });

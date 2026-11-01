@@ -110,4 +110,31 @@ test.describe('phone layout', () => {
     await page.touchscreen.tap(40, 200);
     await expect(page.getByRole('region', { name: 'Flights' })).toBeVisible();
   });
+
+  test('aircraft come back after iOS drops and restores the WebGL contexts', async ({ page }) => {
+    await page.goto('/');
+    const card = page.getByRole('region', { name: 'Flight details' });
+    const { x, y } = toScreen(-0.1, 51.55);
+    const tapUAL789 = () =>
+      expect(async () => {
+        await page.touchscreen.tap(x, y);
+        await expect(card).toContainText('UAL789', { timeout: 1_000 });
+      }).toPass({ timeout: 15_000 });
+
+    await tapUAL789();
+    await page.waitForTimeout(500);
+    await page.touchscreen.tap(40, 200);
+    await expect(card).toBeHidden();
+
+    // Safari does this to a background tab; deck.gl used to stay blank afterwards.
+    await page.evaluate(async () => {
+      const lose = [...document.querySelectorAll('canvas')].map((c) =>
+        c.getContext('webgl2')?.getExtension('WEBGL_lose_context'),
+      );
+      for (const l of lose) l?.loseContext();
+      await new Promise((r) => setTimeout(r, 500));
+      for (const l of lose) l?.restoreContext();
+    });
+    await tapUAL789();
+  });
 });
