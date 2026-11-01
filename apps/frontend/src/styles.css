@@ -1,158 +1,571 @@
 @import "tailwindcss";
 
-/* Phones, and landscape phones too short for the vertical legend. */
-@custom-variant legend-compact (@media (width < 40rem) or (height < 32rem));
-
-@theme inline {
-  --color-background: oklch(0.145 0 0);
-  --color-foreground: oklch(0.985 0 0);
-  --color-card: oklch(0.145 0 0);
-  --color-card-foreground: oklch(0.985 0 0);
-  --color-popover: oklch(0.145 0 0);
-  --color-popover-foreground: oklch(0.985 0 0);
-  --color-primary: oklch(0.985 0 0);
-  --color-primary-foreground: oklch(0.205 0 0);
-  --color-secondary: oklch(0.269 0 0);
-  --color-secondary-foreground: oklch(0.985 0 0);
-  --color-muted: oklch(0.269 0 0);
-  --color-muted-foreground: oklch(0.708 0 0);
-  --color-accent: oklch(0.269 0 0);
-  --color-accent-foreground: oklch(0.985 0 0);
-  --color-destructive: oklch(0.396 0.141 25.723);
-  --color-destructive-foreground: oklch(0.637 0.237 25.331);
-  --color-border: oklch(0.269 0 0);
-  --color-input: oklch(0.269 0 0);
-  --color-ring: oklch(0.556 0 0);
-  --color-chart-1: oklch(0.488 0.243 264.376);
-  --color-chart-2: oklch(0.696 0.17 162.48);
-  --color-chart-3: oklch(0.769 0.188 70.08);
-  --color-chart-4: oklch(0.627 0.265 303.9);
-  --color-chart-5: oklch(0.645 0.246 16.439);
-  --color-sidebar: oklch(0.145 0 0);
-  --color-sidebar-foreground: oklch(0.985 0 0);
-  --color-sidebar-primary: oklch(0.488 0.243 264.376);
-  --color-sidebar-primary-foreground: oklch(0.985 0 0);
-  --color-sidebar-accent: oklch(0.269 0 0);
-  --color-sidebar-accent-foreground: oklch(0.985 0 0);
-  --color-sidebar-border: oklch(0.269 0 0);
-  --color-sidebar-ring: oklch(0.556 0 0);
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --font-sans:
-    "Geist", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
-    "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono:
-    "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+/* Neutral: greys for every piece of chrome, so the aircraft are the only colour. */
+:root {
+  color-scheme: dark;
+  --ink: #111214;
+  --sheet: #18191b;
+  --raise: #242528;
+  --line: #36383c;
+  --text: #f4f4f5;
+  --dim: #a9acb1;
+  --landing: #ffb347;
+  --departing: #4fd6c4;
+  --selected: #5aa9ff;
+  --emergency: #ff5c5c;
+  --bar: #3a3c40;
+  --radius: 8px;
+  --shadow: 0 6px 20px rgb(0 0 0 / 0.45);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --font: "Atkinson Hyperlegible Next Variable", system-ui, sans-serif;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  html,
-  body {
-    @apply bg-background text-foreground;
-    /* The map owns every gesture: no pull-to-refresh or rubber-band scrolling. */
-    overscroll-behavior: none;
-  }
-  ::selection {
-    background: oklch(0.45 0.12 230);
-    color: oklch(0.985 0 0);
-  }
-  :focus-visible {
-    outline: 2px solid oklch(0.78 0.12 230);
-    outline-offset: 2px;
-  }
+html,
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  /* The map owns every gesture: no pull-to-refresh or rubber-band scrolling. */
+  overscroll-behavior: none;
+}
+::selection {
+  background: var(--selected);
+  color: var(--ink);
+}
+:focus-visible {
+  outline: 2px solid var(--selected);
+  outline-offset: 2px;
+}
+input {
+  caret-color: var(--selected);
 }
 
-/* Entrances: the inspector sheet rises, the 3D tip drops in. Both off for reduced motion. */
-@keyframes sheet-in {
-  from {
-    transform: translateY(100%);
-  }
-}
-@keyframes tip-in {
-  from {
-    opacity: 0;
-    transform: translateY(-0.5rem);
-  }
-}
-.sheet-in {
-  animation: sheet-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.tip-in {
-  animation: tip-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-@media (prefers-reduced-motion: reduce) {
-  .sheet-in,
-  .tip-in {
-    animation: none;
-  }
+.app {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
 }
 
-/* MapLibre's attribution sits top-left, where it collides with the view switcher on
-   phones before it collapses. Drop it below the switcher and the altitude legend.
-   Move only the attribution: deck.gl's canvas lives in the same top-left container.
-   (Extra classes to beat maplibre-gl.css, which loads after this file.) */
-@media (width < 40rem) {
-  .maplibregl-map .maplibregl-ctrl-top-left .maplibregl-ctrl-attrib {
-    margin-top: calc(max(env(safe-area-inset-top), 0.75rem) + 9rem);
-    margin-left: max(env(safe-area-inset-left), 0.75rem);
-  }
-}
+/* ---------- Top: search and the Live / Busy times switch ---------- */
 
-/* Hide scrollbar on KPI strip while keeping it scrollable */
-.no-scrollbar::-webkit-scrollbar {
+.top {
+  position: absolute;
+  z-index: 20;
+  inset: max(env(safe-area-inset-top), 12px) 12px auto 12px;
+  display: flex;
+  gap: 8px;
+}
+.search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 6px 0 16px;
+  border-radius: var(--radius);
+  background: var(--sheet);
+  box-shadow: var(--shadow);
+}
+.search-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--dim);
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  background: none;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  /* 16px keeps iOS from zooming in on focus. */
+  font: 500 16px / 1 var(--font);
+}
+.search input::placeholder {
+  color: var(--dim);
+}
+.search input::-webkit-search-cancel-button {
   display: none;
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* MapLibre popup overrides for dark theme */
-/* Above the KPI strip and the view switcher: a popup the user just opened is never cut off. */
-.map-popup {
-  z-index: 40;
-}
-
-.map-popup .maplibregl-popup-content {
-  width: 16.5rem;
-  background: oklch(0.16 0 0 / 0.92);
-  color: oklch(0.985 0 0);
-  border: 1px solid oklch(0.35 0 0);
-  border-radius: 0.625rem;
-  padding: 0.75rem;
+.search:focus-within {
   box-shadow:
-    0 4px 16px rgb(0 0 0 / 0.5),
-    0 0 0 1px rgb(0 0 0 / 0.15);
-  backdrop-filter: blur(12px);
+    var(--shadow),
+    0 0 0 2px var(--selected);
+}
+.search-clear,
+.icon-button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--dim);
+}
+.search-clear svg,
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+}
+.search-clear:hover,
+.icon-button:hover {
+  color: var(--text);
 }
 
-.map-popup .maplibregl-popup-tip {
-  border-top-color: oklch(0.16 0 0 / 0.92);
-  border-bottom-color: oklch(0.16 0 0 / 0.92);
+.switch {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  height: 48px;
+  padding: 4px;
+  border-radius: var(--radius);
+  background: var(--sheet);
+  box-shadow: var(--shadow);
+}
+.switch button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 44px;
+  border-radius: calc(var(--radius) - 3px);
+  color: var(--dim);
+  font: 600 14px / 1 var(--font);
+  transition:
+    background-color 150ms,
+    color 150ms;
+}
+.switch button svg {
+  width: 18px;
+  height: 18px;
+}
+.switch button:hover {
+  color: var(--text);
+}
+.switch button[aria-selected="true"] {
+  background: var(--text);
+  color: var(--ink);
+}
+/* Phones show the icons alone; the label stays for screen readers. */
+.switch-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.map-popup.maplibregl-popup-anchor-top .maplibregl-popup-tip {
-  border-bottom-color: oklch(0.16 0 0 / 0.92);
-  border-top-color: transparent;
+/* ---------- The sheet ---------- */
+
+.sheet {
+  position: absolute;
+  z-index: 20;
+  inset: auto 0 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 16px max(env(safe-area-inset-bottom), 12px);
+  background: var(--sheet);
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -10px 30px rgb(0 0 0 / 0.5);
+  touch-action: none;
+  transition: height 300ms var(--ease-out);
+}
+.sheet[data-dragging] {
+  transition: none;
+  user-select: none;
+}
+.sheet-grip {
+  flex: none;
+  display: grid;
+  place-items: center;
+  height: 28px;
+  margin: 0 -16px 2px;
+  cursor: grab;
+}
+.sheet-grip i {
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sheet {
+    animation: sheet-rise 420ms var(--ease-out);
+  }
+}
+@keyframes sheet-rise {
+  from {
+    transform: translateY(40px);
+    opacity: 0.6;
+  }
 }
 
-.map-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
-  border-top-color: oklch(0.16 0 0 / 0.92);
-  border-bottom-color: transparent;
+.panel-head {
+  flex: none;
+}
+[data-sheet-scroll] {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.sheet[data-snap="peek"] [data-sheet-scroll] {
+  visibility: hidden;
 }
 
-.map-popup.maplibregl-popup-anchor-left .maplibregl-popup-tip {
-  border-right-color: oklch(0.16 0 0 / 0.92);
-  border-left-color: transparent;
+/* ---------- Live: sentence, chips, nearest flights ---------- */
+
+.headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.headline strong {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.live {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--dim);
+}
+.live i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--departing);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--departing) 22%, transparent);
+}
+.live[data-health="stale"] i {
+  background: var(--landing);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--landing) 22%, transparent);
+}
+.live[data-health="offline"] i {
+  background: var(--dim);
+  box-shadow: none;
 }
 
-.map-popup.maplibregl-popup-anchor-right .maplibregl-popup-tip {
-  border-left-color: oklch(0.16 0 0 / 0.92);
-  border-right-color: transparent;
+.chips {
+  /* A fieldset defaults to min-content width, which would stop the row scrolling. */
+  min-width: 0;
+  display: flex;
+  gap: 6px;
+  margin: 14px -16px 6px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+.chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  font: 600 15px / 1 var(--font);
+  white-space: nowrap;
+  transition:
+    background-color 150ms,
+    border-color 150ms;
+}
+.chip:hover {
+  border-color: var(--dim);
+}
+.chip-n {
+  font-weight: 500;
+  color: var(--dim);
+}
+.chip[aria-pressed="true"] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--ink);
+}
+.chip[aria-pressed="true"] .chip-n {
+  color: #55585d;
+}
+
+.flights {
+  margin: 0 -16px;
+}
+.flights button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "name alt"
+    "sub alt";
+  gap: 2px 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--raise);
+  text-align: left;
+}
+.flights button:hover,
+.flights button:active {
+  background: var(--raise);
+}
+.flight-name {
+  grid-area: name;
+  font-size: 16px;
+  font-weight: 700;
+}
+.flight-sub {
+  grid-area: sub;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--dim);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.flight-alt {
+  grid-area: alt;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.trend {
+  width: 14px;
+  height: 14px;
+  color: var(--dim);
+}
+.trend[data-phase="landing"] {
+  color: var(--landing);
+}
+.trend[data-phase="departing"] {
+  color: var(--departing);
+}
+.flights-empty {
+  padding: 20px 16px;
+  color: var(--dim);
+  font-size: 15px;
+}
+
+/* ---------- Flight card ---------- */
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.card-head h2 {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.card-sub {
+  margin-top: 4px;
+  font-size: 15px;
+  color: var(--dim);
+}
+.card-head .icon-button {
+  margin: -4px -6px 0 0;
+  background: var(--raise);
+  color: var(--text);
+}
+.card-status {
+  margin-top: 14px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.card-status[data-phase="landing"] {
+  color: var(--landing);
+}
+.card-status[data-phase="departing"] {
+  color: var(--departing);
+}
+.card-emergency {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--emergency);
+}
+.readings {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  justify-content: space-between;
+  margin-top: 18px;
+}
+.readings div + div {
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+.readings dt {
+  font-size: 13px;
+  color: var(--dim);
+}
+.readings dd {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.readings small {
+  margin-left: 3px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dim);
+}
+.height-bar {
+  margin-top: 20px;
+}
+.height-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--raise);
+  overflow: hidden;
+}
+.height-track span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--selected);
+  transition: width 400ms var(--ease-out);
+}
+.height-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dim);
+}
+.card-meta {
+  margin: 16px 0 4px;
+  font-size: 13px;
+  color: var(--dim);
+}
+
+/* ---------- Busy times ---------- */
+
+.busy-hour {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.busy-verdict {
+  font-size: 19px;
+  font-weight: 600;
+}
+.explain {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--dim);
+}
+.bars {
+  padding: 0 3px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 88px;
+  margin-top: 18px;
+}
+.bars button {
+  flex: 1;
+  min-width: 0;
+  border-radius: 3px 3px 1px 1px;
+  background: var(--bar);
+  transition: background-color 150ms;
+}
+.bars button:hover {
+  background: var(--dim);
+}
+.bars button[data-empty] {
+  background: var(--raise);
+}
+.bars button[aria-pressed="true"] {
+  background: var(--text);
+  box-shadow:
+    0 0 0 2px var(--sheet),
+    0 0 0 3px var(--text);
+}
+.bars-axis {
+  padding: 0 3px;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dim);
+}
+.busy-meta {
+  margin: 12px 0 4px;
+  font-size: 13px;
+  color: var(--dim);
+}
+
+/* ---------- Wide screens: the sheet floats on the left ---------- */
+
+@media (width >= 48rem) {
+  .top {
+    inset: 20px auto auto 20px;
+  }
+  .search {
+    width: 400px;
+    flex: none;
+  }
+  .switch button {
+    width: auto;
+    padding: 0 14px;
+  }
+  .switch-label {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+  }
+  .sheet {
+    inset: 84px auto auto 20px;
+    width: 400px;
+    max-height: calc(100dvh - 104px);
+    padding-top: 18px;
+    padding-bottom: 12px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    touch-action: auto;
+  }
+  .sheet:has(.flights) {
+    height: calc(100dvh - 104px);
+  }
+}
+
+/* MapLibre's attribution: themed, and clear of the search bar on phones. */
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib {
+  background: rgb(24 25 27 / 0.8);
+  color: var(--dim);
+  font-family: var(--font);
+}
+.maplibregl-map .maplibregl-ctrl-attrib a {
+  color: var(--dim);
+}
+@media (width < 48rem) {
+  .maplibregl-map .maplibregl-ctrl-top-right .maplibregl-ctrl-attrib {
+    margin-top: calc(max(env(safe-area-inset-top), 12px) + 56px);
+  }
 }

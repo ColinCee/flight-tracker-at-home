@@ -13,5 +13,5 @@ export function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches);
 }
 
-/** Phones in portrait: inspectors become a bottom sheet and the KPI strip a grid. Matches Tailwind's `max-sm`. */
-export const PHONE_QUERY = '(width < 40rem)';
+/** Tablets and up: the sheet becomes a floating panel on the left. */
+export const WIDE_QUERY = '(width >= 48rem)';

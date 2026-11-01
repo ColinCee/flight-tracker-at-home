@@ -1,59 +1,47 @@
-import type { PickingInfo } from '@deck.gl/core';
-import { ScatterplotLayer, TextLayer } from '@deck.gl/layers';
-import { useCallback, useMemo } from 'react';
-import type { EnrichedAirportWeather } from '@/api/use-weather-data';
+import { TextLayer } from '@deck.gl/layers';
+import { useEffect, useMemo, useState } from 'react';
+import { FONT_FAMILY } from '@/shared/font';
+import { AIRPORTS } from './airports';
 import { useDeckLayers } from './deck-overlay';
 
-interface AirportLayerProps {
-  airports: EnrichedAirportWeather[];
-  selectedIcao?: string | null;
-  onAirportClick?: (icao: string) => void;
-}
+type Airport = (typeof AIRPORTS)[number];
 
-export function AirportLayer({ airports, selectedIcao, onAirportClick }: AirportLayerProps) {
-  const handleClick = useCallback(
-    (info: PickingInfo<EnrichedAirportWeather>) => {
-      if (info.object) {
-        onAirportClick?.(info.object.icao);
-      }
-    },
-    [onAirportClick],
-  );
+/** Airport names on the map, so "Landing at Heathrow" has somewhere to point. */
+export function AirportLayer() {
+  // deck.gl draws text from a glyph atlas built once; build it after the font
+  // arrives or the labels stay in the fallback face.
+  const [fontReady, setFontReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    document.fonts
+      .load(`600 13px "${FONT_FAMILY}"`)
+      .catch(() => undefined)
+      .finally(() => live && setFontReady(true));
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const layers = useMemo(
-    () => [
-      new ScatterplotLayer<EnrichedAirportWeather>({
-        id: 'airport-dots',
-        data: airports,
-        getPosition: (d) => [d.longitude, d.latitude],
-        getFillColor: (d) =>
-          d.icao === selectedIcao ? [100, 200, 255, 255] : [255, 255, 255, 180],
-        getLineColor: [0, 0, 0, 255],
-        getRadius: (d) => (d.icao === selectedIcao ? 12 : 8),
-        radiusUnits: 'pixels',
-        lineWidthUnits: 'pixels',
-        getLineWidth: 2,
-        pickable: true,
-        autoHighlight: true,
-        onClick: handleClick,
-        updateTriggers: {
-          getFillColor: [selectedIcao],
-          getRadius: [selectedIcao],
-        },
-      }),
-      new TextLayer<EnrichedAirportWeather>({
-        id: 'airport-labels',
-        data: airports,
-        getPosition: (d) => [d.longitude, d.latitude],
-        getText: (d) => d.icao,
-        getSize: 12,
-        getColor: [255, 255, 255, 255],
-        getAlignmentBaseline: 'bottom',
-        getPixelOffset: [0, -15],
-        fontFamily: 'monospace',
-      }),
-    ],
-    [airports, selectedIcao, handleClick],
+    () =>
+      fontReady
+        ? [
+            new TextLayer<Airport>({
+              id: 'airport-labels',
+              data: AIRPORTS,
+              getPosition: (d) => [d.lon, d.lat],
+              getText: (d) => d.name,
+              getSize: 13,
+              getColor: [232, 233, 235, 235],
+              fontFamily: FONT_FAMILY,
+              fontWeight: 600,
+              fontSettings: { sdf: true },
+              outlineWidth: 3,
+              outlineColor: [17, 18, 20, 255],
+            }),
+          ]
+        : [],
+    [fontReady],
   );
 
   useDeckLayers('airports', layers);
