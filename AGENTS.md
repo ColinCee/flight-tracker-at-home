@@ -1,6 +1,6 @@
 # Flight Tracker at Home
 
-Real-time map of aircraft over London with arrival tracking for the five London airports, plus a 3D heatmap of past traffic.
+Real-time map of aircraft over London with arrival tracking for the five London airports, plus busy times: where traffic was heaviest in each hour of the last day.
 Built by Colin & Calvin Cheung as a portfolio and learning project. What it does for users, how to run it and where it is deployed: `README.md`.
 
 ## Layout
@@ -9,7 +9,7 @@ Built by Colin & Calvin Cheung as a portfolio and learning project. What it does
 apps/
 ├── frontend/          React 19 + Vite + Tailwind + TanStack Query, deployed to Cloudflare Pages
 │   ├── src/api/       Orval-generated client (generated.ts) + hooks that poll it
-│   ├── src/features/  map/, kpi/, navigation/, with tests next to the code
+│   ├── src/features/  flights/ (list, card, wording), busy/, controls/, map/; tests next to the code
 │   ├── src/shared/    Cross-feature UI and filters
 │   └── openapi.json   Backend schema, exported by `mise run codegen`
 ├── backend/           Python FastAPI; image pushed to GHCR, run by the homelab repo
@@ -50,11 +50,11 @@ adsb.lol (ADSBx v2, 60 nm around central London)
   -> airplanes_live.py: parse, enrich (destination, climbing, descending)
   -> cache.py: 10 s TTL, fetched only when a request finds it stale; KPIs; serves stale data on upstream failure
   -> GET /aircraft (aircraft + KPIs in one response, plus refresh_interval_ms)
-  -> useAircraftData polls at that interval -> AircraftLayer (deck.gl)
+  -> useAircraftData polls at that interval -> AircraftLayer (deck.gl) + the sheet
 
 every 60 s: cache -> H3 cells (resolution 8) -> historical_heatmap.parquet (1-2 days)
-  -> GET /heatmap (all history per cell) -> HeatmapLayer
-  -> GET /heatmap/hourly (last 24 complete hours, resolution 7 cells, per-hour totals)
+  -> GET /heatmap (all history per cell; the frontend no longer reads it)
+  -> GET /heatmap/hourly (last 24 complete hours, resolution 7 cells, per-hour totals) -> BusyLayer
 ```
 
 Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, and `/debug/airplanes_live` only when `ENABLE_DEBUG_ENDPOINTS=true` (it calls upstream on every request). Swagger UI is at `/docs`.
@@ -86,6 +86,8 @@ Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, an
 - **Packages:** `bun add` from the repo root for JS, `uv add` in `apps/backend/` for Python. No npm, yarn or pip.
 - **Tooling:** mise for tasks and tool versions, bun for packages, call vite/vitest/playwright directly; no task-runner layer (Nx was removed as unused).
 - **Pre-commit hook** (`.githooks/pre-commit`) runs ruff and Biome on staged files.
+- **Look:** greys for every control; colour only on aircraft (amber landing, teal taking off, blue picked) and the violet busy-times ramp. Small radii (8px), never pill-shaped buttons. Atkinson Hyperlegible Next, self-hosted, tabular figures. Tokens are the `:root` block in `apps/frontend/src/styles.css`.
+- **Show only what the data has:** no origin airports or flight counts per hour (the backend stores neither); wording comes from `features/flights/flights.ts`.
 - **Agent instructions** live only in this file; `CLAUDE.md` just imports it.
 
 ## Not building (yet)

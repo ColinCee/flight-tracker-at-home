@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "@tanstack/react-query": "^5.96.2",
-    "radix-ui": "^1.4.3"
+    "@tanstack/react-query": "^5.96.2"
   }
 }

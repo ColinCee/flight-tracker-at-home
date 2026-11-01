@@ -1,64 +1,66 @@
 import { expect, test } from '@playwright/test';
 
-test.describe('frontend app', () => {
-  test('loads and renders the map container', async ({ page }) => {
+// Mock data: six airborne aircraft; BAW123, DLH456 and EZY202 are landing,
+// CFE101 is climbing out, and GBCDE (a helicopter), BAW123 and DLH456 are below 3,000 ft.
+
+test.describe('live view', () => {
+  test.beforeEach(async ({ page }) => {
     await page.goto('/');
-
-    // App shell renders
-    const main = page.locator('main');
-    await expect(main).toBeVisible();
-
-    // MapLibre canvas is present (indicates WebGL map loaded)
-    const canvas = page.locator('canvas.maplibregl-canvas');
-    await expect(canvas).toBeVisible({ timeout: 15_000 });
   });
 
-  test('fetches aircraft data from API', async ({ page }) => {
-    const aircraftRequest = page.waitForResponse(
-      (res) => new URL(res.url()).pathname === '/aircraft' && res.status() === 200,
-    );
-
-    await page.goto('/');
-    const res = await aircraftRequest;
-    // Chromium can evict the page's response body before we read it, so re-fetch.
-    const data = await (await page.request.get(res.url())).json();
-
-    expect(data.aircraft.length).toBeGreaterThanOrEqual(0);
+  test('draws the map and says how many flights are up', async ({ page }) => {
+    await expect(page.locator('canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+    const sheet = page.getByRole('region', { name: 'Flights' });
+    await expect(sheet).toContainText('6 flights in the sky over London', { timeout: 10_000 });
+    await expect(sheet).toContainText('live');
   });
 
-  test('fetches weather data from API', async ({ page }) => {
-    const weatherRequest = page.waitForResponse(
-      (res) => new URL(res.url()).pathname === '/weather' && res.status() === 200,
-    );
+  test('chips count and filter the nearest flights', async ({ page }) => {
+    const list = page.getByRole('list', { name: 'Nearest flights' });
+    await expect(list.getByRole('listitem')).toHaveCount(6, { timeout: 10_000 });
 
-    await page.goto('/');
-    const res = await weatherRequest;
-    // Chromium can evict the page's response body before we read it, so re-fetch.
-    const data = await (await page.request.get(res.url())).json();
+    const landing = page.getByRole('button', { name: /^Landing/ });
+    await expect(landing.locator('.chip-n')).toHaveText('3');
+    await landing.click();
+    await expect(landing).toHaveAttribute('aria-pressed', 'true');
+    await expect(list.getByRole('listitem')).toHaveCount(3);
+    await expect(list).toContainText('Landing at Heathrow');
 
-    expect(data.weather.length).toBeGreaterThanOrEqual(0);
+    await page.getByRole('button', { name: /^Taking off/ }).click();
+    await expect(list.getByRole('listitem')).toHaveCount(1);
+    await expect(list).toContainText('CFE101');
+
+    await page.getByRole('button', { name: /^Low/ }).click();
+    await expect(list.getByRole('listitem')).toHaveCount(3);
   });
 
-  test('displays KPI strip with tracked aircraft count', async ({ page }) => {
-    await page.goto('/');
+  test('search finds a flight by airline name', async ({ page }) => {
+    const list = page.getByRole('list', { name: 'Nearest flights' });
+    await expect(list.getByRole('listitem')).toHaveCount(6, { timeout: 10_000 });
+    await page.getByRole('searchbox', { name: /Find a flight/ }).fill('united');
+    await expect(list.getByRole('listitem')).toHaveCount(1);
+    await expect(list).toContainText('UAL789');
 
-    // Wait for data to load and KPI strip to render
-    const trackedLabel = page.getByRole('button', { name: 'Tracked' });
-    await expect(trackedLabel).toBeVisible({ timeout: 10_000 });
-
-    // KPI labels should be present
-    await expect(page.getByRole('button', { name: 'Inbound London' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Airborne' })).toBeVisible();
-    // Average altitude is a reading, not a filter, so it is not a button.
-    await expect(page.getByText('Avg Alt')).toBeVisible();
+    await page.getByRole('searchbox', { name: /Find a flight/ }).fill('nothing-like-this');
+    await expect(list).toContainText('No flight matches');
+    await page.getByRole('button', { name: 'Clear search' }).click();
+    await expect(list.getByRole('listitem')).toHaveCount(6);
   });
 
-  test('shows API health indicator', async ({ page }) => {
-    await page.goto('/');
+  test('a flight opens as a card and closes again', async ({ page }) => {
+    await page.getByRole('button', { name: /^BAW123/ }).click();
+    const card = page.getByRole('region', { name: 'Flight details' });
+    await expect(card).toContainText('BAW123');
+    await expect(card).toContainText('British Airways · A359');
+    await expect(card).toContainText('Landing at Heathrow');
+    await expect(card).toContainText('Emergency squawk (7700)');
+    await expect(card).toContainText('1,950');
 
-    // Health badge should settle on Live/Stale/Offline once data loads
-    const healthBadge = page.locator('[data-slot="badge"]');
-    await expect(healthBadge).toBeVisible({ timeout: 10_000 });
-    await expect(healthBadge).toHaveText(/^(Live|Stale|Offline)$/, { timeout: 10_000 });
+    await card.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByRole('region', { name: 'Flights' })).toBeVisible();
+
+    await page.getByRole('button', { name: /^UAL789/ }).click();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('region', { name: 'Flights' })).toBeVisible();
   });
 });
