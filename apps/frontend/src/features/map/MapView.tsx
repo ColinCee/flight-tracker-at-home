@@ -3,7 +3,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { MapStyleDataEvent } from 'maplibre-gl';
 import * as maplibregl from 'maplibre-gl';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { AttributionControl, Map as MapGL, type MapRef } from 'react-map-gl/maplibre';
 import { DeckOverlay } from './deck-overlay';
 import { isCoarsePointer, pickPickingRadius, pickPixelRatio } from './device';
@@ -38,12 +38,6 @@ interface MapViewProps {
   children: ReactNode;
 }
 
-// OpenFreeMap's dark style references a "wood-pattern" sprite missing from its
-// sprite sheet. Remove the broken layer once the style loads.
-function dropBrokenLayer(e: MapStyleDataEvent) {
-  if (e.target.getLayer('landcover_wood')) e.target.removeLayer('landcover_wood');
-}
-
 function onMapLoad({ target: map }: { target: maplibregl.Map }) {
   // A flat map: two-finger twists zoom but never rotate.
   map.touchZoomRotate.disableRotation();
@@ -68,6 +62,24 @@ export function MapView({ padding, focus, wide, onEmptyClick, children }: MapVie
       pickingRadius: pickPickingRadius(coarse),
     };
   });
+  // iOS Safari drops a background tab's WebGL contexts. maplibre rebuilds its
+  // own when they come back, but deck.gl cannot, and the planes vanished until
+  // a reload. Start a fresh overlay whenever the map's context returns.
+  const [deckGeneration, setDeckGeneration] = useState(0);
+  const onLoad = useCallback((e: { target: maplibregl.Map }) => {
+    onMapLoad(e);
+    e.target.on('webglcontextrestored', () => setDeckGeneration((g) => g + 1));
+  }, []);
+  // Tracked here, from a handler attached when the map is created: a listener
+  // added later misses the event, and isStyleLoaded() stays false while tiles
+  // load, which is always the case right after a context restore.
+  const [styleReady, setStyleReady] = useState(false);
+  const onStyleData = useCallback((e: MapStyleDataEvent) => {
+    // OpenFreeMap's dark style references a "wood-pattern" sprite missing from
+    // its sprite sheet. Remove the broken layer once the style loads.
+    if (e.target.getLayer('landcover_wood')) e.target.removeLayer('landcover_wood');
+    setStyleReady(true);
+  }, []);
   const [initialView] = useState(() => ({
     longitude: -0.2,
     latitude: 51.5,
@@ -105,12 +117,14 @@ export function MapView({ padding, focus, wide, onEmptyClick, children }: MapVie
       maxPitch={0}
       dragRotate={false}
       touchPitch={false}
-      onStyleData={dropBrokenLayer}
-      onLoad={onMapLoad}
+      onStyleData={onStyleData}
+      onLoad={onLoad}
       attributionControl={false}
     >
       <AttributionControl compact position={wide ? 'bottom-right' : 'top-right'} />
       <DeckOverlay
+        key={deckGeneration}
+        styleReady={styleReady}
         pickingRadius={device.pickingRadius}
         pixelRatio={device.pixelRatio}
         hover={!device.coarse}
