@@ -1,165 +1,156 @@
-import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react';
-import { Popup } from 'react-map-gl/maplibre';
-import { getGetHeatmapQueryKey, type HeatmapHexagon, useGetHeatmap } from '@/api/generated';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import type { AircraftState } from '@/api/generated';
+import { getGetHourlyHeatmapQueryKey, useGetHourlyHeatmap } from '@/api/generated';
 import { useAircraftData } from '@/api/use-aircraft-data';
-import { useWeatherData } from '@/api/use-weather-data';
-import { KpiStrip } from '@/features/kpi/KpiStrip';
-import { AircraftInspector } from '@/features/map/AircraftInspector';
-import { AirportInspector } from '@/features/map/AirportInspector';
-import { HexagonInspector } from '@/features/map/HexagonInspector';
-import { KeepClearOfSheet } from '@/features/map/KeepClearOfSheet';
-import { MapView } from '@/features/map/MapView';
-import { TopBar, type ViewMode } from '@/features/navigation/TopBar';
-import type { AircraftFilter } from '@/shared/filters';
-import { BottomSheet } from '@/shared/ui/bottom-sheet';
-import { PHONE_QUERY, useMediaQuery } from '@/shared/use-media-query';
+import { BusyPanel } from '@/features/busy/BusyPanel';
+import { latestHour, toClockDay } from '@/features/busy/busy';
+import { TopControls, type View } from '@/features/controls/TopControls';
+import { FlightCard } from '@/features/flights/FlightCard';
+import { type Chip, matchesChip, matchesQuery, nearestFlights } from '@/features/flights/flights';
+import { LivePanel } from '@/features/flights/LivePanel';
+import { AircraftLayer } from '@/features/map/AircraftLayer';
+import { AirportLayer } from '@/features/map/AirportLayer';
+import { type Focus, MapView, type Padding } from '@/features/map/MapView';
+import { Sheet } from '@/shared/ui/Sheet';
+import { type Snap, snapHeights } from '@/shared/ui/sheet-snap';
+import { useMediaQuery, WIDE_QUERY } from '@/shared/use-media-query';
 
-interface Selection {
-  key: string;
-  label: string;
-  lngLat: [number, number];
-  popupOffset: number;
-  inspector: ReactNode;
-}
+// The busy-times layer pulls in @deck.gl/geo-layers and h3-js; live never needs them.
+const BusyLayer = lazy(() => import('@/features/busy/BusyLayer'));
+
+/** Desktop panel width plus its margins. */
+const PANEL_SPACE = 440;
 
 export function App() {
-  const { aircraft, kpis, isError, dataUpdatedAt, pollIntervalMs } = useAircraftData();
-  const { airports } = useWeatherData();
-  const [selectedIcao24, setSelectedIcao24] = useState<string | null>(null);
-  const [selectedAirportIcao, setSelectedAirportIcao] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<AircraftFilter>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('live');
-  const [selectedHexagon, setSelectedHexagon] = useState<{
-    data: HeatmapHexagon;
-    lngLat: [number, number];
-  } | null>(null);
+  const { aircraft, kpis, isError } = useAircraftData();
+  const wide = useMediaQuery(WIDE_QUERY);
+  const [view, setView] = useState<View>('live');
+  const [chip, setChip] = useState<Chip>('all');
+  const [query, setQuery] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [focus, setFocus] = useState<Focus | null>(null);
+  const [snap, setSnap] = useState<Snap>('half');
+  const [pickedHour, setPickedHour] = useState<number | null>(null);
 
-  const selectedAircraft = useMemo(
-    () => aircraft?.find((a) => a.icao24 === selectedIcao24) ?? null,
-    [aircraft, selectedIcao24],
+  const selected = aircraft.find((a) => a.icao24 === selectedId) ?? null;
+  const flights = useMemo(() => nearestFlights(aircraft, chip, query), [aircraft, chip, query]);
+  const isShown = useCallback(
+    (a: AircraftState) => matchesChip(a, chip) && matchesQuery(a, query),
+    [chip, query],
   );
 
-  const selectedAirport = useMemo(
-    () => airports?.find((a) => a.icao === selectedAirportIcao) ?? null,
-    [airports, selectedAirportIcao],
-  );
-
-  const handleAircraftClick = useCallback((icao24: string) => {
-    setSelectedIcao24((prev) => (prev === icao24 ? null : icao24));
-    setSelectedAirportIcao(null);
-  }, []);
-
-  const handleAirportClick = useCallback((icao: string) => {
-    setSelectedAirportIcao((prev) => (prev === icao ? null : icao));
-    setSelectedIcao24(null);
-  }, []);
-
-  const handleHexagonClick = useCallback((data: HeatmapHexagon, lngLat: [number, number]) => {
-    setSelectedHexagon({ data, lngLat });
-  }, []);
-
-  const handleCloseInspector = useCallback(() => {
-    setSelectedIcao24(null);
-    setSelectedAirportIcao(null);
-    setSelectedHexagon(null);
-  }, []);
-
-  const { data: heatmapData } = useGetHeatmap({
+  // A busy-times answer is fixed for the hour; the backend may not have the
+  // endpoint yet (it deploys on its own schedule), so a 404 must not retry.
+  const hourly = useGetHourlyHeatmap({
     query: {
-      queryKey: getGetHeatmapQueryKey(),
-      enabled: viewMode === 'heatmap',
+      queryKey: getGetHourlyHeatmapQueryKey(),
+      enabled: view === 'busy',
+      retry: false,
+      staleTime: 5 * 60_000,
     },
   });
+  const hourlyData = hourly.data?.data;
+  const day = useMemo(() => toClockDay(hourlyData), [hourlyData]);
+  const hour = pickedHour ?? latestHour(hourlyData, day);
 
-  // Phones get a bottom sheet fixed to the screen; larger screens a popup on the map.
-  const isPhone = useMediaQuery(PHONE_QUERY);
-  const sheetRef = useRef<HTMLElement>(null);
+  // A peeking sheet has no room for a flight card or the hour chart.
+  const lift = useCallback(() => setSnap((s) => (s === 'peek' ? 'half' : s)), []);
 
-  let selection: Selection | null = null;
-  if (selectedAircraft) {
-    selection = {
-      key: `aircraft:${selectedAircraft.icao24}`,
-      label: 'Aircraft details',
-      lngLat: [selectedAircraft.longitude, selectedAircraft.latitude],
-      popupOffset: 20,
-      inspector: <AircraftInspector aircraft={selectedAircraft} onClose={handleCloseInspector} />,
+  const pick = useCallback(
+    (icao24: string) => {
+      setSelectedId(icao24);
+      lift();
+    },
+    [lift],
+  );
+  const pickFromList = (icao24: string) => {
+    const a = aircraft.find((x) => x.icao24 === icao24);
+    if (a) setFocus({ lon: a.longitude, lat: a.latitude, zoom: 'in' });
+    pick(icao24);
+  };
+  const close = useCallback(() => setSelectedId(null), []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedId(null);
     };
-  } else if (selectedAirport) {
-    selection = {
-      key: `airport:${selectedAirport.icao}`,
-      label: 'Airport weather',
-      lngLat: [selectedAirport.longitude, selectedAirport.latitude],
-      popupOffset: 20,
-      inspector: <AirportInspector airport={selectedAirport} onClose={handleCloseInspector} />,
-    };
-  } else if (viewMode === 'heatmap' && selectedHexagon) {
-    selection = {
-      key: `hexagon:${selectedHexagon.data.hexId}`,
-      label: 'Sector traffic',
-      lngLat: selectedHexagon.lngLat,
-      popupOffset: 10,
-      inspector: <HexagonInspector hexagon={selectedHexagon} onClose={handleCloseInspector} />,
-    };
-  }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const onQuery = (q: string) => {
+    setQuery(q);
+    setSelectedId(null);
+    if (q) {
+      setView('live');
+      lift();
+    }
+  };
+  const onView = (v: View) => {
+    setView(v);
+    setSelectedId(null);
+    if (v === 'busy') {
+      lift();
+      // Heathrow's corridors sit west of centre; show them and the rest of London.
+      setFocus({ lon: -0.25, lat: 51.48, zoom: 'out' });
+    }
+  };
+
+  const padding: Padding = wide
+    ? { top: 20, bottom: 20, left: PANEL_SPACE, right: 20 }
+    : // A full sheet leaves only a strip; keep a usable centre above where it would rest at half.
+      {
+        top: 72,
+        bottom: snapHeights(window.innerHeight)[snap === 'full' ? 'half' : snap],
+        left: 0,
+        right: 0,
+      };
 
   return (
-    <main className="relative h-dvh w-full overflow-hidden bg-background text-foreground">
-      <TopBar activeView={viewMode} onViewChange={setViewMode} />
-
-      {/* Render a single MapView and let it handle the ViewMode switching inside */}
-      <MapView
-        viewMode={viewMode}
-        heatmapData={heatmapData?.data ?? []}
-        aircraft={aircraft ?? []}
-        selectedIcao24={selectedAircraft?.icao24}
-        airports={airports ?? []}
-        selectedAirportIcao={selectedAirport?.icao}
-        activeFilter={activeFilter}
-        onAircraftClick={handleAircraftClick}
-        onAirportClick={handleAirportClick}
-        onHexagonClick={handleHexagonClick}
-        onCloseInspector={handleCloseInspector}
-      >
-        {isPhone ? (
-          <KeepClearOfSheet
-            selectionKey={selection?.key ?? null}
-            lngLat={selection?.lngLat ?? null}
-            sheetRef={sheetRef}
+    <main className="app">
+      <MapView padding={padding} focus={focus} wide={wide} onEmptyClick={close}>
+        {view === 'live' ? (
+          <AircraftLayer
+            aircraft={aircraft}
+            isShown={isShown}
+            selectedId={selectedId}
+            onPick={pick}
           />
         ) : (
-          selection && (
-            <Popup
-              key={selection.key}
-              longitude={selection.lngLat[0]}
-              latitude={selection.lngLat[1]}
-              closeButton={false}
-              closeOnClick={false}
-              className="map-popup"
-              offset={selection.popupOffset}
-              maxWidth="none"
-            >
-              {selection.inspector}
-            </Popup>
+          hourlyData && (
+            <Suspense fallback={null}>
+              <BusyLayer data={hourlyData} index={day[hour]?.index ?? -1} />
+            </Suspense>
           )
         )}
+        <AirportLayer />
       </MapView>
 
-      {viewMode === 'live' && (
-        <KpiStrip
-          kpis={kpis}
-          isError={isError}
-          activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
-          dataUpdatedAt={dataUpdatedAt}
-          pollIntervalMs={pollIntervalMs}
-        />
-      )}
+      <TopControls query={query} onQuery={onQuery} view={view} onView={onView} />
 
-      {isPhone && selection && (
-        <BottomSheet ref={sheetRef} label={selection.label} onClose={handleCloseInspector}>
-          {selection.inspector}
-        </BottomSheet>
-      )}
+      <Sheet
+        label={view === 'busy' ? 'Busy times' : selected ? 'Flight details' : 'Flights'}
+        snap={snap}
+        onSnap={setSnap}
+        wide={wide}
+      >
+        {view === 'busy' ? (
+          <BusyPanel day={day} hour={hour} onHour={setPickedHour} isLoading={hourly.isLoading} />
+        ) : selected ? (
+          <FlightCard a={selected} onClose={close} />
+        ) : (
+          <LivePanel
+            aircraft={aircraft}
+            flights={flights}
+            kpis={kpis}
+            isError={isError}
+            query={query}
+            chip={chip}
+            onChip={setChip}
+            onPick={pickFromList}
+          />
+        )}
+      </Sheet>
     </main>
   );
 }

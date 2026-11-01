@@ -1,8 +1,8 @@
 import type { PickingInfo } from '@deck.gl/core';
-import { IconLayer } from '@deck.gl/layers';
-import { useCallback, useMemo } from 'react';
+import { IconLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { useMemo } from 'react';
 import type { AircraftState } from '@/api/generated';
-import { type AircraftFilter, matchesFilter } from '@/shared/filters';
+import { EMERGENCY_SQUAWKS, phaseOf } from '@/features/flights/flights';
 import { useDeckLayers } from './deck-overlay';
 import gliderUrl from './icons/glider.svg';
 import helicopterUrl from './icons/helicopter.svg';
@@ -18,7 +18,7 @@ const ICONS = {
   glider: { url: gliderUrl, ...ICON_SIZE },
 };
 
-function getIconForCategory(category: string) {
+function iconFor(category: string) {
   switch (category) {
     case 'Rotorcraft':
       return ICONS.helicopter;
@@ -33,89 +33,72 @@ function getIconForCategory(category: string) {
   }
 }
 
-const EMERGENCY_SQUAWKS = new Set(['7500', '7600', '7700']);
+type RGBA = [number, number, number, number];
 
-const COLOR_APPROACHING: [number, number, number, number] = [255, 170, 0, 230];
-const COLOR_SELECTED: [number, number, number, number] = [100, 200, 255, 255];
-const COLOR_DIMMED: [number, number, number, number] = [255, 255, 255, 40];
-const COLOR_EMERGENCY: [number, number, number, number] = [255, 60, 60, 255];
-const COLOR_ROTORCRAFT: [number, number, number, number] = [80, 220, 120, 210];
+// Aircraft are the only colour on the map: amber landing, teal taking off,
+// pale grey everything else, blue for the one you picked.
+const COLOUR = {
+  landing: [255, 179, 71, 245],
+  departing: [79, 214, 196, 240],
+  other: [228, 230, 233, 225],
+  selected: [90, 169, 255, 255],
+  emergency: [255, 92, 92, 255],
+  hidden: [140, 143, 148, 60],
+  ground: [140, 143, 148, 90],
+} satisfies Record<string, RGBA>;
 
 interface AircraftLayerProps {
   aircraft: AircraftState[];
-  selectedIcao24?: string | null;
-  activeFilter?: AircraftFilter;
-  onAircraftClick?: (icao24: string) => void;
+  /** Aircraft the chip and search leave visible; the rest fade. */
+  isShown: (a: AircraftState) => boolean;
+  selectedId: string | null;
+  onPick: (icao24: string) => void;
 }
 
-function getAltitudeColor(alt: number | null | undefined): [number, number, number, number] {
-  // Change fallback from 200 (bright white) to 40 (barely visible)
-  if (alt == null) return [255, 255, 255, 40];
-
-  const clampedAlt = Math.max(0, Math.min(alt, 40000));
-
-  if (clampedAlt < 20000) {
-    const t = clampedAlt / 20000;
-    return [0, Math.round(255 - t * 155), 255, 230];
-  } else {
-    const t = (clampedAlt - 20000) / 20000;
-    return [Math.round(t * 200), Math.round(100 - t * 100), 255, 230];
-  }
-}
-
-export function AircraftLayer({
-  aircraft,
-  selectedIcao24,
-  activeFilter,
-  onAircraftClick,
-}: AircraftLayerProps) {
-  const handleClick = useCallback(
-    (info: PickingInfo<AircraftState>) => {
-      if (info.object) {
-        onAircraftClick?.(info.object.icao24);
-      }
-    },
-    [onAircraftClick],
-  );
-
-  const layers = useMemo(
-    () => [
+export function AircraftLayer({ aircraft, isShown, selectedId, onPick }: AircraftLayerProps) {
+  const layers = useMemo(() => {
+    const selected = aircraft.find((a) => a.icao24 === selectedId);
+    return [
+      new ScatterplotLayer<AircraftState>({
+        id: 'aircraft-selected-ring',
+        data: selected ? [selected] : [],
+        getPosition: (d) => [d.longitude, d.latitude],
+        getRadius: 26,
+        radiusUnits: 'pixels',
+        stroked: true,
+        getFillColor: [90, 169, 255, 40],
+        getLineColor: [90, 169, 255, 230],
+        lineWidthUnits: 'pixels',
+        getLineWidth: 2,
+      }),
       new IconLayer<AircraftState>({
         id: 'aircraft-icons',
         data: aircraft,
-        getIcon: (d) => getIconForCategory(d.category),
+        getIcon: (d) => iconFor(d.category),
         getPosition: (d) => [d.longitude, d.latitude],
-        getSize: (d) => (d.icao24 === selectedIcao24 ? 30 : 24),
-        // Lie flat on the map so the heading stays true when the map is
-        // rotated or pitched (a billboard rotates relative to the screen).
+        getSize: (d) => (d.icao24 === selectedId ? 30 : 22),
+        // Lie flat on the map so the heading stays true.
         billboard: false,
         getAngle: (d) => -(d.trueTrack ?? 0),
-        getColor: (d) => {
-          if (d.icao24 === selectedIcao24) return COLOR_SELECTED;
-          if (d.squawk && EMERGENCY_SQUAWKS.has(d.squawk)) return COLOR_EMERGENCY;
-          // 1. If the user selects a specific filter (like "Airborne") and it doesn't match
-          if (activeFilter && !matchesFilter(d, activeFilter)) return COLOR_DIMMED;
-
-          // 2. EXPLICIT GROUND CHECK: Force planes on the tarmac to be barely visible
-          // so they never clutter the airport markers, even if no filters are active.
-          if (d.onGround) return COLOR_DIMMED;
-          if (d.destination != null) return COLOR_APPROACHING;
-          if (d.category === 'Rotorcraft') return COLOR_ROTORCRAFT;
-          return getAltitudeColor(d.baroAltitudeFt);
+        getColor: (d): RGBA => {
+          if (d.icao24 === selectedId) return COLOUR.selected;
+          if (d.squawk && d.squawk in EMERGENCY_SQUAWKS) return COLOUR.emergency;
+          if (d.onGround) return COLOUR.ground;
+          if (!isShown(d)) return COLOUR.hidden;
+          return COLOUR[phaseOf(d)];
         },
-        sizeScale: 1,
         sizeUnits: 'pixels',
         pickable: true,
-        autoHighlight: true,
-        onClick: handleClick,
+        onClick: (info: PickingInfo<AircraftState>) => {
+          if (info.object) onPick(info.object.icao24);
+        },
         updateTriggers: {
-          getSize: [selectedIcao24],
-          getColor: [selectedIcao24, activeFilter],
+          getSize: [selectedId],
+          getColor: [selectedId, isShown],
         },
       }),
-    ],
-    [aircraft, selectedIcao24, activeFilter, handleClick],
-  );
+    ];
+  }, [aircraft, isShown, selectedId, onPick]);
 
   useDeckLayers('aircraft', layers);
   return null;

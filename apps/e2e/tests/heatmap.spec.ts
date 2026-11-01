@@ -36,87 +36,76 @@ test.describe('heatmap endpoint', () => {
   });
 });
 
-test.describe('frontend heatmap view', () => {
-  test.beforeEach(async ({ page }) => {
+test.describe('hourly heatmap endpoint', () => {
+  test('returns 24 hours and cells with 24 counts', async ({ request }) => {
+    const response = await request.get(`${API}/heatmap/hourly`);
+    expect(response.ok()).toBe(true);
+    const data = await response.json();
+    expect(data.resolution).toBe(7);
+    expect(data.hours).toHaveLength(24);
+    expect(data.hours[0]).toMatchObject({
+      start: expect.any(String),
+      aircraft: expect.any(Number),
+      snapshots: expect.any(Number),
+    });
+    for (const cell of data.cells) expect(cell.counts).toHaveLength(24);
+  });
+});
+
+/** A day of made-up traffic in two cells, peaking at the 10th hour. */
+function fakeDay() {
+  const first = Date.now() - 24 * 3600_000;
+  const shape = Array.from({ length: 24 }, (_, i) => 10 + 40 * Math.exp(-((i - 10) ** 2) / 20));
+  return {
+    resolution: 7,
+    hours: shape.map((aircraft, i) => ({
+      start: new Date(first + i * 3600_000).toISOString(),
+      aircraft,
+      snapshots: 60,
+    })),
+    cells: [
+      { hexId: '87194ad86ffffff', counts: shape.map((n) => Math.round(n * 10)) },
+      { hexId: '87194ad33ffffff', counts: shape.map((n) => Math.round(n * 4)) },
+    ],
+  };
+}
+
+test.describe('busy times view', () => {
+  test('says data is coming when the backend has none yet', async ({ page }) => {
+    // Older backends have no /heatmap/hourly at all.
+    await page.route('**/heatmap/hourly', (route) => route.fulfill({ status: 404, body: '' }));
     await page.goto('/');
-    await expect(page.locator('main')).toBeVisible();
+    await page.getByRole('tab', { name: 'Busy times' }).click();
+    const panel = page.getByRole('region', { name: 'Busy times' });
+    await expect(panel).toContainText('Busy times will appear soon');
   });
 
-  test('has a Heatmap button in the navigation', async ({ page }) => {
-    const heatmapButton = page.getByRole('button', { name: /heatmap/i });
-    await expect(heatmapButton).toBeVisible();
-  });
-
-  test('can switch to heatmap view by clicking the Heatmap button', async ({ page }) => {
-    await page.evaluate(() => localStorage.clear());
-
-    const heatmapButton = page.getByRole('button', { name: /heatmap/i });
-    await heatmapButton.click();
-
-    await expect(heatmapButton).toHaveClass(/bg-zinc-700/);
-
-    const radarButton = page.getByRole('button', { name: /live radar/i });
-    await expect(radarButton).not.toHaveClass(/bg-zinc-700/);
-  });
-
-  test('can switch back to live radar view', async ({ page }) => {
-    await page.evaluate(() => localStorage.clear());
-
-    const heatmapButton = page.getByRole('button', { name: /heatmap/i });
-    await heatmapButton.click();
-
-    const radarButton = page.getByRole('button', { name: /live radar/i });
-    await radarButton.click();
-
-    await expect(radarButton).toHaveClass(/bg-zinc-700/);
-  });
-
-  test('heatmap view shows tooltip on first visit', async ({ page }) => {
-    await page.evaluate(() => localStorage.clear());
-
-    const heatmapButton = page.getByRole('button', { name: /heatmap/i });
-    await heatmapButton.click();
-
-    const tooltip = page.getByText('3D Map Controls');
-    await expect(tooltip).toBeVisible();
-  });
-
-  test('tooltip appears with close button', async ({ page }) => {
-    await page.evaluate(() => localStorage.clear());
-
-    const heatmapButton = page.getByRole('button', { name: /heatmap/i });
-    await heatmapButton.click();
-
-    // The tooltip has an X button to close it
-    const closeButton = page.getByRole('button', { name: /close/i });
-    await expect(closeButton).toBeVisible();
-  });
-
-  test('KPI strip is not visible in heatmap mode', async ({ page }) => {
-    await page.evaluate(() => localStorage.clear());
-
-    const trackedLabel = page.getByRole('button', { name: 'Tracked' });
-    await expect(trackedLabel).toBeVisible({ timeout: 10_000 });
-
-    const heatmapButton = page.getByRole('button', { name: /heatmap/i });
-    await heatmapButton.click();
-
-    await page.waitForTimeout(500);
-
-    await expect(trackedLabel).not.toBeVisible();
-  });
-
-  test('fetches heatmap data from API', async ({ page }) => {
-    const heatmapRequest = page.waitForResponse(
-      (res) => new URL(res.url()).pathname === '/heatmap' && res.status() === 200,
+  test('ranks the chosen hour and lets you pick another', async ({ page }) => {
+    await page.route('**/heatmap/hourly', (route) => route.fulfill({ json: fakeDay() }));
+    await page.goto('/');
+    await page.getByRole('tab', { name: 'Busy times' }).click();
+    await expect(page.getByRole('tab', { name: 'Busy times' })).toHaveAttribute(
+      'aria-selected',
+      'true',
     );
 
-    const heatmapButton = page.getByRole('button', { name: /heatmap/i });
-    await heatmapButton.click();
+    const panel = page.getByRole('region', { name: 'Busy times' });
+    const bars = panel.getByRole('group', { name: 'Hour of day' }).getByRole('button');
+    await expect(bars).toHaveCount(24);
+    // Opens on the latest hour, one of the quietest in this made-up day.
+    await expect(panel).toContainText(/Quieter than \d+% of the day|The quietest hour/);
 
-    const res = await heatmapRequest;
-    const data = await res.json();
-
-    expect(Array.isArray(data)).toBe(true);
+    // The peak is the 10th hour of the rolling window: find its clock hour.
+    const peakStart = new Date(fakeDay().hours[10]?.start ?? '');
+    const hour = Number(
+      new Intl.DateTimeFormat('en-GB', {
+        hour: 'numeric',
+        hourCycle: 'h23',
+        timeZone: 'Europe/London',
+      }).format(peakStart),
+    );
+    await bars.nth(hour).click();
+    await expect(panel).toContainText('The busiest hour of the day');
+    await expect(bars.nth(hour)).toHaveAttribute('aria-pressed', 'true');
   });
 });

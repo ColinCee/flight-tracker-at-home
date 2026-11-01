@@ -13,11 +13,11 @@ Real-time aviation dashboard showing aircraft around the London airspace with Lo
 
 ## What it does
 
-- Plots live aircraft on a dark-themed interactive map (OpenFreeMap tiles), with emergency squawks highlighted
-- Highlights planes approaching an airport in orange (heading + altitude + "ILS check")
-- Real-time KPIs: tracked, airborne, inbound airport, climbing, descending, avg altitude, plus a rolling 60-minute arrival throughput counter
-- Click any aircraft for callsign, altitude, speed, heading, and squawk; click an airport for current weather (MET Norway)
-- 3D heatmap view of historical traffic, binned into H3 hexagons
+- Live aircraft over a grey map of London (OpenFreeMap tiles): amber when landing, teal when taking off, red for an emergency squawk
+- One panel: "N flights in the sky over London", filters for Landing / Taking off / Low, and the nearest flights
+- Search by callsign, registration, airline or aircraft type
+- Tap a flight for a card: airline, type, what it is doing in plain words ("Landing at Heathrow"), height, speed, climb or descent
+- Busy times: how busy each hour of the last day was, and where, as flat H3 hexagons
 
 ## Stack
 

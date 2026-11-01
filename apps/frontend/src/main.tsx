@@ -1,3 +1,4 @@
+import '@fontsource-variable/atkinson-hyperlegible-next';
 import '@/styles.css';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
