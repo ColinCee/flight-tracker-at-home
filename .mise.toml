@@ -10,13 +10,16 @@ python.uv_venv_auto = true
 [env]
 VIRTUAL_ENV = "{{config_root}}/apps/backend/.venv"
 
+# Tasks are lists of one-line steps, each valid in both sh and cmd: on Windows
+# mise runs them with cmd, which runs only the first line of a multi-line script.
+# Each step starts in the repo root, so a `cd` lasts only for its own line.
 [tasks.setup]
 description = "Install all dependencies (JS + Python) and git hooks"
-run = """
-bun install ${CI:+--frozen-lockfile}
-cd apps/backend && uv sync
-git config core.hooksPath .githooks
-"""
+run = [
+  'bun install{% if get_env(name="CI", default="") %} --frozen-lockfile{% endif %}',
+  "cd apps/backend && uv sync",
+  "git config core.hooksPath .githooks",
+]
 
 [tasks.dev]
 description = "Run frontend and backend together"
@@ -42,38 +45,36 @@ run = "cd apps/backend && uv sync"
 
 [tasks.format]
 description = "Format all code (ruff + biome)"
-run = """
-uvx ruff format apps/backend/
-uvx ruff check --fix apps/backend/ || true
-bunx biome format --write .
-bunx biome lint --fix . || true
-"""
+run = [
+  "uvx ruff format apps/backend/",
+  "uvx ruff check --fix apps/backend/ || exit 0",
+  "bunx biome format --write .",
+  "bunx biome lint --fix . || exit 0",
+]
 
 [tasks.check]
 description = "Lint, format, and type check (no modifications)"
-run = """
-uvx ruff check apps/backend/
-uvx ruff format --check apps/backend/
-bunx biome check .
-cd apps/backend && uvx ty check
-cd -
-bunx tsc --build
-"""
+run = [
+  "uvx ruff check apps/backend/",
+  "uvx ruff format --check apps/backend/",
+  "bunx biome check .",
+  "cd apps/backend && uvx ty check",
+  "bunx tsc --build",
+]
 
 [tasks.test]
 description = "Run all tests"
-run = """
-cd apps/backend && uv run pytest
-cd {{config_root}}/apps/frontend && bunx vitest run
-"""
+run = [
+  "cd apps/backend && uv run pytest",
+  "cd apps/frontend && bunx vitest run",
+]
 
 [tasks.typecheck]
 description = "Type check all code (subset of check)"
-run = """
-cd apps/backend && uvx ty check
-cd -
-bunx tsc --build
-"""
+run = [
+  "cd apps/backend && uvx ty check",
+  "bunx tsc --build",
+]
 
 [tasks."test:e2e"]
 description = "Run Playwright end-to-end tests"
@@ -89,26 +90,18 @@ run = "cd apps/e2e && bunx playwright test --config smoke/playwright.config.ts"
 
 [tasks.codegen]
 description = "Regenerate frontend API types from backend schema"
-run = """
-cd apps/backend && uv run python scripts/export_openapi.py
-cd {{config_root}}
-bunx orval --config orval.config.ts
-"""
+run = [
+  "cd apps/backend && uv run python scripts/export_openapi.py",
+  "bunx orval --config orval.config.ts",
+]
 
 [tasks."codegen:check"]
 description = "Check generated frontend types are in sync with backend schema"
-run = """
-cd apps/backend && uv run python scripts/export_openapi.py
-cd {{config_root}}
-bunx orval --config orval.config.ts
-if ! git diff --quiet apps/frontend/openapi.json apps/frontend/src/api/generated.ts; then
-  echo "ERROR: Generated API types are out of sync with backend schema"
-  echo "Run: mise run codegen"
-  git diff --stat apps/frontend/openapi.json apps/frontend/src/api/generated.ts
-  exit 1
-fi
-echo "Generated API types are in sync"
-"""
+run = [
+  "cd apps/backend && uv run python scripts/export_openapi.py",
+  "bunx orval --config orval.config.ts",
+  "git diff --exit-code --stat apps/frontend/openapi.json apps/frontend/src/api/generated.ts || (echo Generated API types are out of sync, run: mise run codegen && exit 1)",
+]
 
 [tasks."deploy:frontend"]
 description = "Build and deploy frontend to Cloudflare Pages"
