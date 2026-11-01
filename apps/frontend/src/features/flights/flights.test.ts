@@ -32,6 +32,7 @@ describe('airlineOf', () => {
   it('reads the ICAO prefix', () => {
     expect(airlineOf('BAW12XK')).toBe('British Airways');
     expect(airlineOf('EZY75PD ')).toBe('easyJet');
+    expect(airlineOf('DHK72')).toBe('DHL Air UK');
   });
   it('reads a few IATA-style callsigns', () => {
     expect(airlineOf('BA1')).toBe('British Airways');
