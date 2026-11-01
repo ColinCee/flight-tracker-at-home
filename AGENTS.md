@@ -52,10 +52,12 @@ adsb.lol (ADSBx v2, 60 nm around central London)
   -> GET /aircraft (aircraft + KPIs in one response, plus refresh_interval_ms)
   -> useAircraftData polls at that interval -> AircraftLayer (deck.gl)
 
-every 60 s: cache -> H3 cells (resolution 8) -> historical_heatmap.parquet -> GET /heatmap -> HeatmapLayer
+every 60 s: cache -> H3 cells (resolution 8) -> historical_heatmap.parquet (1-2 days)
+  -> GET /heatmap (all history per cell) -> HeatmapLayer
+  -> GET /heatmap/hourly (last 24 complete hours, resolution 7 cells, per-hour totals)
 ```
 
-Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/health`, and `/debug/airplanes_live` only when `ENABLE_DEBUG_ENDPOINTS=true` (it calls upstream on every request). Swagger UI is at `/docs`.
+Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, and `/debug/airplanes_live` only when `ENABLE_DEBUG_ENDPOINTS=true` (it calls upstream on every request). Swagger UI is at `/docs`.
 
 **Arrival heuristic.** An aircraft counts as inbound to an airport (LHR, LGW, STN, LTN, LCY) when it is within 25 km, below 4,000 ft, level or descending, its track is within 15° of a runway heading, and its bearing from the airport lies inside an 8° cone along the extended centreline. The cone stops aircraft on a parallel downwind leg from counting.
 

@@ -105,6 +105,32 @@ export interface HeatmapHexagon {
 }
 
 /**
+ * One clock hour of the last 24.
+ */
+export interface HeatmapHour {
+  start: string;
+  aircraft: number;
+  snapshots: number;
+}
+
+/**
+ * Traffic in one H3 cell, hour by hour.
+ */
+export interface HourlyHeatmapCell {
+  hexId: string;
+  counts: number[];
+}
+
+/**
+ * Traffic of the last 24 complete hours, per hour and per cell.
+ */
+export interface HourlyHeatmap {
+  resolution: number;
+  hours: HeatmapHour[];
+  cells: HourlyHeatmapCell[];
+}
+
+/**
  * Single response for the weather polling endpoint.
  */
 export interface WeatherResponse {
@@ -459,6 +485,96 @@ export function useGetHeatmap<TData = Awaited<ReturnType<typeof getHeatmap>>, TE
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetHeatmapQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+/**
+ * Aircraft-minutes per H3 cell in each of the last 24 complete hours, and the
+average number of aircraft over the whole area in each hour. An hour with
+no snapshots has `snapshots: 0`; with no history at all, `cells` is empty.
+ * @summary Traffic per hour over the last 24 hours
+ */
+export type getHourlyHeatmapResponse200 = {
+  data: HourlyHeatmap
+  status: 200
+}
+
+export type getHourlyHeatmapResponseSuccess = (getHourlyHeatmapResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getHourlyHeatmapResponse = (getHourlyHeatmapResponseSuccess)
+
+export const getGetHourlyHeatmapUrl = () => {
+
+
+
+
+  return `/heatmap/hourly`
+}
+
+export const getHourlyHeatmap = async ( options?: RequestInit): Promise<getHourlyHeatmapResponse> => {
+
+  return fetchClient<getHourlyHeatmapResponse>(getGetHourlyHeatmapUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHourlyHeatmapQueryKey = () => {
+    return [
+    `/heatmap/hourly`
+    ] as const;
+    }
+
+
+export const getGetHourlyHeatmapQueryOptions = <TData = Awaited<ReturnType<typeof getHourlyHeatmap>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHourlyHeatmap>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHourlyHeatmapQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHourlyHeatmap>>> = ({ signal }) => getHourlyHeatmap({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHourlyHeatmap>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHourlyHeatmapQueryResult = NonNullable<Awaited<ReturnType<typeof getHourlyHeatmap>>>
+export type GetHourlyHeatmapQueryError = unknown
+
+
+/**
+ * @summary Traffic per hour over the last 24 hours
+ */
+
+export function useGetHourlyHeatmap<TData = Awaited<ReturnType<typeof getHourlyHeatmap>>, TError = unknown>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHourlyHeatmap>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHourlyHeatmapQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

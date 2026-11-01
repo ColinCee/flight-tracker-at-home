@@ -1,12 +1,15 @@
 """Flight Tracker at Home API"""
 
 import asyncio
+import functools
 import logging
 import os
 import time
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 
 import duckdb
+import h3
 import httpx
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +20,14 @@ from src.airplanes_live import (
     init_client,
 )
 from src.cache import airspace_cache
-from src.models import AircraftResponse, HeatmapHexagon, WeatherResponse
+from src.models import (
+    AircraftResponse,
+    HeatmapHexagon,
+    HeatmapHour,
+    HourlyHeatmap,
+    HourlyHeatmapCell,
+    WeatherResponse,
+)
 from src.spatial_snapshot import DB_PATH, snapshot_to_parquet
 from src.weather import weather_cache
 
@@ -218,3 +228,89 @@ def get_heatmap_data(response: Response) -> list[HeatmapHexagon]:
         logger.error(f"Heatmap query failed: {e}")
         del response.headers["Cache-Control"]
         return []
+
+
+# Coarser than the stored resolution 8, so a day of hourly traffic stays small
+# enough for a phone.
+HOURLY_RESOLUTION = 7
+# (path, mtime_ns, size, window start) of the result below.
+_hourly_cache: tuple[tuple[str, int, int, datetime], HourlyHeatmap] | None = None
+
+
+@functools.cache
+def _parent_cell(hex_id: str) -> str:
+    return str(h3.cell_to_parent(hex_id, HOURLY_RESOLUTION))
+
+
+@app.get(
+    "/heatmap/hourly",
+    response_model=HourlyHeatmap,
+    operation_id="getHourlyHeatmap",
+    summary="Traffic per hour over the last 24 hours",
+)
+def get_hourly_heatmap(response: Response) -> HourlyHeatmap:
+    """
+    Aircraft-minutes per H3 cell in each of the last 24 complete hours, and the
+    average number of aircraft over the whole area in each hour. An hour with
+    no snapshots has `snapshots: 0`; with no history at all, `cells` is empty.
+    """
+    global _hourly_cache
+
+    # Snapshot times are naive, in the server's local time (what DuckDB's
+    # CURRENT_TIMESTAMP gave the writer), so the window is too. Hours go out
+    # as UTC and the browser shows them in its own zone.
+    first = datetime.now().replace(minute=0, second=0, microsecond=0) - timedelta(
+        hours=24
+    )
+    starts = [first + timedelta(hours=i) for i in range(24)]
+    hours = [
+        HeatmapHour(start=s.astimezone(UTC), aircraft=0, snapshots=0) for s in starts
+    ]
+    empty = HourlyHeatmap(resolution=HOURLY_RESOLUTION, hours=hours, cells=[])
+    if not os.path.exists(DB_PATH):
+        return empty
+    stat = os.stat(DB_PATH)
+    key = (DB_PATH, stat.st_mtime_ns, stat.st_size, first)
+    if _hourly_cache and _hourly_cache[0] == key:
+        response.headers["Cache-Control"] = "public, max-age=60"
+        return _hourly_cache[1]
+
+    window = f"""
+        FROM '{DB_PATH}'
+        WHERE snapshot_time >= $first AND snapshot_time < $first + INTERVAL 24 HOUR
+    """
+    hour = "date_diff('hour', $first, date_trunc('hour', snapshot_time))"
+    try:
+        con = duckdb.connect()
+        try:
+            per_cell = con.execute(
+                f"SELECT hex_id, {hour}, CAST(SUM(total_volume) AS BIGINT) {window} GROUP BY ALL",
+                {"first": first},
+            ).fetchall()
+            per_hour = con.execute(
+                f"SELECT {hour}, SUM(total_volume), COUNT(DISTINCT snapshot_time) {window} GROUP BY ALL",
+                {"first": first},
+            ).fetchall()
+        finally:
+            con.close()
+    except duckdb.Error as e:
+        logger.error(f"Hourly heatmap query failed: {e}")
+        return empty
+
+    counts: dict[str, list[int]] = {}
+    for hex_id, i, volume in per_cell:
+        counts.setdefault(_parent_cell(hex_id), [0] * 24)[i] += volume
+    for i, volume, snapshots in per_hour:
+        hours[i] = HeatmapHour(
+            start=hours[i].start,
+            aircraft=round(volume / snapshots, 1),
+            snapshots=snapshots,
+        )
+    result = HourlyHeatmap(
+        resolution=HOURLY_RESOLUTION,
+        hours=hours,
+        cells=[HourlyHeatmapCell(hex_id=h, counts=c) for h, c in counts.items()],
+    )
+    _hourly_cache = (key, result)
+    response.headers["Cache-Control"] = "public, max-age=60"
+    return result

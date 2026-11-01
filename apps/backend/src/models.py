@@ -14,6 +14,7 @@ Types are strict to match the airplanes.live API:
   - gs, track → float (always have decimals in the API)
 """
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -104,3 +105,35 @@ class HeatmapHexagon(BaseModel):
     hex_id: str
     total_volume: int
     avg_altitude: float
+
+
+class HeatmapHour(BaseModel):
+    """One clock hour of the last 24."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    start: datetime
+    # Aircraft over the whole area, averaged over the hour's snapshots.
+    aircraft: float
+    # Snapshots taken in the hour (60 when nothing was missed, 0 = no data).
+    snapshots: int
+
+
+class HourlyHeatmapCell(BaseModel):
+    """Traffic in one H3 cell, hour by hour."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    hex_id: str
+    # Aircraft-minutes per hour, in the same order as HourlyHeatmap.hours.
+    counts: list[int]
+
+
+class HourlyHeatmap(BaseModel):
+    """Traffic of the last 24 complete hours, per hour and per cell."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    resolution: int
+    hours: list[HeatmapHour]
+    cells: list[HourlyHeatmapCell]
