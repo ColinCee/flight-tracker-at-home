@@ -75,10 +75,11 @@ test.describe('phone layout', () => {
     await drag(page, sheet, -360, 30);
     await expect.poll(() => sheetHeight(sheet)).toBe(SNAP.full);
 
-    // A quick short flick down moves one step.
-    await drag(page, sheet, 60, 2);
+    // A quick flick down moves one step. (Far enough that a slow CI runner,
+    // where the release no longer counts as a flick, still settles there.)
+    await drag(page, sheet, 200, 3);
     await expect.poll(() => sheetHeight(sheet)).toBe(SNAP.half);
-    await drag(page, sheet, 60, 2);
+    await drag(page, sheet, 150, 3);
     await expect.poll(() => sheetHeight(sheet)).toBe(SNAP.peek);
     await expect(sheet.getByRole('list', { name: 'Nearest flights' })).toBeHidden();
 

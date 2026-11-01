@@ -98,7 +98,13 @@ export function App() {
 
   const padding: Padding = wide
     ? { top: 20, bottom: 20, left: PANEL_SPACE, right: 20 }
-    : { top: 72, bottom: snapHeights(window.innerHeight)[snap], left: 0, right: 0 };
+    : // A full sheet leaves only a strip; keep a usable centre above where it would rest at half.
+      {
+        top: 72,
+        bottom: snapHeights(window.innerHeight)[snap === 'full' ? 'half' : snap],
+        left: 0,
+        right: 0,
+      };
 
   return (
     <main className="app">
