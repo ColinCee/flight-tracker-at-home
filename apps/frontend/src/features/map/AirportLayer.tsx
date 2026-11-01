@@ -35,7 +35,10 @@ export function AirportLayer() {
               getColor: [232, 233, 235, 235],
               fontFamily: FONT_FAMILY,
               fontWeight: 600,
-              fontSettings: { sdf: true },
+              // Build glyphs for these few names only, at a modest size: the
+              // atlas is drawn on the main thread while the page loads.
+              characterSet: 'auto',
+              fontSettings: { sdf: true, fontSize: 32, buffer: 6 },
               outlineWidth: 3,
               outlineColor: [17, 18, 20, 255],
             }),

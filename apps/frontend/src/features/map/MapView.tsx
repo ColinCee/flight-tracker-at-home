@@ -71,7 +71,7 @@ export function MapView({ padding, focus, wide, onEmptyClick, children }: MapVie
   const [initialView] = useState(() => ({
     longitude: -0.2,
     latitude: 51.5,
-    zoom: wide ? 9.4 : 8.8,
+    zoom: wide ? 9.4 : 8.6,
     padding,
   }));
 

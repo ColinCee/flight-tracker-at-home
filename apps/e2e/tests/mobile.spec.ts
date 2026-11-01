@@ -16,10 +16,10 @@ const SNAP = { peek: 156, half: Math.round(PHONE.height * 0.48), full: PHONE.hei
 
 /**
  * Screen position of a point at the map's starting view: centre -0.2, 51.5,
- * zoom 8.8, drawn in the space above the half-open sheet and below the search bar.
+ * zoom 8.6, drawn in the space above the half-open sheet and below the search bar.
  */
 function toScreen(lng: number, lat: number) {
-  const worldSize = 512 * 2 ** 8.8;
+  const worldSize = 512 * 2 ** 8.6;
   const project = (lo: number, la: number) => {
     const s = Math.sin((la * Math.PI) / 180);
     return {
