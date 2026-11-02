@@ -6,7 +6,8 @@
   "platformAutomerge": false,
   "minimumReleaseAge": "3 days",
   "vulnerabilityAlerts": {
-    "minimumReleaseAge": "0 days"
+    "minimumReleaseAge": "0 days",
+    "schedule": ["at any time"]
   },
   "packageRules": [
     {
@@ -18,6 +19,12 @@
       "automerge": false
     },
     {
+      "description": "One weekly PR for all non-major updates. main must be up to date to merge, so separate PRs made each other rebase and re-run CI one by one.",
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "groupName": "non-major dependencies",
+      "schedule": ["before 6am on monday"]
+    },
+    {
       "description": "A new Python minor needs wheels for every backend dependency (3.15 broke watchfiles). Move Python by hand after checking them.",
       "matchDepNames": ["python"],
       "matchUpdateTypes": ["major", "minor"],
@@ -27,6 +34,12 @@
       "description": "Playwright 1.59 cannot install Chromium on Ubuntu 26.04, so the E2E job stays on ubuntu-24.04. Remove once a Playwright release supports 26.04.",
       "matchDatasources": ["github-runners"],
       "matchDepNames": ["ubuntu"],
+      "enabled": false
+    },
+    {
+      "description": "TypeScript 7 drops the API Nx's lockfile plugin calls (readConfigFile). Re-enable once Nx supports TypeScript 7.",
+      "matchDepNames": ["typescript"],
+      "matchUpdateTypes": ["major"],
       "enabled": false
     }
   ]
