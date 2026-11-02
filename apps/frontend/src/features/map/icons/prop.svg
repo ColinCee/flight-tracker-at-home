@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>Propeller aircraft</title>
   <!-- Light propeller aircraft (Cessna-style top-down). Used for Light category. -->
   <!-- Fuselage (shorter, wider than jet) -->
   <path d="M32 6 C30.5 6 29.5 9 29.5 12 L29.5 54 C29.5 57 30.8 59 32 59 C33.2 59 34.5 57 34.5 54 L34.5 12 C34.5 9 33.5 6 32 6Z" fill="white"/>

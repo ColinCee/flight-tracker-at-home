@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>Helicopter</title>
   <!-- Helicopter (top-down). Used for Rotorcraft category. -->
   <!-- Fuselage (teardrop) -->
   <path d="M32 16 C28 16 26 20 26 26 L26 38 C26 42 28 46 32 46 C36 46 38 42 38 38 L38 26 C38 20 36 16 32 16Z" fill="white"/>
