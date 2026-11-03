@@ -117,6 +117,7 @@ run = [
   "mise run test",
   "mise run test:e2e",
   "mise run test:e2e:prod",
+  "mise run test:speed",
 ]
 
 [tasks."deploy:frontend"]
