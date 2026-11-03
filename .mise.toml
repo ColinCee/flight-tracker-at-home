@@ -88,6 +88,10 @@ run = "cd apps/e2e && bunx playwright test --ui"
 description = "Smoke-test a production build (vite build + preview) in Playwright"
 run = "cd apps/e2e && bunx playwright test --config smoke/playwright.config.ts"
 
+[tasks."test:speed"]
+description = "Check the main page's speed budgets on a production build in Playwright"
+run = "cd apps/e2e && bunx playwright test --config speed/playwright.config.ts"
+
 [tasks.codegen]
 description = "Regenerate frontend API types from backend schema"
 run = [

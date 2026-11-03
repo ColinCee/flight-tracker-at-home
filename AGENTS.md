@@ -23,6 +23,7 @@ apps/
 └── e2e/
     ├── tests/         Playwright specs against the dev servers
     ├── smoke/         Production-build smoke test (vite build + preview)
+    ├── speed/         Speed budgets: bytes, requests, LCP and CLS of the main page
     └── profiling/     mobile-perf.mjs: phone performance snapshot of any URL
 ```
 
@@ -38,10 +39,11 @@ mise run check        # ruff, biome, ty, tsc (what CI runs)
 mise run test         # pytest + vitest
 mise run test:e2e     # Playwright against dev servers with mock data
 mise run test:e2e:prod  # Playwright against a production build
+mise run test:speed   # main page's speed budgets on a production build, slow phone connection
 mise run codegen      # backend models -> openapi.json -> frontend types
 ```
 
-CI (`.github/workflows/`) runs check, codegen:check, test, both E2E suites, a Trivy scan of the backend image, and the Pages deploy (a preview on every PR). It fails on unformatted code, so run `mise run format` before pushing.
+CI (`.github/workflows/`) runs check, codegen:check, test, both E2E suites, the speed budgets, a Trivy scan of the backend image, and the Pages deploy (a preview on every PR). It fails on unformatted code, so run `mise run format` before pushing. Raise a speed budget (`apps/e2e/speed/main-page.spec.ts`) only with the reason in the pull request that raises it.
 
 ## How data flows
 
