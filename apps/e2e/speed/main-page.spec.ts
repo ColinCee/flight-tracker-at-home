@@ -4,7 +4,8 @@ import { type Browser, devices, expect, test } from '@playwright/test';
 // vite preview) with the mock-data backend.
 //
 // How: each load runs in a fresh browser (empty cache; a second context in the
-// same browser had its font download cancelled) at Pixel 7 size, with the network throttled to a slow phone connection (1.6 Mbps down, 150 ms
+// same browser had its font download cancelled) at Pixel 7 size, with the
+// network throttled to a slow phone connection (1.6 Mbps down, 150 ms
 // latency). Bytes are each finished request's headers plus body as sent, which
 // the preview server gzips; production may send a little less. Only the
 // app's own files and API calls (localhost) count towards bytes and requests:
@@ -12,9 +13,13 @@ import { type Browser, devices, expect, test } from '@playwright/test';
 // change outside this repo. LCP and CLS are the median of three loads, read
 // once the first screen's animations have finished, with no input before.
 //
-// Budgets are today's numbers plus headroom: bytes 10% or 3 KB over, whichever
-// is more; requests two more; LCP 30% over; CLS 0.02, well under the 0.1 that
-// counts as good. Bytes match exactly from run to run, LCP within about 10%.
+// Budgets are today's numbers in CI (ubuntu-24.04, Chromium) plus headroom:
+// bytes 10% or 3 KB over, whichever is more; requests two more; LCP about 35%
+// over; CLS 0.02 over. Bytes match exactly from run to run, LCP and CLS within
+// about 10%. Today's CLS comes from two shifts: the filter chips and list
+// header resize when the self-hosted font replaces the fallback (about 0.02),
+// and the map's top-right controls shrink once the map has loaded (about
+// 0.04). Fixing either one is the way to lower the CLS budget.
 // Raise a budget only with the reason in the pull request that raises it.
 //
 // Measured on 3 Nov 2026 (in comments: today's value):
@@ -26,8 +31,8 @@ const BUDGETS = {
   imageKB: 3, // 0 (the page loads no images itself)
   totalKB: 692, // 628.8
   requests: 13, // 11
-  lcpMs: 6200, // 4780
-  cls: 0.02, // 0.004
+  lcpMs: 4800, // 3500
+  cls: 0.08, // 0.054 to 0.061
 };
 
 type Metric = keyof typeof BUDGETS;
