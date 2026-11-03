@@ -58,7 +58,7 @@ run = [
   "uvx ruff check apps/backend/",
   "uvx ruff format --check apps/backend/",
   "bunx biome check .",
-  "cd apps/backend && uvx ty check",
+  "cd apps/backend && uv run ty check",
   "bunx tsc --build",
 ]
 
@@ -72,7 +72,7 @@ run = [
 [tasks.typecheck]
 description = "Type check all code (subset of check)"
 run = [
-  "cd apps/backend && uvx ty check",
+  "cd apps/backend && uv run ty check",
   "bunx tsc --build",
 ]
 
