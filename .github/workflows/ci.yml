@@ -40,6 +40,8 @@ jobs:
       - run: bunx playwright install chromium --with-deps
       - run: mise run test:e2e
       - run: mise run test:e2e:prod
+      - name: Speed budgets
+        run: mise run test:speed
 
   # Keeps the name of a required check in the repo ruleset. Agent
   # instructions live only in AGENTS.md; CLAUDE.md just imports it.
