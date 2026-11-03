@@ -21,9 +21,6 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
-[tool.ty.environment]
-python = ".venv"
-
 [tool.ty.src]
 include = ["src"]
 
