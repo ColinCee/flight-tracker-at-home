@@ -30,8 +30,11 @@ apps/
 
 Everything runs through [mise](https://mise.jdx.dev/) from the repo root; `mise tasks` lists them all with descriptions.
 
+Checks: `mise run ci`
+
 ```bash
 mise run setup        # bun install, uv sync, git hooks
+mise run ci           # setup, then everything CI runs, in order
 mise run dev          # frontend :4200 + backend :8000 (dev:frontend / dev:backend run one)
 mise run format       # ruff + biome, auto-fix
 mise run check        # ruff, biome, ty, tsc (what CI runs)
