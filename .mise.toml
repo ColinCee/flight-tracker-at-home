@@ -103,6 +103,18 @@ run = [
   "git diff --exit-code --stat apps/frontend/openapi.json apps/frontend/src/api/generated.ts || (echo Generated API types are out of sync, run: mise run codegen && exit 1)",
 ]
 
+[tasks.ci]
+description = "Run everything CI runs, one step after another"
+run = [
+  "mise run setup",
+  "bunx playwright install chromium",
+  "mise run check",
+  "mise run codegen:check",
+  "mise run test",
+  "mise run test:e2e",
+  "mise run test:e2e:prod",
+]
+
 [tasks."deploy:frontend"]
 description = "Build and deploy frontend to Cloudflare Pages"
 dir = "apps/frontend"
