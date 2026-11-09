@@ -14,9 +14,12 @@ COPY src/ ./src/
 # --- Runtime stage ---
 FROM python:3.14-slim@sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8
 
+# Debian fixes land before the base image is rebuilt, so take them here or the
+# Trivy scan fails on HIGH CVEs that already have fixes.
 # The app never installs packages at runtime; pip's vendored copies of
 # urllib3, msgpack and setuptools only add CVEs to the scan.
-RUN python3 -m pip uninstall --yes pip \
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/* \
+    && python3 -m pip uninstall --yes pip \
     && useradd --create-home --shell /bin/false appuser \
     && mkdir -p /app/data && chown appuser:appuser /app/data
 USER appuser
