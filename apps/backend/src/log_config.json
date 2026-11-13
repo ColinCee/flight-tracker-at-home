@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "json": {
+      "()": "pythonjsonlogger.json.JsonFormatter",
+      "format": "%(levelname)s %(name)s %(message)s",
+      "timestamp": "time",
+      "rename_fields": {
+        "levelname": "level",
+        "name": "logger",
+        "message": "msg"
+      },
+      "reserved_attrs": [
+        "args",
+        "asctime",
+        "color_message",
+        "created",
+        "exc_info",
+        "exc_text",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "message",
+        "module",
+        "msecs",
+        "msg",
+        "name",
+        "pathname",
+        "process",
+        "processName",
+        "relativeCreated",
+        "stack_info",
+        "taskName",
+        "thread",
+        "threadName"
+      ]
+    }
+  },
+  "handlers": {
+    "stdout": {
+      "class": "logging.StreamHandler",
+      "formatter": "json",
+      "stream": "ext://sys.stdout"
+    }
+  },
+  "loggers": {
+    "uvicorn": {
+      "level": "INFO",
+      "handlers": ["stdout"],
+      "propagate": false
+    },
+    "uvicorn.access": {
+      "level": "INFO",
+      "handlers": ["stdout"],
+      "propagate": false
+    },
+    "httpx": {
+      "level": "WARNING"
+    },
+    "httpcore": {
+      "level": "WARNING"
+    }
+  },
+  "root": {
+    "level": "INFO",
+    "handlers": ["stdout"]
+  }
+}
