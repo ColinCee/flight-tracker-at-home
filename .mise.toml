@@ -33,7 +33,7 @@ run = "bunx vite"
 [tasks."dev:backend"]
 description = "Run the API with auto-reload on port 8000"
 dir = "apps/backend"
-run = "uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000"
+run = "uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000 --log-config src/log_config.json"
 
 [tasks."setup:frontend"]
 description = "Install frontend dependencies only"

@@ -34,4 +34,5 @@ ENV PYTHONPATH="/app/site-packages:/app"
 
 EXPOSE 8000
 
-ENTRYPOINT ["python3", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# One JSON object a line, uvicorn's included (src/log_config.json).
+ENTRYPOINT ["python3", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-config", "src/log_config.json"]

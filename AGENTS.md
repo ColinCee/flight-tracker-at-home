@@ -19,7 +19,8 @@ apps/
 │   ├── src/cache.py           10 s cache, KPIs, stale fallback
 │   ├── src/weather.py         MET Norway weather, 30 min cache
 │   ├── src/spatial_snapshot.py H3 binning + DuckDB parquet history
-│   └── src/mock_data.py       Fixtures served when MOCK_DATA=true (E2E)
+│   ├── src/mock_data.py       Fixtures served when MOCK_DATA=true (E2E)
+│   └── src/log_config.json    Every line one JSON object (level, logger, msg), uvicorn's too
 └── e2e/
     ├── tests/         Playwright specs against the dev servers
     ├── smoke/         Production-build smoke test (vite build + preview)
