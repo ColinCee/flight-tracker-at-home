@@ -69,7 +69,7 @@ Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, an
 
 **Units** stay aviation-native as the feed gives them: feet, knots, ft/min.
 
-**Upstream.** adsb.lol needs no key. If it fails, the backend tries `ADSB_FALLBACK_URL` (adsb.fi) and meanwhile serves its last good data. `airplanes_live.py` keeps the name of an earlier source.
+**Upstream.** adsb.lol needs no key. If it fails, the backend tries `ADSB_FALLBACK_URL` (adsb.fi) and meanwhile serves its last good data. `airplanes_live.py` is the adsb.lol client; it keeps an earlier source's name.
 
 ## Configuration
 
@@ -90,7 +90,7 @@ Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, an
 - **camelCase JSON, snake_case Python.** `alias_generator=to_camel` on the models does the conversion.
 - **One `/aircraft` response** carries aircraft and KPIs together, so they always agree.
 - **Packages:** `bun add` from the repo root for JS, `uv add` in `apps/backend/` for Python. No npm, yarn or pip.
-- **Tooling:** mise for tasks and tool versions, bun for packages, call vite/vitest/playwright directly; no task-runner layer.
+- **Tooling:** mise for tasks and tool versions, bun for packages, call vite/vitest/playwright directly; no task-runner layer, since one went unused.
 - **Pre-commit hook** (`.githooks/pre-commit`) runs ruff and Biome on staged files.
 - **Look:** greys for every control; colour only on aircraft (amber landing, teal taking off, blue picked) and the violet busy-times ramp. Small radii (8px), never pill-shaped buttons. Atkinson Hyperlegible Next, self-hosted, tabular figures. Tokens are the `:root` block in `apps/frontend/src/styles.css`.
 - **Show only what the data has:** no origin airports or flight counts per hour (the backend stores neither); wording comes from `features/flights/flights.ts`.
