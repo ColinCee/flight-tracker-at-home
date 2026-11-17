@@ -1,4 +1,6 @@
 // Fails when another package manager slips in: bun for JS, uv for Python.
+// Lockfiles and manifests fail at any depth; commands are checked only in the
+// files that run them (tasks, manifests, CI, hooks, Dockerfiles), not in docs or code.
 // Run with `bun scripts/check-packages.ts` (part of `mise run check`).
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -18,8 +20,10 @@ const forbiddenFiles: [RegExp, string][] = [
 const commandFile =
   /(^|\/)(\.mise\.toml|package\.json|Dockerfile)$|^\.github\/workflows\/|^\.githooks\//;
 const forbiddenCommands: [RegExp, string][] = [
-  [/\b(npm|npx|yarn|pnpm)\b/, 'use bun / bunx'],
-  [/\bpip3?\s+install\b|-m\s+pip\s+install\b/, 'use uv'],
+  // The tool as a command word: not part of a name like `npm-run-all` or `yarn.lock`.
+  [/(?<![\w@/.-])(npm|npx|yarn|pnpm)(?![\w.-])/, 'use bun / bunx'],
+  // pip itself, but not `uv pip install`, which is uv.
+  [/(?<!\buv\s+)\bpip3?\s+install\b|-m\s+pip\s+install\b/, 'use uv'],
 ];
 
 // Tracked files plus new ones not yet committed (ignored files excluded).

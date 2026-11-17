@@ -175,7 +175,6 @@ input {
   overflow: hidden;
   padding: 0 16px max(env(safe-area-inset-bottom), 12px);
   background: var(--sheet);
-  /* look-ok: the bottom sheet is a surface, not a control */
   border-radius: 14px 14px 0 0;
   box-shadow: var(--shadow-up);
   touch-action: none;
@@ -255,7 +254,6 @@ input {
 .live i {
   width: 8px;
   height: 8px;
-  /* look-ok: the live dot is a status light, not a button */
   border-radius: 50%;
   background: var(--departing);
   box-shadow: 0 0 0 4px color-mix(in oklab, var(--departing) 22%, transparent);
@@ -551,7 +549,6 @@ input {
     max-height: calc(100dvh - 104px);
     padding-top: 18px;
     padding-bottom: 12px;
-    /* look-ok: the side panel is a surface, not a control */
     border-radius: 12px;
     box-shadow: var(--shadow);
     touch-action: auto;

@@ -10,10 +10,25 @@ from typing import Any
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from src.airplanes_live import LONDON_AIRPORTS, get_destination
+from src.airplanes_live import (
+    APPROACH_CONE_DEG,
+    APPROACH_MAX_ALTITUDE_FT,
+    APPROACH_RADIUS_KM,
+    APPROACH_TRACK_TOLERANCE_DEG,
+    LONDON_AIRPORTS,
+    get_destination,
+)
 from src.models import AircraftState
 
 EARTH_RADIUS_KM = 6371.0
+# The heuristic's thresholds, imported so the tests follow the code.
+RADIUS = APPROACH_RADIUS_KM
+MAX_FT = APPROACH_MAX_ALTITUDE_FT
+TRACK_TOL = APPROACH_TRACK_TOLERANCE_DEG
+CONE = APPROACH_CONE_DEG
+# Generated values stay this far from each threshold, clear of float rounding
+# and of the spherical-geometry approximations in the helpers below.
+MARGIN = 0.5
 
 # Deterministic and quick: same examples every run, no example database on disk.
 deterministic = settings(derandomize=True, database=None, max_examples=200)
@@ -57,7 +72,7 @@ irrelevant = st.fixed_dictionaries(
 runways = st.sampled_from(
     [(code, h) for code, data in LONDON_AIRPORTS.items() for h in data["headings"]]
 )
-approach_altitude = st.integers(0, 4000)
+approach_altitude = st.integers(0, MAX_FT)
 level_or_descending = st.integers(-3000, 0)
 
 
@@ -94,9 +109,9 @@ def on_centreline(
 @deterministic
 @given(
     runway=runways,
-    km=st.floats(0.5, 24.5),
-    offset=st.floats(-7.5, 7.5),
-    track_error=st.floats(-14.5, 14.5),
+    km=st.floats(MARGIN, RADIUS - MARGIN),
+    offset=st.floats(-(CONE - MARGIN), CONE - MARGIN),
+    track_error=st.floats(-(TRACK_TOL - MARGIN), TRACK_TOL - MARGIN),
     altitude=approach_altitude,
     vertical_rate=level_or_descending,
     extra=irrelevant,
@@ -113,9 +128,9 @@ def test_inside_the_cone_counts_whatever_the_irrelevant_fields(
 @deterministic
 @given(
     runway=runways,
-    km=st.floats(0.5, 24.5),
-    offset=st.floats(8.5, 180) | st.floats(-180, -8.5),
-    track_error=st.floats(-15, 15),
+    km=st.floats(MARGIN, RADIUS - MARGIN),
+    offset=st.floats(CONE + MARGIN, 180) | st.floats(-180, -(CONE + MARGIN)),
+    track_error=st.floats(-TRACK_TOL, TRACK_TOL),
     altitude=approach_altitude,
     vertical_rate=level_or_descending,
     extra=irrelevant,
@@ -132,10 +147,11 @@ def test_outside_the_cone_never_counts(
 @deterministic
 @given(
     runway=runways,
-    km=st.floats(0.5, 24.5),
-    offset=st.floats(-8, 8),
+    km=st.floats(MARGIN, RADIUS - MARGIN),
+    offset=st.floats(-CONE, CONE),
     # More than 15 deg off the runway heading and off its reciprocal too.
-    track_error=st.floats(15.5, 164.5) | st.floats(-164.5, -15.5),
+    track_error=st.floats(TRACK_TOL + MARGIN, 180 - TRACK_TOL - MARGIN)
+    | st.floats(-(180 - TRACK_TOL - MARGIN), -(TRACK_TOL + MARGIN)),
     altitude=approach_altitude,
     vertical_rate=level_or_descending,
     extra=irrelevant,
@@ -152,14 +168,14 @@ def test_track_more_than_15_degrees_off_never_counts(
 @deterministic
 @given(
     runway=runways,
-    km=st.floats(0.5, 24.5),
-    offset=st.floats(-7.5, 7.5),
-    track_error=st.floats(-14.5, 14.5),
+    km=st.floats(MARGIN, RADIUS - MARGIN),
+    offset=st.floats(-(CONE - MARGIN), CONE - MARGIN),
+    track_error=st.floats(-(TRACK_TOL - MARGIN), TRACK_TOL - MARGIN),
     # Start from an aircraft that would count, then break exactly one condition.
     state=st.one_of(
         st.tuples(approach_altitude, st.integers(1, 6000), st.just(False)),  # climbing
         st.tuples(
-            st.integers(4001, 50_000), level_or_descending, st.just(False)
+            st.integers(MAX_FT + 1, 50_000), level_or_descending, st.just(False)
         ),  # too high
         st.tuples(
             approach_altitude, level_or_descending, st.just(True)
@@ -186,9 +202,10 @@ def test_climbing_high_grounded_or_unknown_never_counts(
 @deterministic
 @given(
     runway=runways,
-    along_km=st.floats(0.5, 24),
-    # A downwind leg sits several km abeam; 4 km is already outside the cone at 24 km.
-    abeam_km=st.floats(4, 12),
+    along_km=st.floats(MARGIN, RADIUS - MARGIN),
+    # A downwind leg sits several km abeam. This far abeam is outside the cone
+    # even at the edge of the radius.
+    abeam_km=st.floats(RADIUS * math.tan(math.radians(CONE)) + MARGIN, 12),
     side=st.sampled_from([-90, 90]),
     # Flying the runway heading or the reciprocal (a downwind leg).
     reverse=st.booleans(),
@@ -213,4 +230,23 @@ def test_parallel_leg_offset_from_the_centreline_never_counts(
     lat, lon = destination_point(lat0, lon0, heading + 180 + side, abeam_km)
     track = heading + (180 if reverse else 0) + track_error
     ac = aircraft(lat, lon, track, altitude, vertical_rate, extra)
+    assert get_destination(ac) != code
+
+
+@deterministic
+@given(
+    runway=runways,
+    km=st.floats(RADIUS + MARGIN, 60),
+    offset=st.floats(-(CONE - MARGIN), CONE - MARGIN),
+    track_error=st.floats(-(TRACK_TOL - MARGIN), TRACK_TOL - MARGIN),
+    altitude=approach_altitude,
+    vertical_rate=level_or_descending,
+    extra=irrelevant,
+)
+def test_beyond_the_radius_never_counts(
+    runway, km, offset, track_error, altitude, vertical_rate, extra
+):
+    code, heading = runway
+    lat, lon = on_centreline(code, heading, km, offset)
+    ac = aircraft(lat, lon, heading + track_error, altitude, vertical_rate, extra)
     assert get_destination(ac) != code

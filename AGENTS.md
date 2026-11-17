@@ -65,7 +65,7 @@ every 60 s: cache -> H3 cells (resolution 8) -> historical_heatmap.parquet (1-2 
 
 Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, and `/debug/airplanes_live` only when `ENABLE_DEBUG_ENDPOINTS=true` (it calls upstream on every request). Swagger UI is at `/docs`.
 
-**Arrival heuristic.** `get_destination` counts an aircraft as inbound to LHR, LGW, STN, LTN or LCY when it is close, low, not climbing, and lined up inside a narrow cone on a runway's extended centreline. The thresholds and the rules (a parallel downwind leg never counts, and so on) are Hypothesis properties in `apps/backend/tests/test_arrival_properties.py`.
+**Arrival heuristic.** An aircraft counts as inbound to an airport (LHR, LGW, STN, LTN, LCY) when it is within 25 km, at or below 4,000 ft, level or descending, its track is within 15° of a runway heading, and its bearing from the airport lies inside an 8° cone along the extended centreline. The cone stops aircraft on a parallel downwind leg from counting. The thresholds are the `APPROACH_*` constants in `airplanes_live.py`; Hypothesis properties in `apps/backend/tests/test_arrival_properties.py` check each condition, and the downwind case, against them.
 
 **Units** stay aviation-native as the feed gives them: feet, knots, ft/min.
 
@@ -89,10 +89,10 @@ Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, an
 - **Pydantic is the schema source of truth.** Change `apps/backend/src/models.py`, then `mise run codegen`. Never edit `generated.ts` by hand; it and `openapi.json` are committed so the frontend builds without the backend.
 - **camelCase JSON, snake_case Python.** `alias_generator=to_camel` on the models does the conversion.
 - **One `/aircraft` response** carries aircraft and KPIs together, so they always agree.
-- **Packages:** `bun add` from the repo root for JS, `uv add` in `apps/backend/` for Python. `scripts/check-packages.ts` enforces it.
+- **Packages:** `bun add` from the repo root for JS, `uv add` in `apps/backend/` for Python. No npm, yarn or pip. `scripts/check-packages.ts` fails on their lockfiles anywhere and on their commands in tasks, manifests, CI, hooks and Dockerfiles; it does not read docs or code.
 - **Tooling:** mise for tasks and tool versions, bun for packages, call vite/vitest/playwright directly; no task-runner layer, since one went unused.
 - **Pre-commit hook** (`.githooks/pre-commit`) runs ruff and Biome on staged files.
-- **Look:** greys for every control; colour only on aircraft (amber landing, teal taking off, blue picked) and the violet busy-times ramp. Atkinson Hyperlegible Next, self-hosted, tabular figures. `scripts/check-look.ts` keeps colours in the `:root` tokens of `apps/frontend/src/styles.css` and radii at 8px or less; mark a deliberate exception `/* look-ok: why */`.
+- **Look:** greys for every control; colour only on aircraft (amber landing, teal taking off, blue picked) and the violet busy-times ramp. Small radii (8px), never pill-shaped buttons. Atkinson Hyperlegible Next, self-hosted, tabular figures. Tokens are the `:root` block in `apps/frontend/src/styles.css`. `scripts/check-look.ts` fails on colour literals outside those tokens, and on radii over 8px on buttons, inputs and other controls (CSS, Tailwind classes, inline styles); mark a deliberate exception `/* look-ok: why */`. It does not check that controls are grey, the deck.gl colour arrays, or fonts.
 - **Show only what the data has:** no origin airports or flight counts per hour (the backend stores neither); wording comes from `features/flights/flights.ts`.
 - **Agent instructions** live only in this file; `CLAUDE.md` just imports it.
 
