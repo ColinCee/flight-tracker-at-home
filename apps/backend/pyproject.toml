@@ -17,6 +17,7 @@ dev = [
     "ruff>=0.8.0",
     "ty>=0.0.28",
     "pytest-asyncio>=1.3.0",
+    "hypothesis>=6.170.15",
 ]
 
 [tool.pytest.ini_options]

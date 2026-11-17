@@ -14,8 +14,11 @@
   --selected: #5aa9ff;
   --emergency: #ff5c5c;
   --bar: #3a3c40;
+  --dim-on-light: #55585d;
+  --glass: rgb(24 25 27 / 0.8);
   --radius: 8px;
   --shadow: 0 6px 20px rgb(0 0 0 / 0.45);
+  --shadow-up: 0 -10px 30px rgb(0 0 0 / 0.5);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --font: "Atkinson Hyperlegible Next Variable", system-ui, sans-serif;
 }
@@ -172,8 +175,9 @@ input {
   overflow: hidden;
   padding: 0 16px max(env(safe-area-inset-bottom), 12px);
   background: var(--sheet);
+  /* look-ok: the bottom sheet is a surface, not a control */
   border-radius: 14px 14px 0 0;
-  box-shadow: 0 -10px 30px rgb(0 0 0 / 0.5);
+  box-shadow: var(--shadow-up);
   touch-action: none;
   transition: height 300ms var(--ease-out);
 }
@@ -251,6 +255,7 @@ input {
 .live i {
   width: 8px;
   height: 8px;
+  /* look-ok: the live dot is a status light, not a button */
   border-radius: 50%;
   background: var(--departing);
   box-shadow: 0 0 0 4px color-mix(in oklab, var(--departing) 22%, transparent);
@@ -304,7 +309,7 @@ input {
   color: var(--ink);
 }
 .chip[aria-pressed="true"] .chip-n {
-  color: #55585d;
+  color: var(--dim-on-light);
 }
 
 .flights {
@@ -546,6 +551,7 @@ input {
     max-height: calc(100dvh - 104px);
     padding-top: 18px;
     padding-bottom: 12px;
+    /* look-ok: the side panel is a surface, not a control */
     border-radius: 12px;
     box-shadow: var(--shadow);
     touch-action: auto;
@@ -557,7 +563,7 @@ input {
 
 /* MapLibre's attribution: themed, and clear of the search bar on phones. */
 .maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib {
-  background: rgb(24 25 27 / 0.8);
+  background: var(--glass);
   color: var(--dim);
   font-family: var(--font);
 }
