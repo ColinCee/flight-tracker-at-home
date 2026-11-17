@@ -75,6 +75,14 @@ CATEGORY_MAP = {
 
 _VERTICAL_RATE_THRESHOLD_FPM = 200
 
+# Arrival heuristic (get_destination); tests/test_arrival_properties.py checks them.
+APPROACH_RADIUS_KM = 25.0  # within this of the airport
+APPROACH_MAX_ALTITUDE_FT = 4000  # typical ILS intercept altitude
+APPROACH_TRACK_TOLERANCE_DEG = (
+    15.0  # track either side of a runway heading, for crosswinds
+)
+APPROACH_CONE_DEG = 8.0  # bearing either side of the extended centreline
+
 _http_client: httpx.AsyncClient | None = None
 
 
@@ -272,8 +280,10 @@ def get_destination(
     if aircraft.vertical_rate_fpm is None or aircraft.vertical_rate_fpm > 0:
         return None
 
-    # Must be below 4,000 ft (Typical ILS intercept altitude)
-    if aircraft.baro_altitude_ft is None or aircraft.baro_altitude_ft > 4000:
+    if (
+        aircraft.baro_altitude_ft is None
+        or aircraft.baro_altitude_ft > APPROACH_MAX_ALTITUDE_FT
+    ):
         return None
 
     if aircraft.true_track is None:
@@ -285,21 +295,25 @@ def get_destination(
         lat_airport = data["lat"]
         lon_airport = data["lon"]
 
-        # 1. Fast Distance Check: Must be within 25km
+        # 1. Fast distance check
         dist = calculate_distance_km(
             aircraft.latitude,
             aircraft.longitude,
             lat_airport,
             lon_airport,
         )
-        if dist > 25.0:
+        if dist > APPROACH_RADIUS_KM:
             continue
 
         headings = data["headings"]
 
         for h in headings:
-            # 2. Heading Check: Is the plane pointing exactly at the runway? (+/- 15 deg for crosswinds)
-            if not ((h - 15) <= track <= (h + 15)):
+            # 2. Heading check: is the plane pointing along the runway?
+            if not (
+                (h - APPROACH_TRACK_TOLERANCE_DEG)
+                <= track
+                <= (h + APPROACH_TRACK_TOLERANCE_DEG)
+            ):
                 continue
 
             # 3. Position Check (The ILS Cone): Is the plane physically lined up with the runway?
@@ -316,8 +330,8 @@ def get_destination(
                 (bearing_from_airport - runway_reciprocal + 180) % 360 - 180
             )
 
-            # If the plane is within an 8-degree cone extending from the runway, it is on approach!
-            if angle_diff <= 8.0:
+            # Inside the cone extending from the runway: on approach
+            if angle_diff <= APPROACH_CONE_DEG:
                 return airport_code  # type: ignore
 
     return None
