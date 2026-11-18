@@ -32,12 +32,16 @@ jobs:
 
   test-e2e:
     name: E2E Tests
-    runs-on: ubuntu-24.04  # Playwright 1.59 cannot install Chromium on ubuntu-latest (26.04)
+    runs-on: ubuntu-latest
+    # Chromium and its system libraries come in the image, so no run waits on Ubuntu's package mirror
+    # (2 min for 32 MB at its slowest). The tag must match @playwright/test in package.json.
+    container: mcr.microsoft.com/playwright:v1.64.1-noble
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      # The container's user does not own the checkout, so git refuses it until told it is safe.
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
       - run: mise run setup
-      - run: bunx playwright install chromium --with-deps
       - run: mise run test:e2e
       - run: mise run test:e2e:prod
       - name: Speed budgets
