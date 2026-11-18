@@ -38,6 +38,8 @@ jobs:
     container: mcr.microsoft.com/playwright:v1.64.1-noble
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      # The container's user does not own the checkout, so git refuses it until told it is safe.
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
       - run: mise run setup
       - run: mise run test:e2e
