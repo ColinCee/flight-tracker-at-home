@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkLook, type Source } from './check-look';
+import { checkLook, type Source } from './look';
 
 const lines = (sources: Source[]) => checkLook(sources).problems.map((p) => `${p.file}:${p.line}`);
 const lineWith = (text: string, needle: string) =>

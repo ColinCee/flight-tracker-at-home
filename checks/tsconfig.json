@@ -3,7 +3,7 @@
   "compilerOptions": {
     "composite": true,
     "noEmit": true,
-    "tsBuildInfoFile": "../dist/scripts.tsbuildinfo",
+    "tsBuildInfoFile": "../dist/checks.tsbuildinfo",
     "lib": ["es2024"],
     "types": ["node"]
   },

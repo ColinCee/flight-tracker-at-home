@@ -7,7 +7,7 @@
 // Not checked: "greys for every control" (which colour a control uses), the
 // deck.gl colour arrays ([r, g, b, a]) in TS, and fonts.
 // A deliberate exception: put /* look-ok: why */ just before the rule or declaration.
-// Run with `bun scripts/check-look.ts` (part of `mise run check`).
+// Run with `bun checks/look.ts` (part of `mise run check`).
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
