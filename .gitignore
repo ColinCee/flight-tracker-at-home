@@ -78,3 +78,6 @@ opencode.json
 
 # Ignore local database and analytical files
 *.parquet
+
+# Design plugin caches (impeccable)
+.impeccable/
