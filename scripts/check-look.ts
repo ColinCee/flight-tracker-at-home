@@ -79,7 +79,7 @@ for (const [file, text] of sources) {
     controlTags.push({ file, text, index, tag });
     // Static class names in className="..." or className={`...`} (skipping ${...}).
     for (const m of tag.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\}|\{'([^']*)'\})/g)) {
-      const names = (m[1] ?? m[2] ?? m[3]).replace(/\$\{[^}]*\}/g, ' ');
+      const names = (m[1] ?? m[2] ?? m[3] ?? '').replace(/\$\{[^}]*\}/g, ' ');
       for (const name of names.split(/\s+/).filter(Boolean)) controlClasses.add(name);
     }
   }
@@ -87,13 +87,14 @@ for (const [file, text] of sources) {
 
 const pillClass = /\brounded(-[trbl]{1,2}|-[se]{1,2})?-(xl|2xl|3xl|4xl|full|\[[^\]]*\])/;
 for (const { file, text, index, tag } of controlTags) {
+  const firstLine = tag.split('\n')[0] ?? '';
   if (pillClass.test(tag)) {
-    report(file, text, index, tag.split('\n')[0], 'control with a large or pill radius class');
+    report(file, text, index, firstLine, 'control with a large or pill radius class');
   }
   const inline = /borderRadius:\s*(?:'([^']*)'|"([^"]*)"|(\d+(?:\.\d+)?))/.exec(tag);
   if (inline) {
-    const why = radiusProblem(inline[1] ?? inline[2] ?? inline[3]);
-    if (why) report(file, text, index, tag.split('\n')[0], `control's inline ${why}`);
+    const why = radiusProblem(inline[1] ?? inline[2] ?? inline[3] ?? '');
+    if (why) report(file, text, index, firstLine, `control's inline ${why}`);
   }
 }
 
@@ -115,7 +116,7 @@ function selectsControl(selector: string): boolean {
         .pop() ?? '';
     if (/^(button|input|select|textarea)\b/.test(subject)) return true;
     if (/\[role=["']?(button|tab|switch|checkbox|radio|slider)/.test(subject)) return true;
-    return [...subject.matchAll(/\.([\w-]+)/g)].some((m) => controlClasses.has(m[1]));
+    return [...subject.matchAll(/\.([\w-]+)/g)].some((m) => controlClasses.has(m[1] ?? ''));
   });
 }
 
@@ -136,7 +137,7 @@ function checkCss(file: string, text: string) {
     const m = /^\s*([\w-]+)\s*:\s*([\s\S]+?)\s*$/.exec(raw);
     const rule = selectors.at(-1);
     if (!m || !rule || rule.text.startsWith('@')) return;
-    const [, prop, value] = m;
+    const [, prop = '', value = ''] = m;
     const at = start + raw.search(/\S/);
     if (rule.text === ':root') {
       if (prop === '--radius') {

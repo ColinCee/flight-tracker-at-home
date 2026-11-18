@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "tsBuildInfoFile": "../dist/scripts.tsbuildinfo",
+    "lib": ["es2024"],
+    "types": ["node"]
+  },
+  "include": ["*.ts"]
+}

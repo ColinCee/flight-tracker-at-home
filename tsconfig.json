@@ -3,6 +3,9 @@
   "references": [
     {
       "path": "./apps/frontend"
+    },
+    {
+      "path": "./scripts"
     }
   ]
 }
