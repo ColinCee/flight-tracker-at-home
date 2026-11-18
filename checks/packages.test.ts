@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { packageProblems } from './check-packages';
+import { packageProblems } from './packages';
 
 const where = (file: string, text?: string) =>
   packageProblems(file, text).map((p) => p.slice(0, p.indexOf(': ')));

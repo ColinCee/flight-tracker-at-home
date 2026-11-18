@@ -39,7 +39,7 @@ mise run setup        # bun install, uv sync, git hooks
 mise run ci           # setup, then everything CI runs, in order
 mise run dev          # frontend :4200 + backend :8000 (dev:frontend / dev:backend run one)
 mise run format       # ruff + biome, auto-fix
-mise run check        # ruff, biome, ty, tsc, scripts/check-*.ts (what CI runs)
+mise run check        # ruff, biome, ty, tsc, checks/*.ts (what CI runs)
 mise run test         # pytest + vitest
 mise run test:e2e     # Playwright against dev servers with mock data
 mise run test:e2e:prod  # Playwright against a production build
@@ -89,10 +89,11 @@ Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, an
 - **Pydantic is the schema source of truth.** Change `apps/backend/src/models.py`, then `mise run codegen`. Never edit `generated.ts` by hand; it and `openapi.json` are committed so the frontend builds without the backend.
 - **camelCase JSON, snake_case Python.** `alias_generator=to_camel` on the models does the conversion.
 - **One `/aircraft` response** carries aircraft and KPIs together, so they always agree.
-- **Packages:** `bun add` from the repo root for JS, `uv add` in `apps/backend/` for Python. No npm, yarn or pip. `scripts/check-packages.ts` fails on their lockfiles anywhere and on their commands in tasks, manifests, CI, hooks and Dockerfiles; it does not read docs or code.
+- **Packages:** `bun add` from the repo root for JS, `uv add` in `apps/backend/` for Python. No npm, yarn or pip. `checks/packages.ts` fails on their lockfiles anywhere and on their commands in tasks, manifests, CI, hooks and Dockerfiles; it does not read docs or code.
 - **Tooling:** mise for tasks and tool versions, bun for packages, call vite/vitest/playwright directly; no task-runner layer, since one went unused.
+- **Folders:** one per job, named for it, never a catch-all (`scripts`, `utils`, `lib`, `common`, `helpers`, `misc`, `shared`); a file only one other uses sits beside it. `checks/folders.ts` fails on a catch-all name outside its short allowlist.
 - **Pre-commit hook** (`.githooks/pre-commit`) runs ruff and Biome on staged files.
-- **Look:** greys for every control; colour only on aircraft (amber landing, teal taking off, blue picked) and the violet busy-times ramp. Small radii (8px), never pill-shaped buttons. Atkinson Hyperlegible Next, self-hosted, tabular figures. Tokens are the `:root` block in `apps/frontend/src/styles.css`. `scripts/check-look.ts` fails on colour literals outside those tokens, and on radii over 8px on buttons, inputs and other controls (CSS, Tailwind classes, inline styles); mark a deliberate exception `/* look-ok: why */`. It reads only `apps/frontend/src` (not the colours in `index.html` or `manifest.webmanifest`), misses named colours like `'red'` in TS/TSX, ties a CSS rule to a control only through the last part of its selector (a tag, role or a class seen on a control's className), and does not check that controls are grey, the deck.gl colour arrays, or fonts.
+- **Look:** greys for every control; colour only on aircraft (amber landing, teal taking off, blue picked) and the violet busy-times ramp. Small radii (8px), never pill-shaped buttons. Atkinson Hyperlegible Next, self-hosted, tabular figures. Tokens are the `:root` block in `apps/frontend/src/styles.css`. `checks/look.ts` fails on colour literals outside those tokens, and on radii over 8px on buttons, inputs and other controls (CSS, Tailwind classes, inline styles); mark a deliberate exception `/* look-ok: why */`. It reads only `apps/frontend/src` (not the colours in `index.html` or `manifest.webmanifest`), misses named colours like `'red'` in TS/TSX, ties a CSS rule to a control only through the last part of its selector (a tag, role or a class seen on a control's className), and does not check that controls are grey, the deck.gl colour arrays, or fonts.
 - **Show only what the data has:** no origin airports or flight counts per hour (the backend stores neither); wording comes from `features/flights/flights.ts`.
 - **Agent instructions** live only in this file; `CLAUDE.md` just imports it.
 

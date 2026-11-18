@@ -1,7 +1,7 @@
 // Fails when another package manager slips in: bun for JS, uv for Python.
 // Lockfiles and manifests fail at any depth; commands are checked only in the
 // files that run them (tasks, manifests, CI, hooks, Dockerfiles), not in docs or code.
-// Run with `bun scripts/check-packages.ts` (part of `mise run check`).
+// Run with `bun checks/packages.ts` (part of `mise run check`).
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';

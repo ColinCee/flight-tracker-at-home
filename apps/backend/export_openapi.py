@@ -2,9 +2,8 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
-OUTPUT_PATH = ROOT / "apps/frontend/openapi.json"
-BACKEND_ROOT = Path(__file__).resolve().parents[1]
+BACKEND_ROOT = Path(__file__).resolve().parent
+OUTPUT_PATH = BACKEND_ROOT.parents[1] / "apps/frontend/openapi.json"
 
 
 def main() -> None:

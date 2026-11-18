@@ -53,15 +53,16 @@ run = [
 ]
 
 [tasks.check]
-description = "Lint, format, type check, and the package and look checks in scripts/ (no modifications)"
+description = "Lint, format, type check, and the repo checks in checks/ (no modifications)"
 run = [
   "uvx ruff check apps/backend/",
   "uvx ruff format --check apps/backend/",
   "bunx biome check .",
   "cd apps/backend && uv run ty check",
   "bunx tsc --build",
-  "bun scripts/check-packages.ts",
-  "bun scripts/check-look.ts",
+  "bun checks/packages.ts",
+  "bun checks/look.ts",
+  "bun checks/folders.ts",
 ]
 
 [tasks.test]
@@ -97,14 +98,14 @@ run = "cd apps/e2e && bunx playwright test --config speed/playwright.config.ts"
 [tasks.codegen]
 description = "Regenerate frontend API types from backend schema"
 run = [
-  "cd apps/backend && uv run python scripts/export_openapi.py",
+  "cd apps/backend && uv run python export_openapi.py",
   "bunx orval --config orval.config.ts",
 ]
 
 [tasks."codegen:check"]
 description = "Check generated frontend types are in sync with backend schema"
 run = [
-  "cd apps/backend && uv run python scripts/export_openapi.py",
+  "cd apps/backend && uv run python export_openapi.py",
   "bunx orval --config orval.config.ts",
   "git diff --exit-code --stat apps/frontend/openapi.json apps/frontend/src/api/generated.ts || (echo Generated API types are out of sync, run: mise run codegen && exit 1)",
 ]

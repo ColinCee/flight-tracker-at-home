@@ -5,7 +5,7 @@
       "path": "./apps/frontend"
     },
     {
-      "path": "./scripts"
+      "path": "./checks"
     }
   ]
 }
