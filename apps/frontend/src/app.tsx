@@ -11,9 +11,9 @@ import { LivePanel } from '@/features/flights/LivePanel';
 import { AircraftLayer } from '@/features/map/AircraftLayer';
 import { AirportLayer } from '@/features/map/AirportLayer';
 import { type Focus, MapView, type Padding } from '@/features/map/MapView';
-import { Sheet } from '@/shared/ui/Sheet';
-import { type Snap, snapHeights } from '@/shared/ui/sheet-snap';
-import { useMediaQuery, WIDE_QUERY } from '@/shared/use-media-query';
+import { Sheet } from '@/sheet/Sheet';
+import { type Snap, snapHeights } from '@/sheet/sheet-snap';
+import { useMediaQuery, WIDE_QUERY } from '@/use-media-query';
 
 // The busy-times layer pulls in @deck.gl/geo-layers and h3-js; live never needs them.
 const BusyLayer = lazy(() => import('@/features/busy/BusyLayer'));

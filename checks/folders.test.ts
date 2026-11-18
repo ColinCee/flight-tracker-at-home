@@ -13,7 +13,7 @@ describe('catchAllFolders', () => {
     expect(catchAllFolders(files)).toEqual(['scripts', 'apps/backend/scripts']);
   });
 
-  it('passes a file named like a catch-all and the allowed folder', () => {
-    expect(catchAllFolders(['lib.ts', 'apps/frontend/src/shared/font.ts'])).toEqual([]);
+  it('passes a file named like a catch-all', () => {
+    expect(catchAllFolders(['lib.ts', 'apps/frontend/src/use-media-query.ts'])).toEqual([]);
   });
 });

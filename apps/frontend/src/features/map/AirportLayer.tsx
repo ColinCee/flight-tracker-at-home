@@ -1,8 +1,8 @@
 import { TextLayer } from '@deck.gl/layers';
 import { useEffect, useMemo, useState } from 'react';
-import { FONT_FAMILY } from '@/shared/font';
 import { AIRPORTS } from './airports';
 import { useDeckLayers } from './deck-overlay';
+import { FONT_FAMILY } from './font';
 
 type Airport = (typeof AIRPORTS)[number];
 
