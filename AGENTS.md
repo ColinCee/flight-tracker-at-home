@@ -10,7 +10,7 @@ apps/
 ├── frontend/          React 19 + Vite + Tailwind + TanStack Query, deployed to Cloudflare Pages
 │   ├── src/api/       Orval-generated client (generated.ts) + hooks that poll it
 │   ├── src/features/  flights/ (list, card, wording), busy/, controls/, map/; tests next to the code
-│   ├── src/shared/    Cross-feature UI and filters
+│   ├── src/sheet/     Bottom sheet (a side panel on wide screens) that holds the panels
 │   └── openapi.json   Backend schema, exported by `mise run codegen`
 ├── backend/           Python FastAPI; image pushed to GHCR, run by the homelab repo
 │   ├── src/main.py            Endpoints + 60 s heatmap snapshot task
