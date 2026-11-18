@@ -17,6 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.bun/install/cache
+            ~/.cache/uv
+          key: deps-${{ runner.os }}-${{ hashFiles('bun.lock', 'apps/backend/uv.lock') }}
+          restore-keys: deps-${{ runner.os }}-
       - run: mise run setup
       - run: mise run check
       - run: mise run codegen:check
@@ -27,21 +34,66 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.bun/install/cache
+            ~/.cache/uv
+          key: deps-${{ runner.os }}-${{ hashFiles('bun.lock', 'apps/backend/uv.lock') }}
+          restore-keys: deps-${{ runner.os }}-
       - run: mise run setup
       - run: mise run test
 
-  test-e2e:
-    name: E2E Tests
+  # The three Playwright suites run side by side on their own runners: the
+  # speed budgets also get a machine to themselves, so nothing competes with
+  # their timings.
+  e2e:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-24.04  # Playwright 1.59 cannot install Chromium on ubuntu-latest (26.04)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: E2E (dev servers)
+            task: test:e2e
+          - name: E2E (production build)
+            task: test:e2e:prod
+          - name: Speed budgets
+            task: test:speed
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.bun/install/cache
+            ~/.cache/uv
+          key: deps-${{ runner.os }}-${{ hashFiles('bun.lock', 'apps/backend/uv.lock') }}
+          restore-keys: deps-${{ runner.os }}-
       - run: mise run setup
-      - run: bunx playwright install chromium --with-deps
-      - run: mise run test:e2e
-      - run: mise run test:e2e:prod
-      - name: Speed budgets
-        run: mise run test:speed
+      - id: playwright
+        run: echo "version=$(bunx playwright --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+      - id: browser-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-ubuntu-24.04-${{ runner.arch }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install chromium --with-deps
+      # A cached browser still needs its system libraries.
+      - if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
+      - run: mise run ${{ matrix.task }}
+
+  # Keeps the required check "E2E Tests" in the repo ruleset: it passes only
+  # when every suite above passed.
+  test-e2e:
+    name: E2E Tests
+    needs: e2e
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.e2e.result }}" = success
 
   # Keeps the name of a required check in the repo ruleset. Agent
   # instructions live only in AGENTS.md; CLAUDE.md just imports it.
