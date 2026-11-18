@@ -5,17 +5,14 @@ import { execFileSync } from 'node:child_process';
 
 const catchAll = new Set(['scripts', 'utils', 'lib', 'common', 'helpers', 'misc', 'shared']);
 
-// Each with why it stays for now; keep it short.
-const allowed = new Map([['apps/frontend/src/shared', 'not yet split by job; its own change']]);
-
-/** Each folder in `files` with a catch-all name, once, outside the allowed list. */
+/** Each folder in `files` with a catch-all name, once. */
 export function catchAllFolders(files: string[]): string[] {
   const found = new Set<string>();
   for (const file of files) {
     const parts = file.split('/').slice(0, -1);
     parts.forEach((part, i) => {
       const folder = parts.slice(0, i + 1).join('/');
-      if (catchAll.has(part) && !allowed.has(folder)) found.add(folder);
+      if (catchAll.has(part)) found.add(folder);
     });
   }
   return [...found];
