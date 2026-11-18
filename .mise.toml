@@ -68,7 +68,7 @@ run = [
 description = "Run all tests"
 run = [
   "cd apps/backend && uv run pytest",
-  "cd apps/frontend && bunx vitest run",
+  "bunx vitest run",
 ]
 
 [tasks.typecheck]

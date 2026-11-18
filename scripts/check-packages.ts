@@ -26,35 +26,54 @@ const forbiddenCommands: [RegExp, string][] = [
   [/(?<!\buv\s+)\bpip3?\s+install\b|-m\s+pip\s+install\b/, 'use uv'],
 ];
 
-// Tracked files plus new ones not yet committed (ignored files excluded).
-const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
-  encoding: 'utf8',
-})
-  .split('\n')
-  .filter(Boolean);
+/** Whether the file runs commands, so the command check needs its text. */
+export function runsCommands(file: string): boolean {
+  return commandFile.test(file);
+}
 
-const problems: string[] = [];
-for (const file of files) {
+/**
+ * Problems with one repo file: a forbidden lockfile or manifest by its name, and
+ * forbidden commands in `text` when the file runs commands.
+ */
+export function packageProblems(file: string, text: string | undefined): string[] {
+  const problems: string[] = [];
   for (const [pattern, why] of forbiddenFiles) {
     if (pattern.test(basename(file))) problems.push(`${file}: ${why}`);
   }
-  if (!commandFile.test(file)) continue;
-  let text: string;
-  try {
-    text = readFileSync(file, 'utf8');
-  } catch {
-    continue; // deleted but not yet staged
-  }
+  if (text === undefined || !runsCommands(file)) return problems;
   text.split('\n').forEach((line, i) => {
     for (const [pattern, why] of forbiddenCommands) {
       if (pattern.test(line)) problems.push(`${file}:${i + 1}: ${line.trim()} (${why})`);
     }
   });
+  return problems;
 }
 
-if (problems.length) {
-  console.error('Packages: bun for JS, uv for Python (AGENTS.md).\n');
-  for (const p of problems) console.error(`  ${p}`);
-  process.exit(1);
+if (import.meta.main) {
+  // Tracked files plus new ones not yet committed (ignored files excluded).
+  const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
+    encoding: 'utf8',
+  })
+    .split('\n')
+    .filter(Boolean);
+
+  const problems: string[] = [];
+  for (const file of files) {
+    let text: string | undefined;
+    if (runsCommands(file)) {
+      try {
+        text = readFileSync(file, 'utf8');
+      } catch {
+        // deleted but not yet staged
+      }
+    }
+    problems.push(...packageProblems(file, text));
+  }
+
+  if (problems.length) {
+    console.error('Packages: bun for JS, uv for Python (AGENTS.md).\n');
+    for (const p of problems) console.error(`  ${p}`);
+    process.exit(1);
+  }
+  console.log('Package managers OK: bun and uv only.');
 }
-console.log('Package managers OK: bun and uv only.');
