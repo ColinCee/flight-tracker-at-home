@@ -48,10 +48,10 @@ jobs:
         run: mise run test:speed
 
   # Keeps the name of a required check in the repo ruleset. Agent
-  # instructions live only in AGENTS.md; CLAUDE.md just imports it.
+  # instructions live only in AGENTS.md; a CLAUDE.md would make Claude Code skip it.
   rules-sync:
     name: Rules Sync Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: test -s AGENTS.md && test "$(cat CLAUDE.md)" = "@AGENTS.md"
+      - run: test -s AGENTS.md && test ! -e CLAUDE.md
