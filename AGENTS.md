@@ -69,7 +69,7 @@ Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, an
 
 **Units** stay aviation-native as the feed gives them: feet, knots, ft/min.
 
-**Upstream.** adsb.fi and adsb.lol need no key; both terms ask for credit on the site. If adsb.fi fails or answers with no aircraft, the backend tries `ADSB_FALLBACK_URL` (adsb.lol), and the cache serves its last good data while both fail. A failing primary logs at error once it has lasted 5 minutes, so the homelab's errors-logged alert sees it. `airplanes_live.py` is the upstream client; it keeps an earlier source's name.
+**Upstream.** adsb.fi and adsb.lol need no key; both terms ask for credit on the site. If adsb.fi fails or answers with no aircraft, the backend tries `ADSB_FALLBACK_URL` (adsb.lol), and the cache serves its last good data while both fail. A failing primary logs at error once it has lasted `PRIMARY_FAILING_ERROR_AFTER_S`, so the homelab's errors-logged alert sees it. `airplanes_live.py` is the upstream client; it keeps an earlier source's name.
 
 ## Configuration
 

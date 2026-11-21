@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # --- Configuration & Constants ---
 # ADSBx v2-shaped point endpoints, as URL templates with {lat}, {lon} and {radius}
 # (nautical miles). adsb.fi is first: side by side it gives more and fresher
-# positions, and adsb.lol refuses most daytime calls with 429.
+# positions, and adsb.lol allows an IP without a key 500 calls a day, then 429s.
 ADSB_API_URL = os.getenv(
     "ADSB_API_URL",
     "https://opendata.adsb.fi/api/v3/lat/{lat}/lon/{lon}/dist/{radius}",
@@ -29,6 +29,15 @@ ADSB_FALLBACK_URL = os.getenv(
 # The primary failing this long in a row logs at error, not warning, so the
 # homelab's errors-logged alert sees a primary the fallback is quietly covering.
 PRIMARY_FAILING_ERROR_AFTER_S = 300
+
+for _name, _template in (
+    ("ADSB_API_URL", ADSB_API_URL),
+    ("ADSB_FALLBACK_URL", ADSB_FALLBACK_URL),
+):
+    if _template and not all(
+        f"{{{key}}}" in _template for key in ("lat", "lon", "radius")
+    ):
+        raise ValueError(f"{_name} needs {{lat}}, {{lon}} and {{radius}}: {_template}")
 
 # Central London Reference Coordinates
 LONDON_LAT = 51.5072
@@ -129,16 +138,28 @@ async def _fetch_aircraft(url: str) -> list[dict[str, Any]]:
     return data.get("ac") or data.get("aircraft") or []
 
 
-def _primary_failed(reason: str) -> None:
+def _now() -> float:
+    return time.monotonic()
+
+
+def _primary_failed(reason: str, error: Exception | None = None) -> None:
     """Log a primary failure: a warning while it may be a blip, an error once
-    failures have lasted PRIMARY_FAILING_ERROR_AFTER_S in a row."""
+    failures have lasted PRIMARY_FAILING_ERROR_AFTER_S in a row, or at once for
+    a refusal other than 429 (a wrong address, which no wait mends)."""
     global _primary_failing_since
-    now = time.monotonic()
+    now = _now()
     if _primary_failing_since is None:
         _primary_failing_since = now
     lasted = now - _primary_failing_since
+    refused = (
+        isinstance(error, httpx.HTTPStatusError)
+        and 400 <= error.response.status_code < 500
+        and error.response.status_code != 429
+    )
     level = (
-        logging.ERROR if lasted >= PRIMARY_FAILING_ERROR_AFTER_S else logging.WARNING
+        logging.ERROR
+        if refused or lasted >= PRIMARY_FAILING_ERROR_AFTER_S
+        else logging.WARNING
     )
     logger.log(level, "Primary ADS-B API %s (failing for %.0fs)", reason, lasted)
 
@@ -160,7 +181,7 @@ async def fetch_london_airspace() -> list[dict[str, Any]]:
         if not ADSB_FALLBACK_URL:
             logger.warning("Error fetching from ADS-B API: %s", e)
             raise
-        _primary_failed(f"failed, trying fallback: {e!r}")
+        _primary_failed(f"failed, trying fallback: {e!r}", e)
     else:
         if not ADSB_FALLBACK_URL or _has_usable_aircraft(aircraft):
             _primary_failing_since = None
