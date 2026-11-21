@@ -567,6 +567,9 @@ input {
 .maplibregl-map .maplibregl-ctrl-attrib a {
   color: var(--dim);
 }
+.maplibregl-map:not(.attrib-folded) .maplibregl-ctrl-attrib {
+  visibility: hidden;
+}
 @media (width < 48rem) {
   .maplibregl-map .maplibregl-ctrl-top-right .maplibregl-ctrl-attrib {
     margin-top: calc(max(env(safe-area-inset-top), 12px) + 56px);

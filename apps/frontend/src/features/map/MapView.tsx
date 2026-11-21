@@ -47,11 +47,11 @@ interface MapViewProps {
 function onMapLoad({ target: map }: { target: maplibregl.Map }) {
   // A flat map: two-finger twists zoom but never rotate.
   map.touchZoomRotate.disableRotation();
-  // MapLibre opens the compact attribution on load; start it folded to its (i) button.
-  map
-    .getContainer()
-    .querySelector('.maplibregl-compact-show')
-    ?.classList.remove('maplibregl-compact-show');
+  // MapLibre opens the compact attribution on load; start it folded to its (i) button,
+  // and show it only then (styles.css), so the fold shifts nothing on screen.
+  const container = map.getContainer();
+  container.querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show');
+  container.classList.add('attrib-folded');
 }
 
 export function MapView({ padding, focus, wide, onEmptyClick, children }: MapViewProps) {
