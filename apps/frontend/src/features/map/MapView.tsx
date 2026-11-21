@@ -8,10 +8,11 @@ import { AttributionControl, Map as MapGL, type MapRef } from 'react-map-gl/mapl
 import { DeckOverlay } from './deck-overlay';
 import { isCoarsePointer, pickPickingRadius, pickPixelRatio } from './device';
 
-// The aircraft feeds' terms ask for credit with a link (README, Data).
+// adsb.fi's terms ask for a credit with a link; adsb.lol's data is under the ODbL.
 const AIRCRAFT_ATTRIBUTION =
   'Aircraft: <a href="https://adsb.fi/" target="_blank" rel="noopener">adsb.fi</a>, ' +
-  '<a href="https://adsb.lol/" target="_blank" rel="noopener">adsb.lol</a> (ODbL)';
+  '<a href="https://adsb.lol/" target="_blank" rel="noopener">adsb.lol</a> ' +
+  '(<a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>)';
 
 // maplibre v6 finds its worker next to its own module, but Vite bundles that
 // module and never emits the worker, so the map stays blank. Ship it as an asset.
