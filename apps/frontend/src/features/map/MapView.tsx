@@ -8,6 +8,12 @@ import { AttributionControl, Map as MapGL, type MapRef } from 'react-map-gl/mapl
 import { DeckOverlay } from './deck-overlay';
 import { isCoarsePointer, pickPickingRadius, pickPixelRatio } from './device';
 
+// adsb.fi's terms ask for a credit with a link; adsb.lol's data is under the ODbL.
+const AIRCRAFT_ATTRIBUTION =
+  'Aircraft: <a href="https://adsb.fi/" target="_blank" rel="noopener">adsb.fi</a>, ' +
+  '<a href="https://adsb.lol/" target="_blank" rel="noopener">adsb.lol</a> ' +
+  '(<a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>)';
+
 // maplibre v6 finds its worker next to its own module, but Vite bundles that
 // module and never emits the worker, so the map stays blank. Ship it as an asset.
 maplibregl.setWorkerUrl(maplibreWorkerUrl);
@@ -41,11 +47,11 @@ interface MapViewProps {
 function onMapLoad({ target: map }: { target: maplibregl.Map }) {
   // A flat map: two-finger twists zoom but never rotate.
   map.touchZoomRotate.disableRotation();
-  // MapLibre opens the compact attribution on load; start it folded to its (i) button.
-  map
-    .getContainer()
-    .querySelector('.maplibregl-compact-show')
-    ?.classList.remove('maplibregl-compact-show');
+  // MapLibre opens the compact attribution on load; start it folded to its (i) button,
+  // and show it only then (styles.css), so the fold shifts nothing on screen.
+  const container = map.getContainer();
+  container.querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show');
+  container.classList.add('attrib-folded');
 }
 
 export function MapView({ padding, focus, wide, onEmptyClick, children }: MapViewProps) {
@@ -121,7 +127,11 @@ export function MapView({ padding, focus, wide, onEmptyClick, children }: MapVie
       onLoad={onLoad}
       attributionControl={false}
     >
-      <AttributionControl compact position={wide ? 'bottom-right' : 'top-right'} />
+      <AttributionControl
+        compact
+        position={wide ? 'bottom-right' : 'top-right'}
+        customAttribution={AIRCRAFT_ATTRIBUTION}
+      />
       <DeckOverlay
         key={deckGeneration}
         styleReady={styleReady}
