@@ -131,7 +131,7 @@ if os.getenv("ENABLE_DEBUG_ENDPOINTS", "").lower() in ("true", "1", "yes"):
     async def debug_airplanes_live():
         """Diagnose Airplanes.live API connectivity from this server."""
         # We test the exact bounding box for Heathrow
-        api_url = f"{ADSB_API_URL}/51.47/-0.4543/30"
+        api_url = ADSB_API_URL.format(lat=51.47, lon=-0.4543, radius=30)
 
         results = {
             "authenticated": False,  # Airplanes.live is public, no auth required

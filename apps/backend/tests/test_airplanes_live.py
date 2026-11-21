@@ -605,6 +605,11 @@ def test_get_destination_parallel_south():
 
 
 # --- Upstream fallback ---
+@pytest.fixture(autouse=True)
+def _primary_not_failing(monkeypatch):
+    monkeypatch.setattr("src.airplanes_live._primary_failing_since", None)
+
+
 def _ac(hex_code):
     return {"hex": hex_code, "lat": 51.5, "lon": -0.1}
 
@@ -647,8 +652,8 @@ async def test_fetch_falls_back_on_primary_timeout():
     client = _FakeClient(primary_error=httpx.ReadTimeout(""))
     with patch("src.airplanes_live.get_client", return_value=client):
         assert await fetch_london_airspace() == [_ac("f")]
-    assert "adsb.fi" in client.urls[1]
-    assert "/lat/51.5072/lon/-0.1276/dist/60" in client.urls[1]
+    assert "adsb.fi/api/v3/lat/51.5072/lon/-0.1276/dist/60" in client.urls[0]
+    assert "adsb.lol/v2/point/51.5072/-0.1276/60" in client.urls[1]
 
 
 @pytest.mark.asyncio
@@ -690,7 +695,7 @@ async def test_fetch_falls_back_when_primary_has_no_aircraft(primary_payload):
     client = _EmptyPrimaryClient(primary_payload)
     with patch("src.airplanes_live.get_client", return_value=client):
         assert await fetch_london_airspace() == [_ac("f")]
-    assert "adsb.fi" in client.urls[1]
+    assert "adsb.lol" in client.urls[1]
 
 
 @pytest.mark.asyncio
@@ -720,3 +725,58 @@ async def test_fetch_returns_empty_primary_when_fallback_disabled():
     ):
         assert await fetch_london_airspace() == []
     assert len(client.urls) == 1
+
+
+@pytest.mark.asyncio
+async def test_lasting_primary_failure_logs_error(monkeypatch, caplog):
+    # A primary the fallback covers for hours must reach the errors-logged alert.
+    clock = [1000.0]
+    monkeypatch.setattr("src.airplanes_live._now", lambda: clock[0])
+
+    async def fetch(primary_error):
+        client = _FakeClient(primary_error=primary_error)
+        with patch("src.airplanes_live.get_client", return_value=client):
+            await fetch_london_airspace()
+
+    def levels():
+        return [r.levelname for r in caplog.records if "Primary" in r.getMessage()]
+
+    await fetch(httpx.ReadTimeout(""))
+    clock[0] += 299
+    await fetch(httpx.ReadTimeout(""))
+    assert levels() == ["WARNING", "WARNING"]
+    clock[0] += 1
+    await fetch(httpx.ReadTimeout(""))
+    assert levels()[-1] == "ERROR"
+
+    await fetch(None)  # a success ends the run
+    caplog.clear()
+    clock[0] += 1000
+    await fetch(httpx.ReadTimeout(""))
+    assert levels() == ["WARNING"]
+
+
+@pytest.mark.asyncio
+async def test_primary_refusal_logs_error_at_once(caplog):
+    request = httpx.Request("GET", "https://example.test")
+    refusal = httpx.HTTPStatusError(
+        "", request=request, response=httpx.Response(404, request=request)
+    )
+    client = _FakeClient(primary_error=refusal)
+    with patch("src.airplanes_live.get_client", return_value=client):
+        await fetch_london_airspace()
+    assert [r.levelname for r in caplog.records if "Primary" in r.getMessage()] == [
+        "ERROR"
+    ]
+
+
+def test_url_without_placeholders_is_refused(monkeypatch):
+    import importlib
+
+    import src.airplanes_live as module
+
+    monkeypatch.setenv("ADSB_API_URL", "https://api.adsb.lol/v2/point")
+    with pytest.raises(ValueError, match="ADSB_API_URL"):
+        importlib.reload(module)
+    monkeypatch.delenv("ADSB_API_URL")
+    importlib.reload(module)

@@ -15,16 +15,29 @@ from src.models import AircraftState, PositionSource
 logger = logging.getLogger(__name__)
 
 # --- Configuration & Constants ---
-# Any ADSBx v2-compatible point endpoint. airplanes.live blocked our IP in
-# Oct 2026, so the default is adsb.lol (same response shape, no auth).
-ADSB_API_URL = os.getenv("ADSB_API_URL", "https://api.adsb.lol/v2/point")
-# Tried when the primary fails or has no aircraft (adsb.lol times out several
-# times a day, and sometimes answers 200 with no aircraft). A URL
-# template with {lat}, {lon} and {radius}; set it empty to disable.
-ADSB_FALLBACK_URL = os.getenv(
-    "ADSB_FALLBACK_URL",
+# ADSBx v2-shaped point endpoints, as URL templates with {lat}, {lon} and {radius}
+# (nautical miles). adsb.fi is first: side by side it gives more and fresher
+# positions, and adsb.lol allows an IP without a key 500 calls a day, then 429s.
+ADSB_API_URL = os.getenv(
+    "ADSB_API_URL",
     "https://opendata.adsb.fi/api/v3/lat/{lat}/lon/{lon}/dist/{radius}",
 )
+# Tried when the primary fails or has no usable aircraft; set it empty to disable.
+ADSB_FALLBACK_URL = os.getenv(
+    "ADSB_FALLBACK_URL", "https://api.adsb.lol/v2/point/{lat}/{lon}/{radius}"
+)
+# The primary failing this long in a row logs at error, not warning, so the
+# homelab's errors-logged alert sees a primary the fallback is quietly covering.
+PRIMARY_FAILING_ERROR_AFTER_S = 300
+
+for _name, _template in (
+    ("ADSB_API_URL", ADSB_API_URL),
+    ("ADSB_FALLBACK_URL", ADSB_FALLBACK_URL),
+):
+    if _template and not all(
+        f"{{{key}}}" in _template for key in ("lat", "lon", "radius")
+    ):
+        raise ValueError(f"{_name} needs {{lat}}, {{lon}} and {{radius}}: {_template}")
 
 # Central London Reference Coordinates
 LONDON_LAT = 51.5072
@@ -85,6 +98,8 @@ APPROACH_TRACK_TOLERANCE_DEG = (
 APPROACH_CONE_DEG = 8.0  # bearing either side of the extended centreline
 
 _http_client: httpx.AsyncClient | None = None
+# When the primary's current run of failures began; None after a success.
+_primary_failing_since: float | None = None
 
 
 def init_client():
@@ -123,15 +138,42 @@ async def _fetch_aircraft(url: str) -> list[dict[str, Any]]:
     return data.get("ac") or data.get("aircraft") or []
 
 
+def _now() -> float:
+    return time.monotonic()
+
+
+def _primary_failed(reason: str, error: Exception | None = None) -> None:
+    """Log a primary failure: a warning while it may be a blip, an error once
+    failures have lasted PRIMARY_FAILING_ERROR_AFTER_S in a row, or at once for
+    a refusal other than 429 (a wrong address, which no wait mends)."""
+    global _primary_failing_since
+    now = _now()
+    if _primary_failing_since is None:
+        _primary_failing_since = now
+    lasted = now - _primary_failing_since
+    refused = (
+        isinstance(error, httpx.HTTPStatusError)
+        and 400 <= error.response.status_code < 500
+        and error.response.status_code != 429
+    )
+    level = (
+        logging.ERROR
+        if refused or lasted >= PRIMARY_FAILING_ERROR_AFTER_S
+        else logging.WARNING
+    )
+    logger.log(level, "Primary ADS-B API %s (failing for %.0fs)", reason, lasted)
+
+
 async def fetch_london_airspace() -> list[dict[str, Any]]:
     """Phase 1: Extraction - Fetches aircraft within 60nm of Central London.
 
     Tries the fallback when the primary errors, or answers with no aircraft that
-    parse_aircraft can use: adsb.lol has degraded to empty 200s while adsb.fi
-    still had data. Returns [] when both are empty, so the API reports offline;
-    a fallback error propagates, so the cache serves its last data as stale.
+    parse_aircraft can use (sources have degraded to empty 200s). Returns [] when
+    both are empty, so the API reports offline; a fallback error propagates, so
+    the cache serves its last data as stale.
     """
-    url = f"{ADSB_API_URL}/{LONDON_LAT}/{LONDON_LON}/{RADIUS_NM}"
+    global _primary_failing_since
+    url = ADSB_API_URL.format(lat=LONDON_LAT, lon=LONDON_LON, radius=RADIUS_NM)
 
     try:
         aircraft = await _fetch_aircraft(url)
@@ -139,13 +181,13 @@ async def fetch_london_airspace() -> list[dict[str, Any]]:
         if not ADSB_FALLBACK_URL:
             logger.warning("Error fetching from ADS-B API: %s", e)
             raise
-        logger.warning("Error fetching from ADS-B API, trying fallback: %r", e)
+        _primary_failed(f"failed, trying fallback: {e!r}", e)
     else:
         if not ADSB_FALLBACK_URL or _has_usable_aircraft(aircraft):
+            _primary_failing_since = None
             return aircraft
-        logger.warning(
-            "ADS-B API returned no usable aircraft (%d entries), trying fallback",
-            len(aircraft),
+        _primary_failed(
+            f"returned no usable aircraft ({len(aircraft)} entries), trying fallback"
         )
 
     fallback = ADSB_FALLBACK_URL.format(
