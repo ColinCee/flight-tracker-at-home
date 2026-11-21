@@ -69,7 +69,7 @@ Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, an
 
 **Units** stay aviation-native as the feed gives them: feet, knots, ft/min.
 
-**Upstream.** adsb.lol needs no key. If it fails, the backend tries `ADSB_FALLBACK_URL` (adsb.fi) and meanwhile serves its last good data. `airplanes_live.py` is the adsb.lol client; it keeps an earlier source's name.
+**Upstream.** adsb.lol needs no key. If it fails or answers with no aircraft, the backend tries `ADSB_FALLBACK_URL` (adsb.fi) and meanwhile serves its last good data. `airplanes_live.py` is the adsb.lol client; it keeps an earlier source's name.
 
 ## Configuration
 
@@ -80,7 +80,7 @@ Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, an
 | `MOCK_DATA` | off | `true` serves fixtures (E2E) |
 | `ENABLE_DEBUG_ENDPOINTS` | off | `true` adds `/debug/airplanes_live` |
 | `ADSB_API_URL` | adsb.lol `/v2/point` | Any ADSBx v2 point endpoint |
-| `ADSB_FALLBACK_URL` | adsb.fi | Tried when the primary fails; empty disables |
+| `ADSB_FALLBACK_URL` | adsb.fi | Tried when the primary fails or has no aircraft; empty disables |
 | `HEATMAP_DB_PATH` | `apps/backend/historical_heatmap.parquet` | Heatmap history file |
 | `VITE_API_BASE_URL` (frontend build) | `http://localhost:8000` | Backend URL; CI sets it from a repo variable |
 
