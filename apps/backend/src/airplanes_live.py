@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 # Any ADSBx v2-compatible point endpoint. airplanes.live blocked our IP in
 # Oct 2026, so the default is adsb.lol (same response shape, no auth).
 ADSB_API_URL = os.getenv("ADSB_API_URL", "https://api.adsb.lol/v2/point")
-# Tried when the primary fails (adsb.lol times out several times a day). A URL
+# Tried when the primary fails or has no aircraft (adsb.lol times out several
+# times a day, and sometimes answers 200 with no aircraft). A URL
 # template with {lat}, {lon} and {radius}; set it empty to disable.
 ADSB_FALLBACK_URL = os.getenv(
     "ADSB_FALLBACK_URL",
@@ -123,16 +124,29 @@ async def _fetch_aircraft(url: str) -> list[dict[str, Any]]:
 
 
 async def fetch_london_airspace() -> list[dict[str, Any]]:
-    """Phase 1: Extraction - Fetches aircraft within 60nm of Central London."""
+    """Phase 1: Extraction - Fetches aircraft within 60nm of Central London.
+
+    Tries the fallback when the primary errors, or answers with no aircraft that
+    parse_aircraft can use: adsb.lol has degraded to empty 200s while adsb.fi
+    still had data. Returns [] when both are empty, so the API reports offline;
+    a fallback error propagates, so the cache serves its last data as stale.
+    """
     url = f"{ADSB_API_URL}/{LONDON_LAT}/{LONDON_LON}/{RADIUS_NM}"
 
     try:
-        return await _fetch_aircraft(url)
+        aircraft = await _fetch_aircraft(url)
     except httpx.HTTPError as e:
         if not ADSB_FALLBACK_URL:
             logger.warning("Error fetching from ADS-B API: %s", e)
             raise
         logger.warning("Error fetching from ADS-B API, trying fallback: %r", e)
+    else:
+        if not ADSB_FALLBACK_URL or _has_usable_aircraft(aircraft):
+            return aircraft
+        logger.warning(
+            "ADS-B API returned no usable aircraft (%d entries), trying fallback",
+            len(aircraft),
+        )
 
     fallback = ADSB_FALLBACK_URL.format(
         lat=LONDON_LAT, lon=LONDON_LON, radius=RADIUS_NM
@@ -142,6 +156,10 @@ async def fetch_london_airspace() -> list[dict[str, Any]]:
     except httpx.HTTPError as e:
         logger.warning("Error fetching from fallback ADS-B API: %s", e)
         raise
+
+
+def _has_usable_aircraft(aircraft: list[dict[str, Any]]) -> bool:
+    return any(parse_aircraft(ac) is not None for ac in aircraft)
 
 
 def parse_aircraft(ac: dict[str, Any]) -> AircraftState | None:

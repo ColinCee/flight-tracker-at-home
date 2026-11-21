@@ -605,6 +605,10 @@ def test_get_destination_parallel_south():
 
 
 # --- Upstream fallback ---
+def _ac(hex_code):
+    return {"hex": hex_code, "lat": 51.5, "lon": -0.1}
+
+
 class _FakeResponse:
     def __init__(self, payload):
         self._payload = payload
@@ -627,14 +631,14 @@ class _FakeClient:
         error = self.primary_error if len(self.urls) == 1 else self.fallback_error
         if error:
             raise error
-        return _FakeResponse({"ac": [{"hex": "p" if len(self.urls) == 1 else "f"}]})
+        return _FakeResponse({"ac": [_ac("p" if len(self.urls) == 1 else "f")]})
 
 
 @pytest.mark.asyncio
 async def test_fetch_uses_primary_when_healthy():
     client = _FakeClient()
     with patch("src.airplanes_live.get_client", return_value=client):
-        assert await fetch_london_airspace() == [{"hex": "p"}]
+        assert await fetch_london_airspace() == [_ac("p")]
     assert len(client.urls) == 1
 
 
@@ -642,7 +646,7 @@ async def test_fetch_uses_primary_when_healthy():
 async def test_fetch_falls_back_on_primary_timeout():
     client = _FakeClient(primary_error=httpx.ReadTimeout(""))
     with patch("src.airplanes_live.get_client", return_value=client):
-        assert await fetch_london_airspace() == [{"hex": "f"}]
+        assert await fetch_london_airspace() == [_ac("f")]
     assert "adsb.fi" in client.urls[1]
     assert "/lat/51.5072/lon/-0.1276/dist/60" in client.urls[1]
 
@@ -657,3 +661,62 @@ async def test_fetch_raises_when_both_fail():
         pytest.raises(httpx.HTTPError),
     ):
         await fetch_london_airspace()
+
+
+class _EmptyPrimaryClient(_FakeClient):
+    """Primary answers 200 with the given payload; fallback has one aircraft."""
+
+    def __init__(self, primary_payload, fallback_payload=None, fallback_error=None):
+        super().__init__(fallback_error=fallback_error)
+        self.primary_payload = primary_payload
+        self.fallback_payload = fallback_payload or {"ac": [_ac("f")]}
+
+    async def get(self, url):
+        self.urls.append(url)
+        if len(self.urls) == 1:
+            return _FakeResponse(self.primary_payload)
+        if self.fallback_error:
+            raise self.fallback_error
+        return _FakeResponse(self.fallback_payload)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "primary_payload",
+    [{"ac": []}, {}, {"ac": [{"hex": "p"}]}],  # empty, no list, nothing parseable
+    ids=["empty", "no-list", "unparseable"],
+)
+async def test_fetch_falls_back_when_primary_has_no_aircraft(primary_payload):
+    client = _EmptyPrimaryClient(primary_payload)
+    with patch("src.airplanes_live.get_client", return_value=client):
+        assert await fetch_london_airspace() == [_ac("f")]
+    assert "adsb.fi" in client.urls[1]
+
+
+@pytest.mark.asyncio
+async def test_fetch_returns_empty_when_both_have_no_aircraft():
+    client = _EmptyPrimaryClient({"ac": []}, fallback_payload={"ac": []})
+    with patch("src.airplanes_live.get_client", return_value=client):
+        assert await fetch_london_airspace() == []
+    assert len(client.urls) == 2
+
+
+@pytest.mark.asyncio
+async def test_fetch_raises_when_primary_empty_and_fallback_fails():
+    client = _EmptyPrimaryClient({"ac": []}, fallback_error=httpx.ReadTimeout(""))
+    with (
+        patch("src.airplanes_live.get_client", return_value=client),
+        pytest.raises(httpx.HTTPError),
+    ):
+        await fetch_london_airspace()
+
+
+@pytest.mark.asyncio
+async def test_fetch_returns_empty_primary_when_fallback_disabled():
+    client = _EmptyPrimaryClient({"ac": []})
+    with (
+        patch("src.airplanes_live.get_client", return_value=client),
+        patch("src.airplanes_live.ADSB_FALLBACK_URL", ""),
+    ):
+        assert await fetch_london_airspace() == []
+    assert len(client.urls) == 1
