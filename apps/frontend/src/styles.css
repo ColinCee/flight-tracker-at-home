@@ -567,8 +567,9 @@ input {
 .maplibregl-map .maplibregl-ctrl-attrib a {
   color: var(--dim);
 }
+/* Out of the layout until MapView folds it, so its corner never grows and shrinks on load. */
 .maplibregl-map:not(.attrib-folded) .maplibregl-ctrl-attrib {
-  visibility: hidden;
+  display: none;
 }
 @media (width < 48rem) {
   .maplibregl-map .maplibregl-ctrl-top-right .maplibregl-ctrl-attrib {
