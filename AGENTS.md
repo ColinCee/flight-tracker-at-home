@@ -52,7 +52,7 @@ CI (`.github/workflows/`) runs check, codegen:check, test, both E2E suites, the 
 ## How data flows
 
 ```
-adsb.lol (ADSBx v2, 60 nm around central London)
+adsb.fi, else adsb.lol (ADSBx v2, 60 nm around central London)
   -> airplanes_live.py: parse, enrich (destination, climbing, descending)
   -> cache.py: 10 s TTL, fetched only when a request finds it stale; KPIs; serves stale data on upstream failure
   -> GET /aircraft (aircraft + KPIs in one response, plus refresh_interval_ms)
@@ -69,7 +69,7 @@ Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, an
 
 **Units** stay aviation-native as the feed gives them: feet, knots, ft/min.
 
-**Upstream.** adsb.lol needs no key. If it fails or answers with no aircraft, the backend tries `ADSB_FALLBACK_URL` (adsb.fi) and meanwhile serves its last good data. `airplanes_live.py` is the adsb.lol client; it keeps an earlier source's name.
+**Upstream.** adsb.fi and adsb.lol need no key; both terms ask for credit on the site. If adsb.fi fails or answers with no aircraft, the backend tries `ADSB_FALLBACK_URL` (adsb.lol), and the cache serves its last good data while both fail. A failing primary logs at error once it has lasted 5 minutes, so the homelab's errors-logged alert sees it. `airplanes_live.py` is the upstream client; it keeps an earlier source's name.
 
 ## Configuration
 
@@ -79,8 +79,8 @@ Endpoints: `/aircraft`, `/weather`, `/heatmap`, `/heatmap/hourly`, `/health`, an
 | `CORS_ORIGINS` | `http://localhost:4200` | Comma-separated origins; Pages preview URLs are always allowed |
 | `MOCK_DATA` | off | `true` serves fixtures (E2E) |
 | `ENABLE_DEBUG_ENDPOINTS` | off | `true` adds `/debug/airplanes_live` |
-| `ADSB_API_URL` | adsb.lol `/v2/point` | Any ADSBx v2 point endpoint |
-| `ADSB_FALLBACK_URL` | adsb.fi | Tried when the primary fails or has no aircraft; empty disables |
+| `ADSB_API_URL` | adsb.fi | Any ADSBx v2 point endpoint, a template with `{lat}`, `{lon}`, `{radius}` |
+| `ADSB_FALLBACK_URL` | adsb.lol | Same form; tried when the primary fails or has no aircraft; empty disables |
 | `HEATMAP_DB_PATH` | `apps/backend/historical_heatmap.parquet` | Heatmap history file |
 | `VITE_API_BASE_URL` (frontend build) | `http://localhost:8000` | Backend URL; CI sets it from a repo variable |
 

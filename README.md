@@ -27,7 +27,7 @@ Real-time aviation dashboard showing aircraft around the London airspace with Lo
 | Map | MapLibre GL JS, react-map-gl, Deck.gl |
 | State | TanStack Query (auto-polling) |
 | Backend | Python 3.14, FastAPI |
-| Data | [adsb.lol](https://adsb.lol/) REST API (ODbL) |
+| Data | [adsb.fi](https://adsb.fi/) open data, with [adsb.lol](https://adsb.lol/) (ODbL) as backup |
 | E2E Tests | Playwright |
 | Monorepo | Bun workspaces + mise tasks |
 | Deploy (FE) | Cloudflare Pages |
@@ -48,10 +48,10 @@ Other commands (tests, checks, codegen) are listed in [AGENTS.md](./AGENTS.md#co
 ## How it works
 
 ```
-adsb.lol API → Backend (FastAPI + 10s cache) → Frontend (React + Deck.gl)
+adsb.fi / adsb.lol API → Backend (FastAPI + 10s cache) → Frontend (React + Deck.gl)
 ```
 
-The backend fetches aircraft positions from adsb.lol (any ADSBx v2 endpoint via `ADSB_API_URL`), marks aircraft approaching the five London airports, and caches results with a 10-second TTL. The frontend polls the backend and renders aircraft on a map with real-time KPIs.
+The backend fetches aircraft positions from adsb.fi, falling back to adsb.lol (any ADSBx v2 endpoint via `ADSB_API_URL`), marks aircraft approaching the five London airports, and caches results with a 10-second TTL. The frontend polls the backend and renders aircraft on a map with real-time KPIs.
 
 Architecture, configuration and conventions for contributors (and coding agents) are in [AGENTS.md](./AGENTS.md).
 
